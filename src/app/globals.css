@@ -2,26 +2,65 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-Bold.woff2') format('woff2');
+  font-weight: 800; /* extra bold */
+  font-style: normal;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-Bold.woff2') format('woff2');
+  font-weight: 700; /* bold */
+  font-style: normal;
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-SemiBold.woff2') format('woff2');
+  font-weight: 600; /* semi bold */
+  font-style: normal;
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-Medium.woff2') format('woff2');
+  font-weight: 500; /* medium */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-Regular.woff2') format('woff2');
+  font-weight: 400; /* regular */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'MainFont';
+  src: url('./fonts/Estedad-Light.woff2') format('woff2');
+  font-weight: 300; /* light */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PersianNumbers';
+  src: url('./fonts/IRANSansXFaNum-Regular.woff2') format('woff2');
+  font-weight: 400; 
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PersianNumbers';
+  src: url('./fonts/IRANSansXFaNum-Bold.woff2') format('woff2');
+  font-weight: 700; 
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'FancyFont';
+  src: url('./fonts/Nic.ttf') format('truetype');
+  font-weight: normal; 
+  font-style: normal;
 }

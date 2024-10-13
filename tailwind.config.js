@@ -1,15 +1,43 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: [
-    "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
-    "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
+    './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/components/**/*.{js,ts,jsx,tsx,mdx}',
+    './src/app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
+  darkMode: 'selector',
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        transparent: 'transparent',
+        current: 'currentColor',
+        primary: '#FECD1A',
+        secondary: '#FFAF29',
+        accent: '#64F4AB',
+        red: '#F82525',
+        blue: '#25A4F8',
+        green: '#327A56',
+        background: {
+          light: '#F6F6F6',
+          dark: '#2D2E32',
+        },
+        surface: {
+          light: '#FFFFFF',
+          dark: '#25262A',
+        },
+        text: {
+          light: '#25262A',
+          dark: '#FFFFFF',
+        },
+        subtext: {
+          light: '#5D5E65',
+          dark: '#BFBFBF',
+        },
+      },
+      fontFamily: {
+        main: ['MainFont', 'sans-serif'], 
+        faNa: ['PersianNumbers', 'sans-serif'], 
+        fancy: ['FancyFont', 'cursive'], 
       },
     },
   },
