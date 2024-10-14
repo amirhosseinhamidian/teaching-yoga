@@ -36,11 +36,22 @@ module.exports = {
         },
       },
       fontFamily: {
-        main: ['MainFont', 'sans-serif'], 
-        faNa: ['PersianNumbers', 'sans-serif'], 
-        fancy: ['FancyFont', 'cursive'], 
+        main: ['MainFont', 'sans-serif'],
+        faNa: ['PersianNumbers', 'sans-serif'],
+        fancy: ['FancyFont', 'cursive'],
       },
+      // eslint-disable-next-line no-unused-vars
+      fill: (theme) => ({
+        primary: '#FFAF29',
+        secondary: {
+          light: '#F6F6F6',
+          dark: '#2D2E32',
+        },
+      }),
     },
+  },
+  variants: {
+    fill: ['hover', 'focus'],
   },
   plugins: [],
 };

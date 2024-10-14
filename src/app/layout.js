@@ -1,8 +1,9 @@
 /* eslint-disable react/prop-types */
 'use client';
+import IconButton from '@/components/Ui/ButtonIcon/ButtonIcon';
 import './globals.css';
-import React, { useState } from 'react';
-import Input from '@/components/Input/Input';
+import React from 'react';
+import { BsInstagram } from 'react-icons/bs';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -10,20 +11,12 @@ import Input from '@/components/Input/Input';
 // };
 
 export default function RootLayout({ children }) {
-  const [name, setName] = useState('');
   return (
     <html lang='fa' dir='rtl'>
       <body
-        className={`font-main flex h-screen items-center justify-center bg-surface-light antialiased`}
+        className={`flex h-screen items-center justify-center bg-surface-light font-main antialiased`}
       >
-        <Input
-          placeholder='نام کاربری'
-          value={name}
-          onChange={setName}
-          fullWidth
-          errorMessage='این نام کاربری صحیح نیست'
-          label='نام کاربری'
-        />
+        <IconButton icon={BsInstagram} />
         {children}
       </body>
     </html>
