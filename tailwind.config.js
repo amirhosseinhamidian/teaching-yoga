@@ -48,6 +48,9 @@ module.exports = {
           dark: '#2D2E32',
         },
       }),
+      screens: {
+        'xs': '410px',
+      },
     },
     container: {
       padding: '2rem',

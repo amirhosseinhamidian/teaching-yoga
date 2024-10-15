@@ -4,6 +4,7 @@ import Header from '@/components/Header/Header';
 import './globals.css';
 import React from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import Footer from '@/components/Footer/Footer';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -15,10 +16,11 @@ export default function RootLayout({ children }) {
     <ThemeProvider>
       <html lang='fa' dir='rtl'>
         <body
-          className={`bg-background-light font-main antialiased dark:bg-background-dark`}
+          className={`flex flex-col bg-background-light font-main antialiased dark:bg-background-dark`}
         >
           <Header />
           {children}
+          <Footer />
         </body>
       </html>
     </ThemeProvider>
