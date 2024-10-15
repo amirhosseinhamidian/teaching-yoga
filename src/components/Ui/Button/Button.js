@@ -7,7 +7,7 @@ const Button = ({ children, onClick, type = 'button', className = '', shadow = f
       <button
         type={type}
         onClick={onClick}
-        className={`bg-primary text-text-light py-2 px-6 rounded-xl lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]':''} font-main font-medium text-xl ${className}`}
+        className={`bg-primary text-text-light py-2 px-6 rounded-xl lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]':''} font-main font-medium ${className}`}
       >
         {children}
       </button>

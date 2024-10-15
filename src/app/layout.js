@@ -1,9 +1,8 @@
 /* eslint-disable react/prop-types */
 'use client';
-import IconButton from '@/components/Ui/ButtonIcon/ButtonIcon';
+import Header from '@/components/Header/Header';
 import './globals.css';
 import React from 'react';
-import { BsInstagram } from 'react-icons/bs';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -14,9 +13,9 @@ export default function RootLayout({ children }) {
   return (
     <html lang='fa' dir='rtl'>
       <body
-        className={`flex h-screen items-center justify-center bg-surface-light font-main antialiased`}
+        className={`bg-background-light dark:bg-background-dark font-main antialiased`}
       >
-        <IconButton icon={BsInstagram} />
+        <Header />
         {children}
       </body>
     </html>
