@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 'use client';
 import React, { useState } from 'react';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
@@ -7,10 +8,12 @@ import Logo from '../Logo/Logo';
 import { IoCloseOutline } from 'react-icons/io5';
 import Button from '../Ui/Button/Button';
 import NavbarRoutes from './NavRoutes';
+import Switch from '../Ui/Switch/Switch';
 
-export default function NavbarMobileMenu() {
+export default function NavbarMobileMenu({isDark, handelDarkMode}) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+ 
 
   const toggleOpen = () => {
     if (isOpen) {
@@ -25,6 +28,7 @@ export default function NavbarMobileMenu() {
     <div>
       <IconButton
         icon={HiMenu}
+        size={20}
         onClick={(e) => {
           e.preventDefault();
           toggleOpen();
@@ -57,6 +61,8 @@ export default function NavbarMobileMenu() {
               <div className='flex'>
                 <NavbarRoutes vertical />
               </div>
+              <div className='border-b'></div>
+              <Switch label={isDark ? "حالت تاریک" : "حالت روشن"} checked={isDark} onChange={handelDarkMode} className='gap-12'/>
             </div>
           </>,
           document.body,

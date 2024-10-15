@@ -29,13 +29,13 @@ const routes = [
 const NavbarRoutes = ({ vertical = false }) => {
   return (
     <div
-      className={`flex items-start justify-start  ${vertical ? 'flex-col gap-3' : 'gap-2'}`}
+      className={`flex items-start justify-start gap-3 ${vertical ? 'flex-col' : ''}`}
     >
       {routes.map(({ label, path }) => (
         <Link
           href={path}
           key={label}
-          className='text-text-light transition duration-200 ease-in hover:text-secondary'
+          className='text-text-light dark:text-text-dark transition duration-200 ease-in hover:text-secondary'
         >
           {label}
         </Link>

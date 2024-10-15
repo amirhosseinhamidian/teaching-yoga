@@ -40,7 +40,7 @@ const Switch = ({
     <div className={`flex items-center ${className}`}>
       {label && (
         <span
-          className={`mr-3 text-text-light dark:text-text-dark ${labelClass}`}
+          className={`text-text-light dark:text-text-dark ${labelClass}`}
         >
           {label}
         </span>

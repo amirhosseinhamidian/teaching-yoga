@@ -3,6 +3,7 @@
 import Header from '@/components/Header/Header';
 import './globals.css';
 import React from 'react';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -10,15 +11,16 @@ import React from 'react';
 // };
 
 export default function RootLayout({ children }) {
-  const [isChecked, setIsChecked] = useState(true)
   return (
-    <html lang='fa' dir='rtl'>
-      <body
-        className={`bg-background-light dark:bg-background-dark font-main antialiased`}
-      >
-        <Header />
-        {children}
-      </body>
-    </html>
+    <ThemeProvider>
+      <html lang='fa' dir='rtl'>
+        <body
+          className={`bg-background-light font-main antialiased dark:bg-background-dark`}
+        >
+          <Header />
+          {children}
+        </body>
+      </html>
+    </ThemeProvider>
   );
 }
