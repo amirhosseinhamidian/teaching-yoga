@@ -40,7 +40,7 @@ test('renders IconButton with provided icon', () => {
   
     // Check if the icon's class changes (group-hover should apply `fill-secondary`)
     const iconElement = screen.getByTestId('icon');
-    expect(iconElement).toHaveClass('group-hover:fill-secondary');
+    expect(iconElement).toHaveClass('group-hover:fill-secondary-light');
   });
   
   // Test: Accepts and applies custom size and color props

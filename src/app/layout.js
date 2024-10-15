@@ -10,6 +10,7 @@ import React from 'react';
 // };
 
 export default function RootLayout({ children }) {
+  const [isChecked, setIsChecked] = useState(true)
   return (
     <html lang='fa' dir='rtl'>
       <body
