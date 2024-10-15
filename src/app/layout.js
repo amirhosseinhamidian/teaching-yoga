@@ -1,9 +1,8 @@
 /* eslint-disable react/prop-types */
 'use client';
-import IconButton from '@/components/Ui/ButtonIcon/ButtonIcon';
+import Switch from '@/components/Ui/Switch/Switch';
 import './globals.css';
-import React from 'react';
-import { BsInstagram } from 'react-icons/bs';
+import React, { useState } from 'react';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -11,12 +10,13 @@ import { BsInstagram } from 'react-icons/bs';
 // };
 
 export default function RootLayout({ children }) {
+  const [isChecked, setIsChecked] = useState(true)
   return (
     <html lang='fa' dir='rtl'>
       <body
         className={`flex h-screen items-center justify-center bg-surface-light font-main antialiased`}
       >
-        <IconButton icon={BsInstagram} />
+        <Switch checked={isChecked} onChange={setIsChecked} size='large' label={isChecked? "حالت تاریک" : "حالت روشن"} className='mt-4 gap-6' labelClass=' text-sm'/>
         {children}
       </body>
     </html>
