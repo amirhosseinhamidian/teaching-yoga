@@ -9,11 +9,11 @@ import { IoCloseOutline } from 'react-icons/io5';
 import Button from '../Ui/Button/Button';
 import NavbarRoutes from './NavRoutes';
 import Switch from '../Ui/Switch/Switch';
+import Link from 'next/link';
 
-export default function NavbarMobileMenu({isDark, handelDarkMode}) {
+export default function NavbarMobileMenu({ isDark, handelDarkMode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
- 
 
   const toggleOpen = () => {
     if (isOpen) {
@@ -48,21 +48,28 @@ export default function NavbarMobileMenu({isDark, handelDarkMode}) {
               className={`fixed right-0 top-0 flex h-full w-60 transform flex-col gap-y-4 bg-surface-light p-5 transition-transform duration-300 ease-in-out dark:bg-surface-dark ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
             >
               <div className='flex items-center justify-between'>
-                <Logo />
+                <Logo size='small'/>
                 <IoCloseOutline
-                  className='text-2xl'
+                  className='text-2xl text-text-light dark:text-text-dark'
                   onClick={() => toggleOpen()}
                 />
               </div>
-              <Button className='whitespace-nowrap text-sm'>
-                ثبت نام | ورود
-              </Button>
+              <Link href={'/login'} className='w-full'>
+                <Button className='whitespace-nowrap text-sm w-full'>
+                  ثبت نام | ورود
+                </Button>
+              </Link>
               <div className='border-b'></div>
               <div className='flex'>
                 <NavbarRoutes vertical />
               </div>
               <div className='border-b'></div>
-              <Switch label={isDark ? "حالت تاریک" : "حالت روشن"} checked={isDark} onChange={handelDarkMode} className='gap-12'/>
+              <Switch
+                label={isDark ? 'حالت تاریک' : 'حالت روشن'}
+                checked={isDark}
+                onChange={handelDarkMode}
+                className='gap-12'
+              />
             </div>
           </>,
           document.body,

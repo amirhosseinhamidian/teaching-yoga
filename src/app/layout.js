@@ -5,6 +5,8 @@ import './globals.css';
 import React from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import Footer from '@/components/Footer/Footer';
+import { usePathname } from 'next/navigation';
+import { AuthProvider } from '@/contexts/AuthContext';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -12,17 +14,24 @@ import Footer from '@/components/Footer/Footer';
 // };
 
 export default function RootLayout({ children }) {
+  const pathname = usePathname();
+  const hideHeaderFooter =
+    pathname === '/login' ||
+    pathname === '/signup' ||
+    pathname === '/confirm-code';
   return (
-    <ThemeProvider>
-      <html lang='fa' dir='rtl'>
-        <body
-          className={`flex flex-col bg-background-light font-main antialiased dark:bg-background-dark`}
-        >
-          <Header />
-          {children}
-          <Footer />
-        </body>
-      </html>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <html lang='fa' dir='rtl'>
+          <body
+            className={`flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark`}
+          >
+            {!hideHeaderFooter && <Header />}
+            {children}
+            {!hideHeaderFooter && <Footer />}
+          </body>
+        </html>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

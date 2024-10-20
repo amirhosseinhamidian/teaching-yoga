@@ -31,7 +31,7 @@ export default function Header() {
             onClick={toggleTheme}
           />
           <IconButton icon={BsCart3} />
-          <Button className='whitespace-nowrap text-sm'>ثبت نام | ورود</Button>
+          <Link href={'/login'}><Button className='whitespace-nowrap text-sm'>ثبت نام | ورود</Button></Link>
         </div>
         <div className='flex items-center gap-2 md:hidden'>
           <IconButton icon={BsCart3} size={20} />

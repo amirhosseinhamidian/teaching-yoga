@@ -51,6 +51,9 @@ module.exports = {
       screens: {
         'xs': '410px',
       },
+      fontSize: {
+      '2xs': ['10px', '16px'],
+    }
     },
     container: {
       padding: '2rem',
