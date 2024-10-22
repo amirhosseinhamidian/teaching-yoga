@@ -51,3 +51,65 @@ model User {
 
   accounts Account[]
 }
+
+enum CourseLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  BEGINNER_INTERMEDIATE
+  INTERMEDIATE_ADVANCED
+}
+
+enum CourseStatus {
+  COMPLETED
+  IN_PROGRESS
+}
+
+model Course {
+  id               Int          @id @unique @default(autoincrement())
+  title            String 
+  subtitle         String
+  description      String
+  cover            String
+  price            String
+  basePrice        String?
+  isDiscountCode   Boolean      @default(false)
+  isHighPriority   Boolean      @default(false)
+  shortAddress     String       @unique
+  sessionCount     Int
+  duration         String
+  level            CourseLevel
+  participants     Int  
+  rating           Float?       @default(5.0)
+  status           CourseStatus
+  instructorId     Int 
+  introVideoUrl    String?
+  terms            Term[]
+
+  createAt DateTime     @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Term {
+  id            Int      @id @unique @default(autoincrement())
+  name          String  
+  courseId      Int 
+  course        Course   @relation(fields: [courseId], references: [id])
+  sessions      Session[]
+
+  createAt DateTime     @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model Session {
+  id           Int      @id @unique @default(autoincrement())
+  name         String 
+  duration     String
+  termId       Int
+  term         Term     @relation(fields: [termId], references: [id])
+  isFree       Boolean   @default(false)
+  videoUrl     String? 
+
+  createAt DateTime     @default(now())
+  updatedAt DateTime    @updatedAt
+}

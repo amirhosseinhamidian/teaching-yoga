@@ -1,11 +1,11 @@
 /* eslint-disable no-undef */
-import Prisma from '@/libs/prisma';
+import prismadb from '../../../../../libs/prismadb';
 import { PrismaAdapter } from '@next-auth/prisma-adapter';
 import NextAuth from 'next-auth';
 import CredentialProvider from 'next-auth/providers/credentials';
 
 export const authOptions = {
-  adapter: PrismaAdapter(Prisma),
+  adapter: PrismaAdapter(prismadb),
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialProvider({

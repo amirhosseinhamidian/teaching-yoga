@@ -34,6 +34,7 @@ module.exports = {
           light: '#5D5E65',
           dark: '#BFBFBF',
         },
+        priceText: '#9A9A9A',
       },
       fontFamily: {
         main: ['MainFont', 'sans-serif'],
@@ -49,11 +50,11 @@ module.exports = {
         },
       }),
       screens: {
-        'xs': '410px',
+        xs: '410px',
       },
       fontSize: {
-      '2xs': ['10px', '16px'],
-    }
+        '2xs': ['10px', '16px'],
+      },
     },
     container: {
       padding: '2rem',

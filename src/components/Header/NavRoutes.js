@@ -10,7 +10,7 @@ const routes = [
   },
   {
     label: 'دوره‌ها',
-    path: '/',
+    path: '/courses',
   },
   {
     label: 'کلاس آنلاین',
