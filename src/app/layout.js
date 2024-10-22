@@ -1,8 +1,7 @@
 /* eslint-disable react/prop-types */
 'use client';
-import Switch from '@/components/Ui/Switch/Switch';
 import './globals.css';
-import React, { useState } from 'react';
+import React from 'react';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -10,13 +9,11 @@ import React, { useState } from 'react';
 // };
 
 export default function RootLayout({ children }) {
-  const [isChecked, setIsChecked] = useState(true)
   return (
     <html lang='fa' dir='rtl'>
       <body
         className={`flex h-screen items-center justify-center bg-surface-light font-main antialiased`}
       >
-        <Switch checked={isChecked} onChange={setIsChecked} size='large' label={isChecked? "حالت تاریک" : "حالت روشن"} className='mt-4 gap-6' labelClass=' text-sm'/>
         {children}
       </body>
     </html>
