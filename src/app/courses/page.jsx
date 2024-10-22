@@ -2,14 +2,15 @@ import CourseCard from '@/components/CourseCards/CourseCard';
 import CourseHighCard from '@/components/CourseCards/CourseHighCard';
 import React from 'react';
 import { getAllCourses } from '../actions/courseActions';
+import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 
 export default async function page() {
   const courses = await getAllCourses();
   return (
     <div className='container'>
-      <h1 className='my-4 text-xl font-semibold md:my-6 md:text-3xl'>
+      <PageTitle>
         دوره‌ها
-      </h1>
+      </PageTitle>
       <div className='my-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3'>
         {courses.map(course => {
           return course.isHighPriority ? (

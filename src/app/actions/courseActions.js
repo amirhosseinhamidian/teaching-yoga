@@ -13,6 +13,7 @@ async function getAllCourses() {
                 basePrice: true,
                 isHighPriority: true,
                 cover: true,
+                shortAddress: true,
             },
         });
 
@@ -33,6 +34,13 @@ async function getCourseByShortAddress(shortAddress) {
             where: {
                 shortAddress: shortAddress,
             },
+            include: {
+                instructor: {
+                  include: {
+                    user: true,
+                  },
+                },
+            }
         });
         if (!course) {
             return null;

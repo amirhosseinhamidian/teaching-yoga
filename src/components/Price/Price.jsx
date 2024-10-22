@@ -4,10 +4,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { calculateDiscount } from '@/utils/calculateDiscount';
 
-export default function Price({ basePrice, price }) {
+export default function Price({ basePrice, price, className }) {
   console.log(price)
   return (
-    <div className='flex flex-col items-end'>
+    <div className={`flex flex-col items-end ${className}`}>
       <span className='font-faNa text-lg font-bold text-text-light md:text-2xl dark:text-text-dark'>
           {price.toLocaleString()}
           <span className='mr-1 text-2xs'>تومان</span>
@@ -33,5 +33,6 @@ export default function Price({ basePrice, price }) {
 
 Price.propTypes = {
   basePrice: PropTypes.string,
+  className: PropTypes.string,
   price: PropTypes.string.isRequired,
 };

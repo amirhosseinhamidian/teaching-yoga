@@ -1,3 +1,4 @@
+"use client"
 /* eslint-disable react/prop-types */
 import React from 'react';
 import Price from '../Price/Price';
@@ -7,7 +8,7 @@ import { useRouter } from 'next/navigation';
 export default function CourseHighCard({ course }) {
   const route = useRouter()
   const detailCourseClickHandler = () => {
-    route.push(`/${course.shortAddress}`)
+    route.push(`/courses/${course.shortAddress}`)
   }
   return (
     <div className='flex w-full flex-col-reverse rounded-xl bg-surface-light shadow-md md:flex-row dark:bg-surface-dark'>
