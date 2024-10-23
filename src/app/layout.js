@@ -1,7 +1,8 @@
 /* eslint-disable react/prop-types */
 'use client';
 import './globals.css';
-import React from 'react';
+import React, { useState } from 'react';
+import TextArea from '@/components/Ui/TextArea/TextArea';
 
 // export const metadata = {
 //   title: 'Create Next App',
@@ -9,11 +10,22 @@ import React from 'react';
 // };
 
 export default function RootLayout({ children }) {
+  const [text, setText] = useState('');
   return (
     <html lang='fa' dir='rtl'>
       <body
         className={`flex h-screen items-center justify-center bg-surface-light font-main antialiased`}
       >
+        <TextArea
+          value={text}
+          onChange={setText}
+          fullWidth
+          placeholder='نظرت رو بنویس'
+          className='mx-16'
+          rows={3}
+          errorMessage='متن وارد شده اشتباه است'
+          errorClassName='mr-20'
+        />
         {children}
       </body>
     </html>

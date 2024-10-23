@@ -1,17 +1,42 @@
-/* eslint-disable no-unused-vars */
-/* eslint-disable react/prop-types */
-import React from "react";
+import React from 'react';
+import PropTypes from 'prop-types';
 
-const Button = ({ children, onClick, type = 'button', className = '', shadow = false }) => {
-    return (
-      <button
-        type={type}
-        onClick={onClick}
-        className={`bg-primary text-text-light py-2 px-6 rounded-xl lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]':''} font-main font-medium text-xl ${className}`}
-      >
-        {children}
-      </button>
-    );
-  };
-  
-  export default Button;
+const colors = {
+  primary: 'text-text-light bg-primary',
+  secondary: 'bg-secondary text-text-light',
+  red: 'bg-red text-background-light',
+  blue: 'bg-blue text-background-light',
+  accent: 'bg-accent text-background-light',
+  green: 'bg-green text-background-light',
+};
+
+const Button = ({
+  children,
+  onClick,
+  type = 'button',
+  className = '',
+  shadow = false,
+  color = 'primary'
+}) => {
+  const colorClasses = colors[color] || colors.primary; 
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      className={`rounded-xl px-6 py-2  lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]' : ''} font-main font-medium  ${colorClasses} ${className}`}
+    >
+      {children}
+    </button>
+  );
+};
+
+Button.propTypes = {
+  children: PropTypes.node.isRequired,
+  onClick: PropTypes.func,
+  type: PropTypes.string,
+  className: PropTypes.string,
+  shadow: PropTypes.bool,
+  color: PropTypes.string, 
+};
+
+export default Button;
