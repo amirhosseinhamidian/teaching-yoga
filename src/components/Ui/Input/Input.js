@@ -45,6 +45,7 @@ Input.propTypes = {
   errorMessage: PropTypes.string,
   label: PropTypes.string,
   type: PropTypes.string,
+  focus: PropTypes.bool,
 };
 
 export default Input;
