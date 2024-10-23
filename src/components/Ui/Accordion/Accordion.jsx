@@ -32,9 +32,9 @@ const Accordion = ({ title, subtitle, content, info1, info2, className }) => {
               </span>
             </div>
             {isOpen ? (
-              <IoIosArrowUp className='h-8 w-8 text-text-light dark:text-text-dark' />
+              <IoIosArrowUp className='h-8 w-8 text-text-light dark:text-text-dark' aria-label="up arrow" />
             ) : (
-              <IoIosArrowDown className='h-8 w-8 text-text-light dark:text-text-dark' />
+              <IoIosArrowDown className='h-8 w-8 text-text-light dark:text-text-dark' aria-label="down arrow"/>
             )}
           </div>
         </button>
