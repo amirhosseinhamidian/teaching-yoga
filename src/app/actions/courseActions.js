@@ -40,6 +40,11 @@ async function getCourseByShortAddress(shortAddress) {
                     user: true,
                   },
                 },
+                terms: {
+                    include: {
+                        sessions: true,
+                    }
+                }
             }
         });
         if (!course) {

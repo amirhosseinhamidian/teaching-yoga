@@ -11,30 +11,30 @@ const Accordion = ({ title, subtitle, content, info1, info2, className }) => {
   };
 
   return (
-    <div className={`w-full rounded-xl bg-surface-light p-4 dark:bg-surface-dark ${className}`}>
+    <div className={`w-full rounded-xl bg-background-light p-4 dark:bg-background-dark ${className}`}>
       <button
           className='flex w-full items-center justify-between gap-2 py-4 text-left focus:outline-none'
           onClick={toggleAccordion}
         >
           <div className='flex flex-col items-start gap-2'>
-            <span className='text-base font-semibold sm:text-lg'>{title}</span>
-            <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark'>
+            <span className='text-base font-semibold sm:text-lg font-faNa'>{title}</span>
+            <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark font-faNa'>
               {subtitle}
             </span>
           </div>
           <div className='flex min-w-28 items-center gap-3'>
             <div className='mt-2 flex flex-col gap-1'>
-              <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark'>
+              <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark font-faNa'>
                 {info1}
               </span>
-              <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark'>
+              <span className='text-start text-xs text-subtext-light md:text-base dark:text-subtext-dark font-faNa'>
                 {info2}
               </span>
             </div>
             {isOpen ? (
-              <IoIosArrowUp className='h-8 w-8 text-text-light dark:text-text-light' />
+              <IoIosArrowUp className='h-8 w-8 text-text-light dark:text-text-dark' />
             ) : (
-              <IoIosArrowDown className='h-8 w-8 text-text-light dark:text-text-light' />
+              <IoIosArrowDown className='h-8 w-8 text-text-light dark:text-text-dark' />
             )}
           </div>
         </button>

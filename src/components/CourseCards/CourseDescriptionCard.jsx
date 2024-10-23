@@ -16,7 +16,7 @@ const CourseDescriptionCard = ({ description, className }) => {
     >
       <h3 className='mb-4 font-semibold md:text-lg'>توضیحات دوره</h3>
       <div
-        className={`relative transition-all ${isExpanded ? 'max-h-full' : 'max-h-24'} overflow-hidden`}
+        className={`relative overflow-hidden transition-max-height duration-300 ease-in-out ${isExpanded ? 'max-h-[1000px]' : 'max-h-24'}`}
       >
         <p className='text-sm leading-6 text-subtext-light dark:text-subtext-dark'>
           {description}

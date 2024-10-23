@@ -87,7 +87,7 @@ model Course {
   instructorId     Int 
   instructor      Instructor   @relation(fields: [instructorId], references: [id])
   introVideoUrl    String?
-  terms            Term[]
+  terms            Term[]  @relation("CourseTerms")
 
   createAt DateTime     @default(now())
   updatedAt DateTime    @updatedAt
@@ -95,10 +95,12 @@ model Course {
 
 model Term {
   id            Int      @id @unique @default(autoincrement())
-  name          String  
+  name          String
+  subtitle      String?
+  duration      Int      @default(0)  
   courseId      Int 
-  course        Course   @relation(fields: [courseId], references: [id])
-  sessions      Session[]
+  course        Course   @relation("CourseTerms" ,fields: [courseId], references: [id])
+  sessions      Session[] @relation("TermSessions")
 
   createAt DateTime     @default(now())
   updatedAt DateTime    @updatedAt
@@ -107,9 +109,9 @@ model Term {
 model Session {
   id           Int      @id @unique @default(autoincrement())
   name         String 
-  duration     String
+  duration     Int
   termId       Int
-  term         Term     @relation(fields: [termId], references: [id])
+  term         Term     @relation("TermSessions" ,fields: [termId], references: [id])
   isFree       Boolean   @default(false)
   videoUrl     String? 
 

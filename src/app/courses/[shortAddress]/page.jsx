@@ -22,11 +22,13 @@ import { COMPLETED, IN_PROGRESS } from '@/constants/courseStatus';
 import Price from '@/components/Price/Price';
 import Button from '@/components/Ui/Button/Button';
 import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
+import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
+import CommentsMainCard from '@/components/Comment/CommentsMainCard';
 
 async function page({ params }) {
   const { shortAddress } = params;
   const course = await getCourseByShortAddress(shortAddress);
-  console.log(course)
+
   if (!course) {
     //TODO: redirect to 404
   }
@@ -132,6 +134,8 @@ async function page({ params }) {
         />
       </div>
       <CourseDescriptionCard description={course.description} className='mt-4'/>
+      <CourseLessonsCard className='mt-4' terms={course.terms}/>
+      <CommentsMainCard className='mt-4'/>
     </div>
   );
 }

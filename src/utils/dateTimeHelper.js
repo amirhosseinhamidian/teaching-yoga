@@ -55,11 +55,15 @@ export function getCurrentDateTime() {
     return `${year}-${month}-${day}`;
   }
   
-  // Format the time as hh:mm:ss
-  export function formatTimeHHMMSS() {
-    const now = new Date();
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    const seconds = String(now.getSeconds()).padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+  // Format the time as hh:mm:ss or hh:mm
+  export function formatTime(seconds, showSeconds = true) {
+    const h = Math.floor(seconds / 3600); 
+    const m = Math.floor((seconds % 3600) / 60); 
+    const s = seconds % 60; 
+    
+    const hours = h.toString().padStart(2, '0');
+    const minutes = m.toString().padStart(2, '0');
+    const secs = s.toString().padStart(2, '0');
+    
+    return showSeconds ? `${hours}:${minutes}:${secs}` : `${hours}:${minutes}`;
   }
