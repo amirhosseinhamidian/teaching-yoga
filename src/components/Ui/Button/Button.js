@@ -23,7 +23,7 @@ const Button = ({
     <button
       type={type}
       onClick={onClick}
-      className={`rounded-xl px-6 py-2  lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]' : ''} font-main font-medium  ${colorClasses} ${className}`}
+      className={`disabled:opacity-70 rounded-xl py-2 px-2 sm:px-6  lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]' : ''} font-main font-medium  ${colorClasses} ${className}`}
     >
       {children}
     </button>
