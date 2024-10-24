@@ -6,10 +6,10 @@ import { BsCameraVideo } from 'react-icons/bs';
 import { WiTime4 } from 'react-icons/wi';
 import { BiBarChartAlt2 } from 'react-icons/bi';
 import { BiSupport } from 'react-icons/bi';
-import { GrGroup } from "react-icons/gr";
-import { FaStar } from "react-icons/fa6";
-import { BsInfoCircle } from "react-icons/bs";
-import { FiMonitor } from "react-icons/fi";
+import { GrGroup } from 'react-icons/gr';
+import { FaStar } from 'react-icons/fa6';
+import { BsInfoCircle } from 'react-icons/bs';
+import { FiMonitor } from 'react-icons/fi';
 
 import {
   BEGINNER,
@@ -58,7 +58,7 @@ async function page({ params }) {
     return value;
   };
 
-  const getCourseStatus = status => {
+  const getCourseStatus = (status) => {
     let value = '';
     switch (status) {
       case COMPLETED:
@@ -77,22 +77,39 @@ async function page({ params }) {
   return (
     <div className='container'>
       <PageTitle>{course.title}</PageTitle>
-      <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 my-4'>
-        <div className='col-span-1 rounded-xl bg-surface-light dark:bg-surface-dark shadow p-4'>
-            <h4 className='text-subtext-light dark:text-subtext-dark font-semibold mr-4 xs:text-sm'>هزینه و ثبت نام</h4>
-            <div className='flex flex-wrap justify-between gap-6 lg:gap-1 mt-2 md:mt-6 mb-2 items-end w-full flex-col-reverse lg:flex-row'>
-            <Button shadow className='w-3/4 lg:w-2/4 self-center'>ثبت نام</Button>
-            <Price className='ml-4' basePrice={Number(course.basePrice)} price={Number(course.price)}/>
-            </div>
+      <div className='my-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+        <div className='col-span-1 rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
+          <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+            هزینه و ثبت نام
+          </h4>
+          <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-6 lg:flex-row lg:gap-1'>
+            <Button shadow className='w-3/4 self-center lg:w-2/4'>
+              ثبت نام
+            </Button>
+            <Price
+              className='ml-4'
+              basePrice={Number(course.basePrice)}
+              price={Number(course.price)}
+            />
+          </div>
         </div>
-        <div className='col-span-1 rounded-xl bg-surface-light dark:bg-surface-dark shadow p-4 flex flex-col'>
-        <h4 className='text-subtext-light dark:text-subtext-dark font-semibold mr-4 xs:text-sm'>مدرس دوره</h4>
-            <div className='flex gap-2 items-center mt-2 md:mt-6 mb-2 '>
-                <img src={course.instructor.user.avatar} alt="instructor avatar" className='rounded-full w-16 h-16'/>
-                <h5>{course.instructor.user.firstname} {course.instructor.user.lastname} | {course.instructor.describe}</h5>
-            </div>
-            {/* TODO: outline button */}
-            {/* <Button shadow className='w-3/4 lg:w-2/4 self-center mt-3'>ثبت نام</Button> */}
+        <div className='col-span-1 flex flex-col rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
+          <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+            مدرس دوره
+          </h4>
+          <div className='mb-2 mt-2 flex items-center gap-2 md:mt-6'>
+            <img
+              src={course.instructor.user.avatar}
+              alt='instructor avatar'
+              className='h-16 w-16 rounded-full'
+            />
+            <h5>
+              {course.instructor.user.firstname}{' '}
+              {course.instructor.user.lastname} | {course.instructor.describe}
+            </h5>
+          </div>
+          {/* TODO: outline button */}
+          {/* <Button shadow className='w-3/4 lg:w-2/4 self-center mt-3'>ثبت نام</Button> */}
         </div>
       </div>
       <div className='grid grid-cols-2 gap-2 xs:grid-cols-3 sm:grid-cols-4 sm:gap-4 xl:mx-16 2xl:grid-cols-8'>
@@ -122,20 +139,23 @@ async function page({ params }) {
           title='میزان رضایت'
           value={course.rating}
         />
-        <CourseDetailsCard
-          icon={FiMonitor}
-          title='نوع مشاهده'
-          value="آنلاین"
-        />
+        <CourseDetailsCard icon={FiMonitor} title='نوع مشاهده' value='آنلاین' />
         <CourseDetailsCard
           icon={BsInfoCircle}
           title='وضعیت دوره'
           value={getCourseStatus(course.status)}
         />
       </div>
-      <CourseDescriptionCard description={course.description} className='mt-4'/>
-      <CourseLessonsCard className='mt-4' terms={course.terms}/>
-      <CommentsMainCard className='mt-4'/>
+      <CourseDescriptionCard
+        description={course.description}
+        className='mt-4'
+      />
+      <CourseLessonsCard className='mt-4' terms={course.terms} />
+      <CommentsMainCard
+        className='mt-4'
+        isCourse={true}
+        referenceId={course.id}
+      />
     </div>
   );
 }
