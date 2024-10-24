@@ -16,14 +16,16 @@ const Button = ({
   type = 'button',
   className = '',
   shadow = false,
-  color = 'primary'
+  color = 'primary',
+  disable = false,
 }) => {
-  const colorClasses = colors[color] || colors.primary; 
+  const colorClasses = colors[color] || colors.primary;
   return (
     <button
+      disabled={disable}
       type={type}
       onClick={onClick}
-      className={`disabled:opacity-70 rounded-xl py-2 px-2 sm:px-6  lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]' : ''} font-main font-medium  ${colorClasses} ${className}`}
+      className={`rounded-xl px-2 py-2 disabled:opacity-70 sm:px-6 lg:cursor-pointer ${shadow ? 'shadow-[1px_5px_14px_rgba(255,175,41,0.4)]' : ''} font-main font-medium ${colorClasses} ${className}`}
     >
       {children}
     </button>
@@ -36,7 +38,8 @@ Button.propTypes = {
   type: PropTypes.string,
   className: PropTypes.string,
   shadow: PropTypes.bool,
-  color: PropTypes.string, 
+  color: PropTypes.string,
+  disable: PropTypes.bool,
 };
 
 export default Button;
