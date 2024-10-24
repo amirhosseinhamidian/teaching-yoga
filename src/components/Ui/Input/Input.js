@@ -29,7 +29,9 @@ const Input = ({
         className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 font-medium text-subtext-light transition duration-200 ease-in focus:outline-none focus:ring-1 dark:bg-background-dark ${className}`}
       />
       {errorMessage && (
-        <p className={`mt-1 text-xs text-red ${errorClassName}`}>*{errorMessage}</p>
+        <p className={`mt-1 text-xs text-red ${errorClassName}`}>
+          *{errorMessage}
+        </p>
       )}
     </div>
   );

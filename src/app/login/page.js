@@ -1,4 +1,4 @@
-"use client"
+'use client';
 import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
@@ -12,9 +12,6 @@ import { ImSpinner2 } from 'react-icons/im';
 import { OTP } from '../actions/Sms';
 
 const page = () => {
-
-
-
   const { userPhone, setUserPhone } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
