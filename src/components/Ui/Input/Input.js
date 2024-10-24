@@ -12,7 +12,15 @@ const Input = ({
   errorClassName = 'mr-3',
   label = '',
   focus = false,
+  maxLength,
 }) => {
+  const handleChange = (event) => {
+    const inputValue = event.target.value;
+    if (!maxLength || inputValue.length <= maxLength) {
+      onChange(inputValue);
+    }
+  };
+
   return (
     <div className={`flex flex-col ${fullWidth ? 'w-full' : ''}`}>
       {label && (
@@ -25,11 +33,13 @@ const Input = ({
         type={type}
         placeholder={placeholder}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 font-medium text-subtext-light transition duration-200 ease-in focus:outline-none focus:ring-1 dark:bg-background-dark ${className}`}
+        onChange={handleChange}
+        className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus:outline-none focus:ring-1 dark:bg-background-dark dark:text-subtext-dark ${className}`}
       />
       {errorMessage && (
-        <p className={`mt-1 text-xs text-red ${errorClassName}`}>*{errorMessage}</p>
+        <p className={`mt-1 text-xs text-red ${errorClassName}`}>
+          *{errorMessage}
+        </p>
       )}
     </div>
   );
@@ -46,6 +56,7 @@ Input.propTypes = {
   label: PropTypes.string,
   type: PropTypes.string,
   focus: PropTypes.bool,
+  maxLength: PropTypes.number,
 };
 
 export default Input;
