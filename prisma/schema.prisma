@@ -51,3 +51,10 @@ model User {
 
   accounts Account[]
 }
+
+model VerificationCode {
+  id            Int      @id @default(autoincrement())
+  phone         String   @unique
+  code          Int
+  expiresAt     DateTime
+}

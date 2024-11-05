@@ -9,36 +9,59 @@ import { CheckPhoneAction } from '../actions/CheckPhoneAction';
 import { useRouter } from 'next/navigation';
 import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { ImSpinner2 } from 'react-icons/im';
-import { OTP } from '../actions/Sms';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const page = () => {
-  const { userPhone, setUserPhone } = useAuth();
+  const { userPhone, setUserPhone, setToken, user } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
+
+  if (user) {
+    router.back();
+  }
 
   const loginHandler = async () => {
     setIsSubmitting(true);
+
     const validation = validatePhoneNumber(userPhone);
     if (!validation.isValid) {
-      console.log(validation.errorMessage);
-      //TODO:Add toast error
+      setIsSubmitting(false);
+      toast.showErrorToast(validation.errorMessage);
       return;
     }
+
     const checkResponse = await CheckPhoneAction(userPhone);
     if (checkResponse) {
       try {
-        const result = await OTP(userPhone);
-        if (result.success) {
-          console.log('Generated OTP token:', result.token);
+        const response = await fetch('/api/send-otp', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ phone: userPhone }),
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          setToken(data.token);
           router.push('/confirm-code');
+        } else {
+          if (data.error) {
+            toast.showErrorToast(data.error); // Show the error message from the API
+          } else {
+            toast.showErrorToast('ارسال کد ناموفق بود، لطفاً دوباره تلاش کنید');
+          }
         }
       } catch (error) {
-        console.error('Error during OTP request:', error);
-        // TODO: نمایش Toast برای خطا
+        toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
       }
     } else {
       router.push('/signup');
     }
+
     setIsSubmitting(false);
   };
 
@@ -60,6 +83,7 @@ const page = () => {
           focus
           type='number'
           className='mt-12 text-lg md:min-w-64'
+          maxLength={11}
         />
 
         <Button
