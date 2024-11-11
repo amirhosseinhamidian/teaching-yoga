@@ -19,11 +19,13 @@ import { signOut } from 'next-auth/react';
 import { LuLogOut } from 'react-icons/lu';
 import Modal from '../modules/Modal/Modal';
 import { useRouter, usePathname } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header({ isLogin }) {
   const { isDark, toggleTheme } = useTheme();
   const [isShowProfileModal, setShowProfileModal] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const { setUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -33,6 +35,7 @@ export default function Header({ isLogin }) {
 
   const signOutHandler = async () => {
     await signOut({ callbackUrl: pathname });
+    setUser(null);
     setShowSignOutModal(false);
   };
 

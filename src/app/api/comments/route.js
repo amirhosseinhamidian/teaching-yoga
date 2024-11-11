@@ -1,14 +1,20 @@
 import prismadb from '../../../../libs/prismadb';
 import { getCourseComments } from '../../actions/commentActions';
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const courseId = searchParams.get('courseId');
   const page = parseInt(searchParams.get('page')) || 1;
 
+  // Get the session and extract the userId
+  const session = await getServerSession(authOptions);
+  const userId = session?.user?.userId || null;
+
   try {
-    const commentsData = await getCourseComments(courseId, page);
+    const commentsData = await getCourseComments(courseId, userId, page);
     return NextResponse.json(commentsData);
   } catch (error) {
     return NextResponse.json(
@@ -28,6 +34,9 @@ export async function POST(request) {
         courseId,
         content,
         userId,
+      },
+      include: {
+        user: true,
       },
     });
     return NextResponse.json(newComment);

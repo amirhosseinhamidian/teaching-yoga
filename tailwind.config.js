@@ -22,6 +22,10 @@ module.exports = {
           light: '#F6F6F6',
           dark: '#2D2E32',
         },
+        foreground: {
+          light: '#E7E7E7',
+          dark: '#35363A',
+        },
         surface: {
           light: '#FFFFFF',
           dark: '#25262A',

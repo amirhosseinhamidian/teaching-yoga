@@ -1,15 +1,29 @@
 /* eslint-disable react/prop-types */
 
-import React from 'react'
+import React from 'react';
 
-const CourseDetailsCard = ({icon:Icon, title, value}) => {
+const CourseDetailsCard = ({
+  icon: Icon,
+  title,
+  value,
+  horizontal,
+  className,
+}) => {
   return (
-    <div className='rounded-xl bg-surface-light dark:bg-surface-dark shadow flex flex-col items-center gap-2 p-3 sm:p-4'>
-        <Icon className="text-lg xs:text-2xl sm:text-3xl md:text-4xl lg:text-5xl sm:mb-2 text-accent"/>
-        <span className='text-subtext-light dark:text-subtext-dark font-medium text-2xs xs:text-xs sm:text-sm md:text-base'>{title}</span>
-        <span className='font-bold font-faNa text-xs xs:text-base sm:text-lg md:text-xl'>{value}</span>
+    <div
+      className={`flex ${horizontal ? 'flex-col gap-1 text-center sm:flex-row sm:gap-3 sm:text-start' : 'flex-col text-center'} items-center rounded-xl bg-surface-light px-2 py-3 shadow sm:px-4 sm:py-2 dark:bg-surface-dark ${className}`}
+    >
+      <Icon className='text-lg text-accent xs:text-2xl sm:mb-2 sm:text-2xl md:text-3xl lg:text-4xl' />
+      <div className={'flex flex-col'}>
+        <span className='text-xs font-normal text-subtext-light xs:text-xs md:text-sm dark:text-subtext-dark'>
+          {title}
+        </span>
+        <span className='font-faNa text-2xs font-medium xs:text-xs sm:text-sm md:text-base'>
+          {value}
+        </span>
+      </div>
     </div>
-  )
-}
+  );
+};
 
-export default CourseDetailsCard
+export default CourseDetailsCard;

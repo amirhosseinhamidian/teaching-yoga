@@ -7,7 +7,13 @@ import PropTypes from 'prop-types';
 export default function CardActions({ mainBtnClick, subBtnClick, className }) {
   return (
     <div className={`flex items-center gap-4 ${className}`}>
-      <Button onClick={mainBtnClick} shadow className='w-full'>مشاهده جزییات</Button>
+      <Button
+        onClick={mainBtnClick}
+        shadow
+        className='w-full text-xs sm:text-sm md:text-base'
+      >
+        مشاهده جزییات
+      </Button>
       <IconButton icon={BiCartAdd} onClick={subBtnClick} size={28} />
     </div>
   );
@@ -16,5 +22,5 @@ export default function CardActions({ mainBtnClick, subBtnClick, className }) {
 CardActions.propTypes = {
   mainBtnClick: PropTypes.func,
   subBtnClick: PropTypes.func,
-  className: PropTypes.string
+  className: PropTypes.string,
 };

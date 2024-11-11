@@ -1,4 +1,3 @@
-import { getCourseByShortAddress } from '@/app/actions/courseActions';
 import CourseDetailsCard from '@/components/CourseCards/CourseDetailsCard';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import React from 'react';
@@ -24,6 +23,10 @@ import Button from '@/components/Ui/Button/Button';
 import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
 import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
+import { getCourseByShortAddress } from '@/app/actions/courseActions';
+import CourseFAQ from '@/components/CourseCards/CourseFAQ';
+import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
+import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
 
 async function page({ params }) {
   const { shortAddress } = params;
@@ -76,86 +79,144 @@ async function page({ params }) {
 
   return (
     <div className='container'>
-      <PageTitle>{course.title}</PageTitle>
-      <div className='my-4 grid grid-cols-1 gap-4 sm:grid-cols-2'>
-        <div className='col-span-1 rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
-          <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
-            هزینه و ثبت نام
-          </h4>
-          <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-6 lg:flex-row lg:gap-1'>
-            <Button shadow className='w-3/4 self-center lg:w-2/4'>
-              ثبت نام
-            </Button>
-            <Price
-              className='ml-4'
-              basePrice={Number(course.basePrice)}
-              price={Number(course.price)}
+      <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
+        <div className='flex flex-col items-center justify-between lg:col-span-1'>
+          <div>
+            <PageTitle>{course.title}</PageTitle>
+            <p className='mb-6 font-thin'>{course.shortDescription}</p>
+          </div>
+          <div className='flex w-full flex-col gap-4 sm:flex-row'>
+            <div className='mx-auto w-full basis-full rounded-xl bg-surface-light p-4 shadow sm:basis-1/2 lg:basis-full dark:bg-surface-dark'>
+              <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+                هزینه و ثبت نام
+              </h4>
+              <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
+                <Button shadow className='w-3/4 self-center sm:py-3 lg:w-2/4'>
+                  ثبت نام
+                </Button>
+                <Price
+                  className='ml-4'
+                  basePrice={Number(course.basePrice)}
+                  price={Number(course.price)}
+                />
+              </div>
+            </div>
+            <div className='flex flex-col justify-between rounded-xl bg-surface-light p-4 shadow sm:basis-1/2 lg:hidden dark:bg-surface-dark'>
+              <div>
+                <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+                  مدرس دوره
+                </h4>
+                <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
+                  <img
+                    src={course.instructor.user.avatar}
+                    alt='instructor avatar'
+                    className='h-14 w-14 rounded-full'
+                  />
+                  <h5>
+                    {course.instructor.user.firstname}{' '}
+                    {course.instructor.user.lastname} |{' '}
+                    {course.instructor.describe}
+                  </h5>
+                </div>
+              </div>
+              <OutlineButton className='mx-auto mb-3 w-fit text-xs font-normal sm:text-sm'>
+                مشاهده اطلاعات
+              </OutlineButton>
+            </div>
+          </div>
+        </div>
+        <div className='m-auto mt-10 items-center lg:col-span-1 lg:mt-0 lg:py-8 lg:pr-10'>
+          <VideoPlayer src={course.introVideoUrl} poster={course.cover} />
+        </div>
+      </div>
+
+      <div className='grid grid-cols-3 gap-2 sm:gap-4'>
+        <div className='col-span-3 lg:col-span-2'>
+          <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:gap-4'>
+            <CourseDetailsCard
+              icon={BsCameraVideo}
+              title='تعداد جلسات'
+              value={course.sessionCount}
+              horizontal={true}
+            />
+            <CourseDetailsCard
+              icon={WiTime4}
+              title='زمان دوره'
+              value={course.duration}
+              horizontal={true}
+            />
+            <CourseDetailsCard
+              icon={BiBarChartAlt2}
+              title='سطح دوره'
+              value={getLevel(course.level)}
+              horizontal={true}
+            />
+            <CourseDetailsCard
+              icon={BiSupport}
+              title='پشتیبانی'
+              value='آنلاین'
+              horizontal={true}
+            />
+            <CourseDetailsCard
+              icon={GrGroup}
+              title='شرکت کنندگان'
+              value={course.participants}
+              horizontal={true}
+            />
+            <CourseDetailsCard
+              icon={FiMonitor}
+              title='نوع مشاهده'
+              value='آنلاین'
+              horizontal={true}
+            />
+          </div>
+          <CourseDescriptionCard
+            description={course.description}
+            className='mt-4'
+          />
+          <CourseLessonsCard className='mt-4' terms={course.terms} />
+          <CommentsMainCard
+            className='mt-4'
+            isCourse={true}
+            referenceId={course.id}
+          />
+          <CourseFAQ className='my-4' />
+        </div>
+        <div className='hidden lg:col-span-1 lg:block'>
+          <div className='flex flex-col rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
+            <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+              مدرس دوره
+            </h4>
+            <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
+              <img
+                src={course.instructor.user.avatar}
+                alt='instructor avatar'
+                className='h-14 w-14 rounded-full'
+              />
+              <h5>
+                {course.instructor.user.firstname}{' '}
+                {course.instructor.user.lastname} | {course.instructor.describe}
+              </h5>
+            </div>
+            <OutlineButton className='mx-auto mt-3 w-fit text-xs font-normal sm:text-sm'>
+              مشاهده اطلاعات
+            </OutlineButton>
+          </div>
+          <div className='mt-3 grid grid-cols-2 gap-3'>
+            <CourseDetailsCard
+              icon={FaStar}
+              title='میزان رضایت'
+              value={course.rating}
+            />
+
+            <CourseDetailsCard
+              icon={BsInfoCircle}
+              title='وضعیت دوره'
+              value={getCourseStatus(course.status)}
             />
           </div>
         </div>
-        <div className='col-span-1 flex flex-col rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
-          <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
-            مدرس دوره
-          </h4>
-          <div className='mb-2 mt-2 flex items-center gap-2 md:mt-6'>
-            <img
-              src={course.instructor.user.avatar}
-              alt='instructor avatar'
-              className='h-16 w-16 rounded-full'
-            />
-            <h5>
-              {course.instructor.user.firstname}{' '}
-              {course.instructor.user.lastname} | {course.instructor.describe}
-            </h5>
-          </div>
-          {/* TODO: outline button */}
-          {/* <Button shadow className='w-3/4 lg:w-2/4 self-center mt-3'>ثبت نام</Button> */}
-        </div>
       </div>
-      <div className='grid grid-cols-2 gap-2 xs:grid-cols-3 sm:grid-cols-4 sm:gap-4 xl:mx-16 2xl:grid-cols-8'>
-        <CourseDetailsCard
-          icon={BsCameraVideo}
-          title='تعداد جلسات'
-          value={course.sessionCount}
-        />
-        <CourseDetailsCard
-          icon={WiTime4}
-          title='زمان دوره'
-          value={course.duration}
-        />
-        <CourseDetailsCard
-          icon={BiBarChartAlt2}
-          title='سطح دوره'
-          value={getLevel(course.level)}
-        />
-        <CourseDetailsCard icon={BiSupport} title='پشتیبانی' value='آنلاین' />
-        <CourseDetailsCard
-          icon={GrGroup}
-          title='شرکت کنندگان'
-          value={course.participants}
-        />
-        <CourseDetailsCard
-          icon={FaStar}
-          title='میزان رضایت'
-          value={course.rating}
-        />
-        <CourseDetailsCard icon={FiMonitor} title='نوع مشاهده' value='آنلاین' />
-        <CourseDetailsCard
-          icon={BsInfoCircle}
-          title='وضعیت دوره'
-          value={getCourseStatus(course.status)}
-        />
-      </div>
-      <CourseDescriptionCard
-        description={course.description}
-        className='mt-4'
-      />
-      <CourseLessonsCard className='mt-4' terms={course.terms} />
-      <CommentsMainCard
-        className='mt-4'
-        isCourse={true}
-        referenceId={course.id}
-      />
     </div>
   );
 }

@@ -12,7 +12,7 @@ import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const page = () => {
+const Login = () => {
   const { userPhone, setUserPhone, setToken, user } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,4 +109,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Login;

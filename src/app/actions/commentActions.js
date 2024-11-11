@@ -2,35 +2,37 @@
 
 import prismadb from '../../../libs/prismadb';
 
-async function getCourseComments(courseId, page = 1, limit = 6) {
+async function getCourseComments(courseId, userId = null, page = 1, limit = 6) {
   // Calculate the number of items to skip based on the page number
   const skip = (page - 1) * limit;
+
   // Fetch main comments (where parentId is null)
   const comments = await prismadb.comment.findMany({
     where: {
-      courseId: Number(courseId), // Fetch comments related to the specific course
-      parentId: null, // Only main comments (not replies)
+      courseId: Number(courseId),
+      parentId: null,
+      OR: [{ status: 'APPROVED' }, { userId: userId }],
     },
-    skip: skip, // Skip comments based on the page number
-    take: limit, // Limit the number of comments returned
+    skip: skip,
+    take: limit,
     orderBy: {
-      createAt: 'desc', // Sort comments by creation date in descending order
+      createAt: 'desc',
     },
     include: {
       replies: {
         include: {
-          user: true, // Fetch user information for replies
+          user: true,
         },
       },
-      user: true, // Fetch user information for the main comment
+      user: true,
     },
   });
 
-  // Count the total number of main comments for the specific course
   const totalComments = await prismadb.comment.count({
     where: {
       courseId: Number(courseId),
-      parentId: null, // Only count main comments
+      parentId: null,
+      OR: [{ status: 'APPROVED' }, { userId: userId }],
     },
   });
 

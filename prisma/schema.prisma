@@ -72,6 +72,7 @@ model Course {
   id               Int          @id @unique @default(autoincrement())
   title            String 
   subtitle         String
+  shortDescription String?
   description      String
   cover            String
   price            String
@@ -135,13 +136,20 @@ model Instructor {
   courses     Course[] 
 }
 
+enum CommentStatus {
+  PENDING 
+  APPROVED 
+  REJECTED 
+}
+
 model Comment {
   id         Int      @id @default(autoincrement())
   content    String
   userId     String
   courseId   Int?     
   articleId  Int?    
-  parentId   Int?    
+  parentId   Int?
+  status     CommentStatus @default(PENDING)     
   replies    Comment[] @relation("CommentReplies")
   parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   
@@ -168,4 +176,12 @@ model VerificationCode {
   phone         String   @unique
   code          Int
   expiresAt     DateTime
+}
+
+model FAQ {
+  id        Int      @id @default(autoincrement()) 
+  question  String  
+  answer    String  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt 
 }

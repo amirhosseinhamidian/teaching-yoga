@@ -7,6 +7,9 @@ import React from 'react';
 import { AuthProvider } from '@/contexts/AuthContext';
 import prismadb from '@/libs/prismadb';
 import { Toaster } from 'react-hot-toast';
+import { headers } from 'next/headers';
+import Header from '@/components/Header/Header';
+import Footer from '@/components/Footer/Footer';
 
 export const metadata = {
   title: 'Create Next App',
@@ -23,6 +26,17 @@ export default async function RootLayout({ children }) {
     });
   }
 
+  const requestHeaders = headers();
+  const fullUrl = requestHeaders.get('referer');
+  let currentPath = '/';
+  if (fullUrl) {
+    const url = new URL(fullUrl);
+    currentPath = url.pathname;
+  }
+  const hideHeaderFooter = ['/login', '/signup', '/confirm-code'].includes(
+    currentPath,
+  );
+
   return (
     <ThemeProvider>
       <AuthProvider initialUser={user}>
@@ -30,7 +44,9 @@ export default async function RootLayout({ children }) {
           <body
             className={`flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark`}
           >
+            {!hideHeaderFooter && <Header isLogin={session} />}
             {children}
+            {!hideHeaderFooter && <Footer />}
             <Toaster />
           </body>
         </html>
