@@ -1,3 +1,4 @@
+'use client';
 /* eslint-disable react/prop-types */
 import {
   getFromLocalStorage,
@@ -35,5 +36,5 @@ export const ThemeProvider = ({ children }) => {
 };
 
 export const useTheme = () => {
-    return useContext(ThemeContext);
-  };
+  return useContext(ThemeContext);
+};

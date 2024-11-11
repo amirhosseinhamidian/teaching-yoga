@@ -10,7 +10,7 @@ async function CheckPhoneAction(phone) {
       },
     });
 
-    if(!user) return false
+    if (!user) return false;
     return true;
   } catch (error) {
     console.error('Error finding user:', error);

@@ -1,15 +1,18 @@
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
 import React from 'react';
-import { authOptions } from './api/auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../api/auth/[...nextauth]/route';
 
-export default async function Home() {
+const page = async () => {
   const session = await getServerSession(authOptions);
   return (
-    <div>
+    <>
       <Header isLogin={session} />
+      <div>About page</div>
       <Footer />
-    </div>
+    </>
   );
-}
+};
+
+export default page;
