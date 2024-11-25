@@ -10,6 +10,8 @@ const colors = {
   accent:
     'text-accent border-accent hover:bg-accent hover:text-background-light',
   green: 'text-green border-green hover:bg-green hover:text-background-light',
+  subtext:
+    'text-subtext-light border-subtext-light hover:bg-primary hover:text-text-light hover:border-primary dark:text-subtext-dark dark:border-subtext-dark',
 };
 
 const OutlineButton = ({

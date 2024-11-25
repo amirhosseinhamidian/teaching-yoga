@@ -25,7 +25,7 @@ export default function Header({ isLogin }) {
   const { isDark, toggleTheme } = useTheme();
   const [isShowProfileModal, setShowProfileModal] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -77,13 +77,19 @@ export default function Header({ isLogin }) {
         </div>
         <div className='flex items-center gap-2 md:hidden'>
           <IconButton icon={BsCart3} size={20} />
-          <NavbarMobileMenu isDark={isDark} handelDarkMode={toggleTheme} />
+          <NavbarMobileMenu
+            isDark={isDark}
+            handelDarkMode={toggleTheme}
+            isLogin={isLogin}
+            user={user}
+          />
         </div>
       </div>
       {isShowProfileModal && (
         <ProfileModal
           onClose={handleCloseModal}
           setShowSignOutModal={setShowSignOutModal}
+          user={user}
         />
       )}
       {showSignOutModal && (

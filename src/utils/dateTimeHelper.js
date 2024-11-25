@@ -57,8 +57,7 @@ export function formatDateYYYYMMDD() {
   return `${year}-${month}-${day}`;
 }
 
-// Format the time as hh:mm:ss or hh:mm
-export function formatTime(seconds, showSeconds = true) {
+export function formatTime(seconds, format = 'hh:mm:ss') {
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = seconds % 60;
@@ -67,7 +66,15 @@ export function formatTime(seconds, showSeconds = true) {
   const minutes = m.toString().padStart(2, '0');
   const secs = s.toString().padStart(2, '0');
 
-  return showSeconds ? `${hours}:${minutes}:${secs}` : `${hours}:${minutes}`;
+  switch (format) {
+    case 'mm:ss':
+      return `${minutes}:${secs}`;
+    case 'hh:mm':
+      return `${hours}:${minutes}`;
+    case 'hh:mm:ss':
+    default:
+      return `${hours}:${minutes}:${secs}`;
+  }
 }
 
 export function getShamsiDate(dateString) {

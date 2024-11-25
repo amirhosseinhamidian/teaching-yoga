@@ -24,7 +24,7 @@ const Modal = ({
         <p className='py-4 text-xs font-light text-subtext-light sm:text-base dark:text-subtext-dark'>
           {desc}
         </p>
-        <div className='flex flex-wrap-reverse items-center justify-center gap-2 xs:flex-nowrap xs:justify-end'>
+        <div className='mt-8 flex flex-wrap-reverse items-center justify-center gap-2 xs:flex-nowrap xs:justify-end'>
           <OutlineButton
             onClick={secondaryButtonClick}
             className='text-xs sm:text-base'

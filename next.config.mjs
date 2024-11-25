@@ -3,6 +3,19 @@ const nextConfig = {
   images: {
     domains: ['samane-yoga.storage.c2.liara.space'],
   },
+  webpack(config) {
+    // اضافه کردن پشتیبانی از فایل‌های mjs
+    config.resolve.extensions.push('.mjs');
+
+    // پیکربندی برای بارگذاری صحیح Hls.js
+    config.module.rules.push({
+      test: /\.mjs$/,
+      include: /node_modules/,
+      type: 'javascript/auto',
+    });
+
+    return config;
+  },
 };
 
 export default nextConfig;

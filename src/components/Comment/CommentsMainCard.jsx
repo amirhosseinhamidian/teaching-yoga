@@ -7,6 +7,7 @@ import OutlineButton from '../Ui/OutlineButton/OutlineButton';
 import { FaSpinner, FaAngleDown } from 'react-icons/fa6';
 import { useAuth } from '@/contexts/AuthContext';
 import CreateCommentCard from './CreateCommentCard';
+import EmptyComment from './EmptyComment';
 
 const CommentsMainCard = ({ className, referenceId, isCourse }) => {
   const [comments, setComments] = useState([]);
@@ -14,7 +15,7 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [finishComments, setFinishComments] = useState(false);
+  const [finishComments, setFinishComments] = useState(true);
   const { user } = useAuth();
   const [showCreateCard, setShowCreateCard] = useState(false);
 
@@ -48,10 +49,13 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
         setLoading(false);
         if (page >= data.totalPages) {
           setFinishComments(true);
+        } else {
+          setFinishComments(false);
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
           setError(error.message);
+          console.error('Error comment fetching =>', error.message);
         }
       }
     };
@@ -118,6 +122,9 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
             </OutlineButton>
           )}
         </>
+      )}
+      {!loading && comments.length === 0 && (
+        <EmptyComment isCourse={isCourse} />
       )}
     </div>
   );

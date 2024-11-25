@@ -24,6 +24,7 @@ export default async function RootLayout({ children }) {
     user = await prismadb.user.findUnique({
       where: { id: session.user.userId },
     });
+    console.log('layout user => ', user);
   }
 
   const requestHeaders = headers();

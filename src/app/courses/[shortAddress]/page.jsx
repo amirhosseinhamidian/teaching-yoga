@@ -23,14 +23,41 @@ import Button from '@/components/Ui/Button/Button';
 import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
 import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
-import { getCourseByShortAddress } from '@/app/actions/courseActions';
 import CourseFAQ from '@/components/CourseCards/CourseFAQ';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
+import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
+import { headers } from 'next/headers';
+
+const fetchCourseData = async (shortAddress) => {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/api/courses/${shortAddress}`,
+      {
+        method: 'GET',
+        headers: headers(),
+        next: {
+          revalidate: 21600, // 6 hours
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch course data');
+    }
+
+    const course = await response.json();
+    const videoLink = course.introLink;
+
+    return { course, videoLink };
+  } catch (error) {
+    console.error('Error fetching course data:', error);
+  }
+};
 
 async function page({ params }) {
   const { shortAddress } = params;
-  const course = await getCourseByShortAddress(shortAddress);
+
+  const userId = '';
+  const { course, videoLink } = await fetchCourseData(shortAddress, userId);
 
   if (!course) {
     //TODO: redirect to 404
@@ -87,7 +114,7 @@ async function page({ params }) {
           </div>
           <div className='flex w-full flex-col gap-4 sm:flex-row'>
             <div className='mx-auto w-full basis-full rounded-xl bg-surface-light p-4 shadow sm:basis-1/2 lg:basis-full dark:bg-surface-dark'>
-              <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
+              <h4 className='mr-4 text-xs font-semibold text-subtext-light sm:text-sm dark:text-subtext-dark'>
                 هزینه و ثبت نام
               </h4>
               <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
@@ -101,32 +128,17 @@ async function page({ params }) {
                 />
               </div>
             </div>
-            <div className='flex flex-col justify-between rounded-xl bg-surface-light p-4 shadow sm:basis-1/2 lg:hidden dark:bg-surface-dark'>
-              <div>
-                <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
-                  مدرس دوره
-                </h4>
-                <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
-                  <img
-                    src={course.instructor.user.avatar}
-                    alt='instructor avatar'
-                    className='h-14 w-14 rounded-full'
-                  />
-                  <h5>
-                    {course.instructor.user.firstname}{' '}
-                    {course.instructor.user.lastname} |{' '}
-                    {course.instructor.describe}
-                  </h5>
-                </div>
-              </div>
-              <OutlineButton className='mx-auto mb-3 w-fit text-xs font-normal sm:text-sm'>
-                مشاهده اطلاعات
-              </OutlineButton>
+            {/* for smaller screen */}
+            <div className='self-stretch sm:basis-1/2 lg:hidden'>
+              <InstructorCard
+                instructor={course.instructor}
+                className='h-full justify-between'
+              />
             </div>
           </div>
         </div>
         <div className='m-auto mt-10 items-center lg:col-span-1 lg:mt-0 lg:py-8 lg:pr-10'>
-          <VideoPlayer src={course.introVideoUrl} poster={course.cover} />
+          <VideoPlayer videoUrl={videoLink} posterUrl={course.cover} />
         </div>
       </div>
 
@@ -174,7 +186,10 @@ async function page({ params }) {
             description={course.description}
             className='mt-4'
           />
-          <CourseLessonsCard className='mt-4' terms={course.terms} />
+          <CourseLessonsCard
+            className='mt-4'
+            shortAddress={course.shortAddress}
+          />
           <CommentsMainCard
             className='mt-4'
             isCourse={true}
@@ -182,26 +197,9 @@ async function page({ params }) {
           />
           <CourseFAQ className='my-4' />
         </div>
+        {/* for larger screen */}
         <div className='hidden lg:col-span-1 lg:block'>
-          <div className='flex flex-col rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
-            <h4 className='mr-4 font-semibold text-subtext-light xs:text-sm dark:text-subtext-dark'>
-              مدرس دوره
-            </h4>
-            <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
-              <img
-                src={course.instructor.user.avatar}
-                alt='instructor avatar'
-                className='h-14 w-14 rounded-full'
-              />
-              <h5>
-                {course.instructor.user.firstname}{' '}
-                {course.instructor.user.lastname} | {course.instructor.describe}
-              </h5>
-            </div>
-            <OutlineButton className='mx-auto mt-3 w-fit text-xs font-normal sm:text-sm'>
-              مشاهده اطلاعات
-            </OutlineButton>
-          </div>
+          <InstructorCard instructor={course.instructor} />
           <div className='mt-3 grid grid-cols-2 gap-3'>
             <CourseDetailsCard
               icon={FaStar}

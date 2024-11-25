@@ -26,7 +26,7 @@ const Accordion = ({ title, subtitle, content, info1, info2, className }) => {
             {subtitle}
           </span>
           {(info1 || info2) && (
-            <div className='mt-2 flex gap-2'>
+            <div className='mt-2 flex flex-wrap gap-2'>
               {info1 && (
                 <span className='rounded-full border border-gray-400 px-2 py-1 text-start font-faNa text-2xs text-subtext-light md:text-xs dark:text-subtext-dark'>
                   {info1}

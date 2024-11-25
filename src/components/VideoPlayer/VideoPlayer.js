@@ -1,48 +1,145 @@
 'use client';
-import React, { useEffect, useRef } from 'react';
-import videojs from 'video.js';
-import 'video.js/dist/video-js.css';
+import React, { useEffect, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
+import Plyr from 'plyr';
+import Hls from 'hls.js';
+import 'plyr/dist/plyr.css';
 
-const VideoPlayer = ({ src, poster }) => {
-  const videoRef = useRef(null);
+const VideoPlayer = ({ videoUrl, posterUrl, sessionId, userId }) => {
   const playerRef = useRef(null);
+  let hls;
 
-  const options = {
-    autoplay: false,
-    controls: true,
-    preload: 'auto',
-    sources: [
-      {
-        src: src,
-        type: 'video/mp4',
-      },
-    ],
+  const [isVideoCompleted, setIsVideoCompleted] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+
+  const markVideoAsCompleted = async () => {
+    try {
+      await fetch(
+        `http://localhost:3000/api/session-progress/${sessionId}/complete`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            userId: userId,
+          },
+          body: JSON.stringify({ completed: true }),
+        },
+      );
+    } catch (error) {
+      console.error('Error marking video as completed:', error);
+    }
+  };
+
+  const fetchVideoCompletionStatus = async () => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/session-progress/${sessionId}/complete`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            userId: userId,
+          },
+        },
+      );
+
+      const data = await response.json();
+      if (data.isCompleted !== undefined) {
+        setIsVideoCompleted(data.isCompleted); // وضعیت تکمیل را در state ذخیره می‌کنیم
+      }
+    } catch (error) {
+      console.error('Error fetching video completion status:', error);
+    }
   };
 
   useEffect(() => {
-    console.log('Video source:', src);
-    console.log('Poster image:', poster);
-    if (videoRef.current && !playerRef.current) {
-      const player = videojs(videoRef.current, options, () => {});
-      playerRef.current = player;
+    fetchVideoCompletionStatus();
+    const video = playerRef.current;
+
+    // تنظیم پوستر برای ویدیو
+    video.poster = posterUrl;
+
+    if (Hls.isSupported()) {
+      hls = new Hls({
+        autoStartLoad: true,
+        startLevel: -1,
+        capLevelToPlayerSize: true,
+      });
+      // بارگذاری فایل m3u8 با استفاده از loadSource
+      hls.loadSource(videoUrl); // استفاده از `loadSource` برای بارگذاری master.m3u8
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        new Plyr(video, {
+          controls: [
+            'play-large', // دکمه پخش بزرگ
+            'play',
+            'progress',
+            'current-time',
+            'mute',
+            'volume',
+            'fullscreen',
+            'settings',
+          ],
+        });
+      });
+
+      hls.on(Hls.Events.ERROR, (event, data) => {
+        console.error('HLS Error:', data);
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = videoUrl; // در صورتی که HLS پشتیبانی نمی‌شود
+    }
+
+    if (userId) {
+      video.ontimeupdate = () => {
+        const currentTime = video.currentTime;
+        // بررسی 80% ویدیو مشاهده شده
+        if (
+          !isVideoCompleted &&
+          videoDuration > 0 &&
+          currentTime >= videoDuration * 0.8
+        ) {
+          setIsVideoCompleted(true);
+        }
+      };
+
+      video.onloadedmetadata = () => {
+        setVideoDuration(video.duration); // ذخیره مدت زمان ویدیو
+      };
     }
 
     return () => {
-      if (playerRef.current) {
-        playerRef.current.dispose();
+      // در هنگام رندر مجدد، پلیر را تمیز کنیم
+      if (hls) {
+        hls.destroy();
       }
     };
-  }, [src]);
+  }, [videoUrl, posterUrl, videoDuration]);
+
+  useEffect(() => {
+    if (isVideoCompleted) {
+      console.log('set complete watch video when user 80% watched...');
+      markVideoAsCompleted();
+    }
+  }, [isVideoCompleted]);
 
   return (
-    <div className='h-auto w-full rounded-xl'>
-      <div data-vjs-player>
-        <video className='rounded-xl' controls poster={poster} preload='auto'>
-          <source src={src} type='video/mp4' />
-        </video>
-      </div>
+    <div className='plyr-container overflow-hidden rounded-xl'>
+      <video
+        ref={playerRef}
+        controls
+        crossOrigin='anonymous'
+        className='w-full'
+      />
     </div>
   );
+};
+
+VideoPlayer.propTypes = {
+  videoUrl: PropTypes.string.isRequired,
+  posterUrl: PropTypes.string,
+  sessionId: PropTypes.string.isRequired,
+  userId: PropTypes.string.isRequired,
 };
 
 export default VideoPlayer;

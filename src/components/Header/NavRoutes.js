@@ -26,7 +26,7 @@ const routes = [
   },
 ];
 
-const NavbarRoutes = ({ vertical = false }) => {
+const NavbarRoutes = ({ vertical = false, toggleOpen }) => {
   return (
     <div
       className={`flex items-start justify-start gap-3 ${vertical ? 'flex-col' : ''}`}
@@ -35,7 +35,8 @@ const NavbarRoutes = ({ vertical = false }) => {
         <Link
           href={path}
           key={label}
-          className='text-text-light dark:text-text-dark transition duration-200 ease-in hover:text-secondary'
+          className='text-text-light transition duration-200 ease-in hover:text-secondary dark:text-text-dark'
+          onClick={toggleOpen && toggleOpen}
         >
           {label}
         </Link>

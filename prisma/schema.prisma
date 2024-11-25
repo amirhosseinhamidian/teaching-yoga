@@ -8,7 +8,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
+datasource db  {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
@@ -46,13 +46,17 @@ model User {
   phone String    @unique
   role Role             @default(USER)
   avatar String?
+  sessionProgress SessionProgress[]   @relation("SessionProgress")
+
+  courses        UserCourse[]     @relation("UserCourses")
 
   createAt DateTime     @default(now())
   updatedAt DateTime    @updatedAt
 
-  accounts Account[]
-  instructor   Instructor?
-  comments Comment[]
+  accounts      Account[]
+  instructor    Instructor?
+  comments      Comment[]
+  questions     Question[]
 }
 
 enum CourseLevel {
@@ -87,13 +91,35 @@ model Course {
   rating           Float?       @default(5.0)
   status           CourseStatus
   instructorId     Int 
-  instructor      Instructor   @relation(fields: [instructorId], references: [id])
+  instructor       Instructor   @relation(fields: [instructorId], references: [id])
   introVideoUrl    String?
-  terms            Term[]  @relation("CourseTerms")
+  terms            Term[]       @relation("CourseTerms")
   comments         Comment[]
+  questions        Question[]
 
-  createAt DateTime     @default(now())
-  updatedAt DateTime    @updatedAt
+  users            UserCourse[]   @relation("UserCourses")
+
+  createAt         DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model UserCourse {
+  id           Int       @id @default(autoincrement())
+  userId       String
+  courseId     Int
+  purchasedAt  DateTime  @default(now())
+  status       PurchaseStatus @default(ACTIVE)
+
+  user         User      @relation("UserCourses", fields: [userId], references: [id])
+  course       Course    @relation("UserCourses", fields: [courseId], references: [id])
+
+  @@unique([userId, courseId]) // Prevent repeated purchase of a course by a user
+}
+
+enum PurchaseStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
 }
 
 model Term {
@@ -105,22 +131,68 @@ model Term {
   course        Course   @relation("CourseTerms" ,fields: [courseId], references: [id])
   sessions      Session[] @relation("TermSessions")
 
-  createAt DateTime     @default(now())
-  updatedAt DateTime    @updatedAt
+  createAt      DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
 }
 
 model Session {
-  id           Int      @id @unique @default(autoincrement())
-  name         String 
-  duration     Int
-  termId       Int
-  term         Term     @relation("TermSessions" ,fields: [termId], references: [id])
-  isFree       Boolean   @default(false)
-  videoUrl     String? 
+  id            String            @id @unique @default(uuid())
+  name          String 
+  duration      Int
+  termId        Int
+  order         Int            @default(0)
+  term          Term           @relation("TermSessions", fields: [termId], references: [id])
+  isFree        Boolean        @default(false)
+  video         SessionVideo?  @relation("SessionToVideo", fields: [videoId], references: [id])
+  videoId       Int?           @unique
+  sessionProgress SessionProgress[] @relation("SessionProgress")
+  questions     Question[]
 
-  createAt DateTime     @default(now())
-  updatedAt DateTime    @updatedAt
+  createAt      DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 }
+
+model SessionVideo {
+  id            Int              @id @unique @default(autoincrement())
+  videoKey      String            // .m3u8
+  accessLevel   VideoAccessLevel @default(REGISTERED) 
+  status        VideoStatus      @default(AVAILABLE)
+  session       Session?         @relation("SessionToVideo")
+  createAt      DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+
+model SessionProgress {
+  id                  Int          @id @default(autoincrement())
+  userId              String       // ID of the user
+  sessionId           String       // ID of the session
+  isCompleted         Boolean      @default(false) // Flag indicating if the session is marked as completed by the user
+  
+  // Relations
+  user                User         @relation("SessionProgress", fields: [userId], references: [id])
+  session             Session      @relation("SessionProgress", fields: [sessionId], references: [id])
+
+  createAt            DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@unique([userId, sessionId]) // Ensures each user has only one progress entry per session
+}
+
+model Question {
+  id            String   @id @default(uuid())             // شناسه یکتا
+  userId        String                                    // شناسه کاربر
+  courseId      Int                                       // شناسه دوره
+  sessionId     String                                    // شناسه جلسه
+  questionText  String   @db.Text                         // متن سوال
+  createdAt     DateTime @default(now())                  // تاریخ ایجاد
+  updatedAt     DateTime @updatedAt                       // تاریخ آخرین تغییر
+
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)  // ارتباط با مدل User
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)  // ارتباط با مدل Course
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  // ارتباط با مدل Session
+}
+
 
 model Instructor {
   id          Int      @id @unique @default(autoincrement())
@@ -185,3 +257,18 @@ model FAQ {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
 }
+
+
+// Enum for video access levels
+enum VideoAccessLevel {
+  PUBLIC       // Video is accessible to everyone
+  REGISTERED   // Only registered users can view
+  PURCHASED     // Only users who have purchased the course can view
+}
+
+// Enum for video status
+enum VideoStatus {
+  AVAILABLE    // Video is available for viewing
+  UNAVAILABLE   // Video is not currently available
+}
+
