@@ -40,6 +40,9 @@ module.exports = {
         },
         priceText: '#9A9A9A',
       },
+      boxShadow: {
+        search: '0px 4px 6px rgba(100, 244, 171, 0.3))',
+      },
       fontFamily: {
         main: ['MainFont', 'sans-serif'],
         faNa: ['PersianNumbers', 'sans-serif'],

@@ -34,7 +34,6 @@ export default function NavbarMobileMenu({
       setTimeout(() => setIsOpen(true), 10); // Small delay to allow portal to mount
     }
   };
-  console.log('user in mobile navbar =>', user);
   const loginClickHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
     router.push('/login');
@@ -94,7 +93,7 @@ export default function NavbarMobileMenu({
                   </Link>
                   {user.userRole !== 'Admin' && (
                     <Link
-                      href='/'
+                      href='/a-panel'
                       className='mx-auto flex items-center gap-2 rounded-full border border-text-light p-2 transition-all duration-200 ease-in hover:bg-background-light dark:border-text-dark dark:hover:bg-background-dark'
                     >
                       <MdOutlineAdminPanelSettings className='text-2xl' />

@@ -3,11 +3,31 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoIosArrowDown, IoIosArrowUp } from 'react-icons/io';
 
-const Accordion = ({ title, subtitle, content, info1, info2, className }) => {
+const Accordion = ({
+  title,
+  subtitle,
+  content,
+  info1,
+  info2,
+  actionLeftContent,
+  className,
+  onToggle,
+}) => {
   const [isOpen, setIsOpen] = useState(false);
 
-  const toggleAccordion = () => {
-    setIsOpen(!isOpen);
+  const toggleAccordion = (e) => {
+    e.stopPropagation(); // جلوگیری از تاثير کلیک بر روی دیگر بخش‌ها
+    const newState = !isOpen;
+    setIsOpen(newState);
+    if (onToggle) {
+      onToggle(newState); // فراخوانی تابع در هنگام تغییر وضعیت
+    }
+  };
+
+  // جلوگیری از تاثیر کلیک روی actionLeftContent بر روی اکاردیون
+  const handleActionClick = (e) => {
+    e.stopPropagation(); // جلوگیری از بروز تغییر در وضعیت اکاردیون
+    // در اینجا می‌توانید رفتارهای خاص خود را برای actionLeftContent پیاده‌سازی کنید
   };
 
   return (
@@ -41,22 +61,30 @@ const Accordion = ({ title, subtitle, content, info1, info2, className }) => {
           )}
         </div>
 
-        {isOpen ? (
-          <IoIosArrowUp
-            className='text-subtext-light md:text-lg dark:text-subtext-dark'
-            aria-label='up arrow'
-          />
-        ) : (
-          <IoIosArrowDown
-            className='text-subtext-light md:text-lg dark:text-subtext-dark'
-            aria-label='down arrow'
-          />
-        )}
+        <div className='flex items-center gap-2'>
+          {actionLeftContent && (
+            <div onClick={handleActionClick}>
+              {' '}
+              {/* متوقف کردن رویداد کلیک برای actionLeftContent */}
+              {actionLeftContent}
+            </div>
+          )}
+
+          {isOpen ? (
+            <IoIosArrowUp
+              className='text-subtext-light md:text-lg dark:text-subtext-dark'
+              aria-label='up arrow'
+            />
+          ) : (
+            <IoIosArrowDown
+              className='text-subtext-light md:text-lg dark:text-subtext-dark'
+              aria-label='down arrow'
+            />
+          )}
+        </div>
       </button>
       <div
-        className={`overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
-        }`}
+        className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? 'max-h-fit opacity-100' : 'max-h-0 opacity-0'}`}
       >
         <div className='mt-2 border-t border-gray-300 py-2 text-sm text-gray-600 dark:border-gray-600 dark:text-gray-300'>
           {content}
@@ -72,7 +100,10 @@ Accordion.propTypes = {
   info1: PropTypes.string,
   info2: PropTypes.string,
   className: PropTypes.string,
+  addTitle: PropTypes.string,
+  actionLeftContent: PropTypes.node, // تغییر نوع به node برای دکمه
   content: PropTypes.string.isRequired,
+  onToggle: PropTypes.func,
 };
 
 export default Accordion;

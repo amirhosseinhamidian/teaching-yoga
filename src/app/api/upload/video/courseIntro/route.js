@@ -6,7 +6,6 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import prismadb from '@/libs/prismadb';
 import { setProgress } from '../../progress/route';
 
 // S3 configuration
@@ -67,9 +66,9 @@ const convertToHLS = async (tempFilePath, outputDir) => {
             .output(outputPath)
             .on('progress', (progress) => {
               const progressPercent = progress.percent || 0;
-              const ffmpegProgress = (progressPercent / 100 / numTasks) * 50;
+              const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
               totalProgress += ffmpegProgress;
-              setProgress(Math.min(totalProgress, 50)); // درصد پیشرفت
+              setProgress(Math.min(totalProgress, 5)); // درصد پیشرفت
             })
             .on('end', resolve)
             .on('error', (error) => {
@@ -106,7 +105,7 @@ const uploadFilesToS3 = async (files, outputDir, folderKey) => {
     const s3Key = `${folderKey}/${fileName}`;
     await uploadToS3(filePath, s3Key);
 
-    const uploadProgress = 50 + ((i + 1) / totalFiles) * 50; // Map upload progress to 50%-100%
+    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95; // Map upload progress to 50%-100%
     setProgress(uploadProgress);
 
     // Return fileKey immediately if "master.m3u8" is found
@@ -117,31 +116,12 @@ const uploadFilesToS3 = async (files, outputDir, folderKey) => {
   return fileKey; // If no master.m3u8 was found, return empty string
 };
 
-// Save intro video info in course table
-const saveIntroVideo = async (courseId, videoKey) => {
-  try {
-    console.log('video key in upload system =>', videoKey);
-    const updatedCourse = await prismadb.course.update({
-      where: { id: Number(courseId) },
-      data: { introVideoUrl: videoKey },
-    });
-
-    // چاپ پاسخ در لاگ
-    console.log('Course updated successfully:', updatedCourse);
-  } catch (error) {
-    console.error('Error saving intro video:', error);
-    throw new Error('Failed to save intro video');
-  }
-};
-
 // Route handler
 export async function POST(req) {
   const data = await req.formData();
   const file = data.get('video');
-  const courseName = data.get('courseName');
-  const courseId = data.get('courseId');
 
-  if (!file || !courseName || !courseId) {
+  if (!file) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
       { status: 400 },
@@ -167,21 +147,19 @@ export async function POST(req) {
 
     // Upload files to S3 (50% to 100%)
     const files = fs.readdirSync(outputDir);
-    const folderKey = `videos/${courseName}/intro`;
+    const folderKey = `videos/intros`;
     const videoKey = await uploadFilesToS3(files, outputDir, folderKey);
 
     // Clean up temporary files
     fs.unlinkSync(tempFilePath);
     fs.rmSync(outputDir, { recursive: true, force: true });
 
-    // Save intro video information in the course table
-    await saveIntroVideo(courseId, videoKey);
-
     // Send final completion progress (100%)
     setProgress(100);
 
     return NextResponse.json({
-      message: 'آپلود و ذخیره‌سازی موفقیت‌آمیز بود',
+      videoKey,
+      message: 'آپلود موفقیت‌آمیز بود',
     });
   } catch (error) {
     console.error('Error converting/uploading video:', error);

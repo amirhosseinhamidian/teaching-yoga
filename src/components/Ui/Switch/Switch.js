@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+'use client';
+import React from 'react';
 import PropTypes from 'prop-types';
 
 const Switch = ({
@@ -9,17 +10,14 @@ const Switch = ({
   label,
   labelClass,
 }) => {
-  const [isChecked, setIsChecked] = useState(checked);
-
   const handleToggle = () => {
-    setIsChecked(!isChecked);
     if (onChange) {
-      onChange(!isChecked);
+      onChange(!checked); // مقدار جدید را به تابع والد ارسال کنید
     }
   };
 
   const sizeClasses = {
-    small: 'w-86 h-5',
+    small: 'w-8 h-5',
     medium: 'w-12 h-7',
     large: 'w-16 h-10',
   };
@@ -39,29 +37,22 @@ const Switch = ({
   return (
     <div className={`flex items-center ${className}`}>
       {label && (
-        <span
-          className={`text-text-light dark:text-text-dark ${labelClass}`}
-        >
+        <span className={`text-text-light dark:text-text-dark ${labelClass}`}>
           {label}
         </span>
       )}
       <label
-        className={`relative flex items-center justify-center ${sizeClasses[size]}`}
+        className={`relative flex cursor-pointer items-center justify-center ${sizeClasses[size]}`}
+        onClick={handleToggle} // تغییر مقدار هنگام کلیک
       >
-        <input
-          type='checkbox'
-          checked={isChecked}
-          onChange={handleToggle}
-          className='sr-only'
-        />
         <span
           className={`block cursor-pointer rounded-full ${backgroundClasses[size]} transition-colors duration-300 ${
-            isChecked ? 'bg-secondary' : 'bg-subtext-dark'
+            checked ? 'bg-secondary' : 'bg-subtext-dark'
           }`}
         ></span>
         <span
-          className={`absolute left-0 transform rounded-full bg-white transition-transform duration-300 ${handleClasses[size]} ${
-            isChecked ? 'translate-x-full' : 'translate-x-0'
+          className={`absolute left-0 transform rounded-full bg-foreground-light transition-transform duration-300 dark:bg-white ${handleClasses[size]} ${
+            checked ? 'translate-x-full' : 'translate-x-0'
           }`}
         ></span>
       </label>
@@ -71,12 +62,12 @@ const Switch = ({
 
 // Define the PropTypes
 Switch.propTypes = {
-  checked: PropTypes.bool, // Initial state of the switch
-  onChange: PropTypes.func, // Callback for when the switch is toggled
-  size: PropTypes.oneOf(['small', 'medium', 'large']), // Size of the switch
-  className: PropTypes.string, // Custom class names
-  labelClass: PropTypes.string, // Custom class names
-  label: PropTypes.string, // Optional label text
+  checked: PropTypes.bool, // مقدار اولیه
+  onChange: PropTypes.func, // تابع تغییر وضعیت
+  size: PropTypes.oneOf(['small', 'medium', 'large']), // سایز
+  className: PropTypes.string, // کلاس‌های اضافی
+  labelClass: PropTypes.string, // کلاس‌های لیبل
+  label: PropTypes.string, // لیبل اختیاری
 };
 
 export default Switch;

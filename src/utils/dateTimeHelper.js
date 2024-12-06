@@ -77,6 +77,17 @@ export function formatTime(seconds, format = 'hh:mm:ss') {
   }
 }
 
+export function getStringTime(seconds) {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = seconds % 60;
+
+  const hours = h.toString().padStart(2, '0');
+  const minutes = m.toString().padStart(2, '0');
+  const secs = s.toString().padStart(2, '0');
+  return `${hours} ساعت ${minutes} دقیقه ${secs} ثانیه`;
+}
+
 export function getShamsiDate(dateString) {
   const date = new Date(dateString);
   return gregorianToJalali(date).join('/');

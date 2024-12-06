@@ -1,31 +1,7 @@
 /* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
-import AWS from 'aws-sdk';
-
-// AWS S3 settings
-const s3 = new AWS.S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  endpoint: process.env.AWS_S3_ENDPOINT,
-});
-
-// Generate a temporary link
-async function generateTemporaryLink(videoKey) {
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: videoKey,
-    Expires: 7200, // Expiry time in seconds (1 hour)
-  };
-
-  try {
-    const signedUrl = await s3.getSignedUrlPromise('getObject', params);
-    return signedUrl;
-  } catch (error) {
-    console.error('Error generating temporary link:', error);
-    throw new Error('Unable to generate temporary link');
-  }
-}
+import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -39,7 +15,7 @@ export async function GET(request) {
   }
 
   try {
-    // Fetch session details
+    // دریافت جزئیات جلسه
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
       select: {
@@ -50,7 +26,7 @@ export async function GET(request) {
         video: {
           select: {
             id: true,
-            videoKey: true, // Updated field
+            videoKey: true, // فیلد آپدیت شده
             accessLevel: true,
             status: true,
           },
@@ -67,13 +43,13 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // Generate temporary link for the videoKey
+    // ساخت لینک موقت برای videoKey
     let videoLink = await generateTemporaryLink(session.video.videoKey);
 
-    // Add the temporary link to the response
+    // افزودن لینک موقت به پاسخ
     const response = {
       ...session,
-      videoLink, // Include the temporary link
+      videoLink, // اضافه کردن لینک موقت
     };
     return NextResponse.json(response);
   } catch (error) {

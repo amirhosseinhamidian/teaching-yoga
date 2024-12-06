@@ -84,12 +84,13 @@ model Course {
   isDiscountCode   Boolean      @default(false)
   isHighPriority   Boolean      @default(false)
   shortAddress     String       @unique
-  sessionCount     Int
-  duration         String
+  sessionCount     Int          @default(0)           
+  duration         Int          @default(0)          
   level            CourseLevel
-  participants     Int  
+  participants     Int          @default(0)
   rating           Float?       @default(5.0)
   status           CourseStatus
+  activeStatus     Boolean      @default(false)
   instructorId     Int 
   instructor       Instructor   @relation(fields: [instructorId], references: [id])
   introVideoUrl    String?

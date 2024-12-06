@@ -112,9 +112,9 @@ const convertToHLS = async (tempFilePath, outputDir) => {
             .output(path.join(outputDir, fileName))
             .on('progress', (progress) => {
               const progressPercent = progress.percent || 0;
-              const ffmpegProgress = (progressPercent / 100 / numTasks) * 50;
+              const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
               totalProgress += ffmpegProgress;
-              setProgress(Math.min(totalProgress, 50));
+              setProgress(Math.min(totalProgress, 5));
             })
             .on('end', resolve)
             .on('error', (error) => {
@@ -151,7 +151,7 @@ const uploadFilesToS3 = async (files, outputDir, folderKey) => {
     const s3Key = `${folderKey}/${fileName}`;
     await uploadToS3(filePath, s3Key);
 
-    const uploadProgress = 50 + ((i + 1) / totalFiles) * 50; // Map upload progress to 50%-100%
+    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95; // Map upload progress to 50%-100%
     setProgress(uploadProgress);
 
     // Return fileKey immediately if "master.m3u8" is found
@@ -169,6 +169,7 @@ export async function POST(req) {
   const courseName = data.get('courseName');
   const termId = data.get('termId');
   const sessionId = data.get('sessionId');
+  setProgress(0);
 
   if (!file || !courseName || !termId || !sessionId) {
     return NextResponse.json(

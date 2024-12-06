@@ -35,7 +35,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
         <div className='mx-4 border-b'></div>
         {user.userRole !== 'Admin' && (
           <Link
-            href='/'
+            href='/a-panel'
             className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
           >
             <MdOutlineAdminPanelSettings className='text-2xl' />

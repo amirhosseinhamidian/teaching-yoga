@@ -5,7 +5,13 @@ import Plyr from 'plyr';
 import Hls from 'hls.js';
 import 'plyr/dist/plyr.css';
 
-const VideoPlayer = ({ videoUrl, posterUrl, sessionId, userId }) => {
+const VideoPlayer = ({
+  videoUrl,
+  posterUrl,
+  sessionId,
+  userId,
+  isAdmin = false,
+}) => {
   const playerRef = useRef(null);
   let hls;
 
@@ -53,11 +59,13 @@ const VideoPlayer = ({ videoUrl, posterUrl, sessionId, userId }) => {
   };
 
   useEffect(() => {
-    fetchVideoCompletionStatus();
+    if (!isAdmin) fetchVideoCompletionStatus();
     const video = playerRef.current;
 
     // تنظیم پوستر برای ویدیو
-    video.poster = posterUrl;
+    if (posterUrl) {
+      video.poster = posterUrl;
+    }
 
     if (Hls.isSupported()) {
       hls = new Hls({
@@ -65,6 +73,7 @@ const VideoPlayer = ({ videoUrl, posterUrl, sessionId, userId }) => {
         startLevel: -1,
         capLevelToPlayerSize: true,
       });
+      console.log('video player => ', videoUrl);
       // بارگذاری فایل m3u8 با استفاده از loadSource
       hls.loadSource(videoUrl); // استفاده از `loadSource` برای بارگذاری master.m3u8
       hls.attachMedia(video);
@@ -138,8 +147,9 @@ const VideoPlayer = ({ videoUrl, posterUrl, sessionId, userId }) => {
 VideoPlayer.propTypes = {
   videoUrl: PropTypes.string.isRequired,
   posterUrl: PropTypes.string,
-  sessionId: PropTypes.string.isRequired,
-  userId: PropTypes.string.isRequired,
+  sessionId: PropTypes.string,
+  userId: PropTypes.string,
+  isAdmin: PropTypes.bool,
 };
 
 export default VideoPlayer;

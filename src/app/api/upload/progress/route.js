@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 let progress = 0;
 export function setProgress(newProgress) {
-  progress = newProgress;
+  progress = Math.ceil(newProgress);
 }
 
 export async function GET() {
