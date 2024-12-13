@@ -46,12 +46,12 @@ export async function PUT(request, { params }) {
   try {
     const body = await request.json(); // دریافت داده‌های ارسال شده در بدنه درخواست
 
-    const { name, subtitle, duration } = body; // استخراج مقادیر از بدنه درخواست
+    const { name, subtitle, price, discount, duration } = body; // استخراج مقادیر از بدنه درخواست
 
     // اعتبارسنجی مقادیر ورودی
-    if (!name || !subtitle || !duration) {
+    if (!name || !duration) {
       return NextResponse.json(
-        { error: 'All fields (name, subtitle, duration) are required' },
+        { error: 'All fields (name, duration) are required' },
         { status: 400 },
       );
     }
@@ -64,6 +64,8 @@ export async function PUT(request, { params }) {
       data: {
         name,
         subtitle,
+        price,
+        discount,
         duration: parseInt(duration), // تبدیل duration به عدد
       },
     });

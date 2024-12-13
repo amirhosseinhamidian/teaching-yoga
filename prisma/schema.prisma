@@ -73,36 +73,34 @@ enum CourseStatus {
 }
 
 model Course {
-  id               Int          @id @unique @default(autoincrement())
-  title            String 
+  id               Int           @id @unique @default(autoincrement())
+  title            String
   subtitle         String
   shortDescription String?
   description      String
   cover            String
-  price            String
-  basePrice        String?
-  isDiscountCode   Boolean      @default(false)
-  isHighPriority   Boolean      @default(false)
-  shortAddress     String       @unique
-  sessionCount     Int          @default(0)           
-  duration         Int          @default(0)          
+  price            Int?        // قیمت پایه (در صورت نیاز)
+  isHighPriority   Boolean       @default(false)
+  shortAddress     String        @unique
+  sessionCount     Int           @default(0)
+  duration         Int           @default(0)
   level            CourseLevel
-  participants     Int          @default(0)
-  rating           Float?       @default(5.0)
+  participants     Int           @default(0)
+  rating           Float?        @default(5.0)
   status           CourseStatus
-  activeStatus     Boolean      @default(false)
-  instructorId     Int 
-  instructor       Instructor   @relation(fields: [instructorId], references: [id])
+  activeStatus     Boolean       @default(false)
+  instructorId     Int
+  instructor       Instructor    @relation(fields: [instructorId], references: [id])
   introVideoUrl    String?
-  terms            Term[]       @relation("CourseTerms")
+  courseTerms      CourseTerm[]  @relation("CourseToTerms") // ارتباط با ترم‌ها
   comments         Comment[]
   questions        Question[]
-
-  users            UserCourse[]   @relation("UserCourses")
-
-  createAt         DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  users            UserCourse[]  @relation("UserCourses")
+  createAt         DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 }
+
+
 
 model UserCourse {
   id           Int       @id @default(autoincrement())
@@ -124,33 +122,44 @@ enum PurchaseStatus {
 }
 
 model Term {
-  id            Int      @id @unique @default(autoincrement())
+  id            Int       @id @unique @default(autoincrement())
   name          String
   subtitle      String?
-  duration      Int      @default(0)  
-  courseId      Int 
-  course        Course   @relation("CourseTerms" ,fields: [courseId], references: [id])
-  sessions      Session[] @relation("TermSessions")
-
-  createAt      DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  duration      Int       @default(0)
+  price         Int     @default(0)  // قیمت ترم
+  discount      Int?    @default(0)  // درصد تخفیف ترم
+  sessions      Session[] @relation("TermToSessions") // جلسات ترم
+  courseTerms   CourseTerm[] @relation("TermToCourses") // ارتباط با دوره‌ها
+  createAt      DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 }
+model CourseTerm {
+  id           Int      @id @unique @default(autoincrement())
+  courseId     Int
+  termId       Int
+  isOptional   Boolean  @default(false) // نشان‌دهنده اختیاری بودن ترم در دوره
+  course       Course   @relation("CourseToTerms", fields: [courseId], references: [id])
+  term         Term     @relation("TermToCourses", fields: [termId], references: [id])
+  createAt     DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
+  @@unique([courseId, termId]) // جلوگیری از ارتباط تکراری یک ترم با یک دوره
+}
 model Session {
-  id            String            @id @unique @default(uuid())
-  name          String 
-  duration      Int
-  termId        Int
-  order         Int            @default(0)
-  term          Term           @relation("TermSessions", fields: [termId], references: [id])
-  isFree        Boolean        @default(false)
-  video         SessionVideo?  @relation("SessionToVideo", fields: [videoId], references: [id])
-  videoId       Int?           @unique
+  id             String           @id @unique @default(uuid())
+  name           String
+  duration       Int
+  termId         Int
+  order          Int              @default(0)
+  term           Term             @relation("TermToSessions", fields: [termId], references: [id])
+  isFree         Boolean          @default(false)
+  isActive       Boolean          @default(false)
+  video          SessionVideo?    @relation("SessionToVideo", fields: [videoId], references: [id])
+  videoId        Int?             @unique
   sessionProgress SessionProgress[] @relation("SessionProgress")
-  questions     Question[]
-
-  createAt      DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  questions      Question[]
+  createAt       DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model SessionVideo {

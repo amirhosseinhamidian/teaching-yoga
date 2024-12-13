@@ -36,7 +36,7 @@ const Login = () => {
     const checkResponse = await CheckPhoneAction(userPhone);
     if (checkResponse) {
       try {
-        const response = await fetch('/api/send-otp', {
+        const response = await fetch('http://localhost:3000/api/send-otp', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,31 +1,29 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-// بررسی دسترسی کاربر به ویدیوها و وضعیت خرید
 export async function GET(req, { params }) {
   try {
     const { shortAddress } = params;
     const requestHeaders = new Headers(req.headers);
     const userId = requestHeaders.get('userid');
 
-    // Fetch terms
-    const terms = await prismadb.course.findUnique({
+    // دریافت اطلاعات دوره به همراه ترم‌ها و جلسات فعال
+    const course = await prismadb.course.findUnique({
       where: { shortAddress },
-      select: {
-        terms: {
+      include: {
+        courseTerms: {
           include: {
-            sessions: {
-              orderBy: {
-                order: 'asc',
-              },
+            term: {
               include: {
-                video: true,
-                sessionProgress: {
-                  where: {
-                    userId, // Filter sessionProgress by userId
-                  },
-                  select: {
-                    isCompleted: true, // Only fetch completion status
+                sessions: {
+                  where: { isActive: true },
+                  orderBy: { order: 'asc' },
+                  include: {
+                    video: true,
+                    sessionProgress: {
+                      where: { userId },
+                      select: { isCompleted: true },
+                    },
                   },
                 },
               },
@@ -35,24 +33,25 @@ export async function GET(req, { params }) {
       },
     });
 
-    if (!terms) {
+    if (!course) {
       return NextResponse.json(
         { message: 'Course not found' },
         { status: 404 },
       );
     }
 
-    // Check if user has purchased the course
+    // بررسی وضعیت خرید دوره توسط کاربر
     const userCourse = await prismadb.userCourse.findFirst({
       where: {
         userId,
-        courseId: terms.courseId,
+        courseId: course.id,
         status: 'ACTIVE',
       },
     });
-    // Add access control for each session video
-    terms.terms.forEach((term) => {
-      term.sessions.forEach((session) => {
+
+    // افزودن سطح دسترسی برای هر جلسه
+    course.courseTerms.forEach((courseTerm) => {
+      courseTerm.term.sessions.forEach((session) => {
         const { video } = session;
         if (video) {
           if (video.accessLevel === 'PUBLIC') {
@@ -66,7 +65,7 @@ export async function GET(req, { params }) {
       });
     });
 
-    return NextResponse.json(terms, { status: 200 });
+    return NextResponse.json(course, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

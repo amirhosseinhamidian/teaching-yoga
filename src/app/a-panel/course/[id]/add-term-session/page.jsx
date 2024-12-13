@@ -21,6 +21,7 @@ import UploadSessionVideoModal from '@/app/a-panel/components/modules/UploadSess
 import AddEditTermModal from '@/app/a-panel/components/modules/AddEditTermModal/AddEditTermModal';
 import EditSessionModal from '@/app/a-panel/components/modules/EditSessionModal/EditSessionModal';
 import VideoModal from '@/app/a-panel/components/modules/VideoModal/VideoModal';
+import Switch from '@/components/Ui/Switch/Switch';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -80,11 +81,14 @@ const AddTermSessionPage = () => {
 
   const fetchTerms = async () => {
     try {
-      const response = await fetch(`/api/admin/courses/${courseId}/terms`);
+      const response = await fetch(
+        `http://localhost:3000/api/admin/courses/${courseId}/terms`,
+      );
       if (!response.ok) {
         throw new Error('Failed to fetch terms');
       }
       const data = await response.json();
+      console.log(data);
       setTerms(data);
     } catch (error) {
       console.error(error);
@@ -97,8 +101,8 @@ const AddTermSessionPage = () => {
     fetchTerms();
   }, [courseId]);
 
-  const addTermSuccessfully = (newTerm) => {
-    setTerms((prev) => [...prev, newTerm]);
+  const addTermSuccessfully = () => {
+    fetchTerms();
   };
 
   const fetchSessions = async (termId, forceUpdate = false) => {
@@ -195,6 +199,7 @@ const AddTermSessionPage = () => {
   };
 
   const uploadVideoSession = (termId, sessionId) => {
+    console.log('termId =>', termId, ' sessionId => ', sessionId);
     setTermTempId(termId);
     setSessionTempId(sessionId);
     setShowUploadVideoSessionModal(true);
@@ -255,8 +260,6 @@ const AddTermSessionPage = () => {
   const handleUpdateSessionSuccessfully = (updatedSession) => {
     const termId = updatedSession.termId;
 
-    console.log(updatedSession);
-
     setSessions((prevSessions) => {
       // بررسی وجود جلسات برای این ترم
       const existingSessions = prevSessions[termId] || [];
@@ -302,6 +305,43 @@ const AddTermSessionPage = () => {
       setVideoLoadingId(null);
     } catch (error) {
       console.error('Error fetching video link:', error);
+    }
+  };
+
+  const toggleActiveStatus = async (row, currentStatus) => {
+    row.isActive = currentStatus;
+    try {
+      setSessions((prev) => ({
+        ...prev,
+        [row.termId]: prev[row.termId].map((session) =>
+          session.id === row.id
+            ? { ...session, isActive: currentStatus } // وضعیت جدید به‌روزرسانی می‌شود
+            : session,
+        ),
+      }));
+      const response = await fetch(
+        `http://localhost:3000/api/session/${row.id}/active-status`,
+        {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isActive: currentStatus }), // ارسال مقدار جدید
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to update status on server');
+      }
+    } catch (error) {
+      console.error('Error updating activeStatus:', error);
+      // بازگرداندن به حالت قبلی در صورت خطا
+      setSessions((prev) => ({
+        ...prev,
+        [row.termId]: prev[row.termId].map((session) =>
+          session.id === row.id
+            ? { ...session, isActive: currentStatus }
+            : session,
+        ),
+      }));
     }
   };
 
@@ -367,6 +407,18 @@ const AddTermSessionPage = () => {
         </div>
       ),
     },
+    {
+      key: 'active',
+      label: 'فعال/غیر فعال',
+      render: (_, row) => (
+        <Switch
+          className='mt-3 justify-center'
+          size='small'
+          checked={row.isActive}
+          onChange={(newStatus) => toggleActiveStatus(row, newStatus)}
+        />
+      ),
+    },
   ];
 
   return (
@@ -389,7 +441,7 @@ const AddTermSessionPage = () => {
                 key={term.id}
                 title={term.name}
                 subtitle={term.subtitle}
-                info1={formatTime(term.duration)}
+                info1={`هزینه ترم: ${term.price.toLocaleString('fa-IR')} تومان`}
                 info2={`تعداد جلسات : ${term.sessions.length ? term.sessions.length : '0'}`}
                 className='mt-6 flex-1 bg-foreground-light dark:bg-foreground-dark'
                 onToggle={(isOpen) => {
@@ -420,6 +472,7 @@ const AddTermSessionPage = () => {
                     data={sessions[term.id] || []}
                     loading={loadingSessions[term.id]}
                     empty={sessions[term.id]?.length === 0}
+                    emptyText='هیچ جلسه ای برای این ترم وجود ندارد.'
                   />
                 }
               />

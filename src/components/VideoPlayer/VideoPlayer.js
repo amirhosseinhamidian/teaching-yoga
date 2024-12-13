@@ -59,7 +59,7 @@ const VideoPlayer = ({
   };
 
   useEffect(() => {
-    if (!isAdmin) fetchVideoCompletionStatus();
+    if (!isAdmin && sessionId) fetchVideoCompletionStatus();
     const video = playerRef.current;
 
     // تنظیم پوستر برای ویدیو
@@ -73,7 +73,6 @@ const VideoPlayer = ({
         startLevel: -1,
         capLevelToPlayerSize: true,
       });
-      console.log('video player => ', videoUrl);
       // بارگذاری فایل m3u8 با استفاده از loadSource
       hls.loadSource(videoUrl); // استفاده از `loadSource` برای بارگذاری master.m3u8
       hls.attachMedia(video);

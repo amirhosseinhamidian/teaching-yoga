@@ -47,7 +47,7 @@ const DropDown = ({
       <div
         className={`relative rounded-xl border border-solid ${
           errorMessage ? 'border-red' : 'border-accent'
-        } bg-background-light px-4 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 dark:bg-background-dark dark:text-subtext-dark ${
+        } bg-surface-light px-4 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 dark:bg-surface-dark dark:text-subtext-dark ${
           isOpen ? 'ring-1 ring-accent' : ''
         } ${className}`}
         onClick={toggleDropdown}

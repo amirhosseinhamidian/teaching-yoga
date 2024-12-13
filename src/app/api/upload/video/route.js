@@ -64,6 +64,10 @@ const saveSessionVideo = async (videoKey, accessLevel, status, sessionId) => {
         session: { connect: { id: sessionId } },
       },
     });
+    await prismadb.session.update({
+      where: { id: sessionId },
+      data: { isActive: true }, // مقدار isActive به true تغییر می‌کند
+    });
     return newSessionVideo.id;
   } catch (error) {
     console.error('Error saving session video:', error);

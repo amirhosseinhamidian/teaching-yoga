@@ -11,6 +11,7 @@ const Table = ({
   className,
   loading = false,
   empty = false,
+  emptyText = '',
 }) => {
   return (
     <div className={`relative overflow-x-auto ${className}`}>
@@ -22,7 +23,7 @@ const Table = ({
         <div className='z-10 flex h-56 w-full items-center justify-center rounded-xl bg-surface-light dark:bg-surface-dark'>
           <div className='flex flex-col items-center justify-center'>
             <PiEmpty className='mb-2 text-primary' size={42} />
-            <p>هیچ جلسه ای برای این ترم وجود ندارد.</p>
+            {emptyText}
           </div>
         </div>
       ) : (
@@ -71,6 +72,7 @@ Table.propTypes = {
   className: PropTypes.string,
   loading: PropTypes.bool, // پراپ برای لودینگ
   empty: PropTypes.bool, // پراپ برای نمایش نمای خالی
+  emptyText: PropTypes.string,
 };
 
 export default Table;

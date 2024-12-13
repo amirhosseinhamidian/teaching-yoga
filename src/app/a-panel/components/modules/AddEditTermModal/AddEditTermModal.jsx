@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
@@ -8,35 +8,73 @@ import { getStringTime } from '@/utils/dateTimeHelper';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
 
 const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const [isLoading, setIsLoading] = useState(false);
+  const [termOptions, setTermOptions] = useState([]);
+  const [selectedTermId, setSelectedTermId] = useState(null);
 
   // Initialize state based on whether editing an existing term or adding a new one
   const [name, setName] = useState(term?.name || '');
   const [duration, setDuration] = useState(term?.duration || '');
+  const [price, setPrice] = useState(term?.price || '');
+  const [discount, setDiscount] = useState(term?.discount || '');
   const [subtitle, setSubtitle] = useState(term?.subtitle || '');
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     subtitle: '',
     duration: '',
+    price: '',
+    discount: '',
   });
+
+  // Fetch terms data
+  useEffect(() => {
+    const fetchTerms = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/api/admin/terms');
+        if (!response.ok) throw new Error('Failed to fetch terms');
+        const data = await response.json();
+        const formattedOptions = data.map((term) => ({
+          value: term.id,
+          label: term.name + ' - ' + term.sessionCount + ' جلسه',
+        }));
+        setTermOptions(formattedOptions);
+      } catch (err) {
+        toast.showErrorToast(err.message);
+        console.error(err);
+      }
+    };
+
+    fetchTerms();
+  }, []);
 
   const validateInputs = () => {
     let errors = {};
 
-    if (!name.trim()) {
-      errors.name = 'عنوان نمی‌تواند خالی باشد.';
-    }
+    if (!selectedTermId) {
+      if (!name.trim()) {
+        errors.name = 'عنوان نمی‌تواند خالی باشد.';
+      }
 
-    if (subtitle.length > 100) {
-      errors.subtitle = 'توضیح مختصر باید کمتر از ۱۰۰ کاراکتر باشد.';
-    }
+      if (!price || isNaN(price) || price <= 0) {
+        errors.price = 'قیمت باید یک عدد معتبر و بیشتر از صفر باشد.';
+      }
 
-    if (!duration || isNaN(duration) || Number(duration) <= 0) {
-      errors.duration = 'مدت زمان باید یک عدد معتبر و بیشتر از صفر باشد.';
+      if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
+        errors.discount = 'تخفیف باید یک عدد بین ۰ تا ۱۰۰ باشد.';
+      }
+
+      if (subtitle.length > 100) {
+        errors.subtitle = 'توضیح مختصر باید کمتر از ۱۰۰ کاراکتر باشد.';
+      }
+
+      if (!duration || isNaN(duration) || Number(duration) <= 0) {
+        errors.duration = 'مدت زمان باید یک عدد معتبر و بیشتر از صفر باشد.';
+      }
     }
 
     setErrorMessages(errors);
@@ -44,6 +82,12 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     // Return true if no errors exist
     return Object.keys(errors).length === 0;
   };
+
+  const calculateFinalPrice = () => {
+    const discountAmount = (price * discount) / 100; // مقدار تخفیف
+    return price - discountAmount; // قیمت نهایی
+  };
+  const finalPrice = calculateFinalPrice();
 
   const handleFormSubmit = async () => {
     if (!validateInputs()) {
@@ -54,14 +98,26 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     const payload = {
       name,
       subtitle,
+      price: Number(price),
+      discount: Number(discount),
       duration: Number(duration),
+      selectedTermId, // ترم انتخاب‌شده (در صورت وجود)
     };
 
-    const url = term
-      ? `http://localhost:3000/api/admin/terms/${term.id}` // Update existing term
-      : `http://localhost:3000/api/admin/courses/${courseId}/terms`; // Add new term
+    let url;
+    if (term) {
+      url = `http://localhost:3000/api/admin/terms/${term.id}`; // بروزرسانی ترم موجود
+    } else {
+      if (selectedTermId) {
+        // اتصال ترم موجود به دوره
+        url = `http://localhost:3000/api/admin/courses/${courseId}/terms`; // ارسال ترم انتخابی برای ارتباط
+      } else {
+        // افزودن ترم جدید
+        url = `http://localhost:3000/api/admin/courses/${courseId}/terms`;
+      }
+    }
 
-    const method = term ? 'PUT' : 'POST'; // Use PUT for updates, POST for new
+    const method = term ? 'PUT' : 'POST'; // استفاده از POST برای ترم جدید یا اتصال ترم انتخابی، PUT برای بروزرسانی
 
     try {
       const response = await fetch(url, {
@@ -79,9 +135,9 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
         );
         onSuccess(data);
       } else {
-        const errorText = await response.text();
+        const errorText = await response.json();
         console.error('Server error response:', errorText);
-        toast.showErrorToast(errorText || 'خطای رخ داده');
+        toast.showErrorToast(errorText.error || 'خطای رخ داده');
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -93,7 +149,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
+      <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
         <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             {term ? 'ویرایش ترم' : 'افزودن ترم'}
@@ -105,6 +161,22 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
             />
           </button>
         </div>
+        {!term && (
+          <div className='mt-10'>
+            <p className='mb-8'>
+              شما می توانید از ترم هایی که قبلا ساخته شده برای این دوره استفاده
+              کنید یا ترم جدیدی بسازید.
+            </p>
+            <DropDown
+              options={termOptions}
+              placeholder='انتخاب ترم مورد نظر'
+              value={selectedTermId}
+              onChange={setSelectedTermId}
+              label='انتخاب ترم'
+            />
+            <div className='mt-10 border border-b border-subtext-light dark:border-subtext-dark'></div>
+          </div>
+        )}
         <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>
           <Input
             label='عنوان ترم'
@@ -126,6 +198,32 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
             />
             <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
               {duration && getStringTime(duration)}
+            </p>
+          </div>
+          <Input
+            label='قیمت (تومان)'
+            placeholder='قیمت دوره را وارد کنید'
+            value={price}
+            onChange={setPrice}
+            errorMessage={errorMessages.price}
+            thousandSeparator={true}
+            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+          />
+          <div>
+            <Input
+              label='تخفیف %'
+              placeholder='تخفیف دوره را وارد کنید (درصد)'
+              value={discount}
+              onChange={setDiscount}
+              errorMessage={errorMessages.discount}
+              type='number'
+              maxLength={2}
+              className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+            />
+            <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
+              {price &&
+                discount &&
+                `قیمت نهایی: ${finalPrice.toLocaleString()} تومان`}
             </p>
           </div>
           <div className='col-span-1 sm:col-span-2'>

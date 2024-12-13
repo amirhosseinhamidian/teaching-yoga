@@ -19,7 +19,6 @@ export async function middleware(request) {
   );
 
   if (isAdminRoute) {
-    console.log('token in middleware => ', token);
     if (!token || token.userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/access-denied', request.url));
     }

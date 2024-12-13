@@ -12,7 +12,7 @@ function NavRoutes() {
   const navRoutes = [
     { href: '/a-panel', label: 'داشبورد', icon: RxDashboard },
     { href: '/a-panel/course', label: 'مدیریت دوره ها', icon: TbSchool },
-    { href: '/a-panel/users', label: 'مدیریت کاربران', icon: PiUsersBold },
+    { href: '/a-panel/user', label: 'مدیریت کاربران', icon: PiUsersBold },
     { href: '/a-panel/blog', label: 'مدیریت بلاگ', icon: GrBlog },
     {
       href: '/a-panel/media',

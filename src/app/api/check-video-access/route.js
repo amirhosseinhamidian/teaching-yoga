@@ -6,7 +6,6 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const sessionId = searchParams.get('sessionId'); // `sessionId` یک رشته است
 
-    console.log('session id in check video => ', sessionId);
     if (!sessionId) {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 });
     }

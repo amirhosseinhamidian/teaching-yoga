@@ -9,6 +9,7 @@ import { GrGroup } from 'react-icons/gr';
 import { FaStar } from 'react-icons/fa6';
 import { BsInfoCircle } from 'react-icons/bs';
 import { FiMonitor } from 'react-icons/fi';
+import { redirect } from 'next/navigation';
 
 import {
   BEGINNER,
@@ -18,8 +19,6 @@ import {
   INTERMEDIATE_ADVANCED,
 } from '@/constants/courseLevels';
 import { COMPLETED, IN_PROGRESS } from '@/constants/courseStatus';
-import Price from '@/components/Price/Price';
-import Button from '@/components/Ui/Button/Button';
 import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
 import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
@@ -27,8 +26,16 @@ import CourseFAQ from '@/components/CourseCards/CourseFAQ';
 import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
 import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
 import { headers } from 'next/headers';
+import Footer from '@/components/Footer/Footer';
+import Header from '@/components/Header/Header';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import CoursePriceCard from '@/components/CourseCards/CoursePriceCard';
+import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
+import { formatTime } from '@/utils/dateTimeHelper';
 
 const fetchCourseData = async (shortAddress) => {
+  console.log('short address to fetch api => ', shortAddress);
   try {
     const response = await fetch(
       `http://localhost:3000/api/courses/${shortAddress}`,
@@ -53,14 +60,40 @@ const fetchCourseData = async (shortAddress) => {
   }
 };
 
+const checkUserBuyCourse = async (shortAddress, userId) => {
+  try {
+    const purchaseResponse = await fetch(
+      `http://localhost:3000/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`,
+    );
+    if (!purchaseResponse.ok) {
+      const errorData = await purchaseResponse.json();
+      console.error('Error:', errorData);
+      return false;
+    }
+
+    if (purchaseResponse.status === 200) {
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error('Error while checking user course:', error);
+    return false;
+  }
+};
+
 async function page({ params }) {
+  const session = await getServerSession(authOptions);
   const { shortAddress } = params;
 
-  const userId = '';
-  const { course, videoLink } = await fetchCourseData(shortAddress, userId);
+  const { course, videoLink } = await fetchCourseData(shortAddress);
+  const isUserPurchased = await checkUserBuyCourse(
+    shortAddress,
+    session?.user.userId,
+  );
 
   if (!course) {
-    //TODO: redirect to 404
+    redirect('/not-found');
   }
 
   const getLevel = (level) => {
@@ -105,117 +138,119 @@ async function page({ params }) {
   };
 
   return (
-    <div className='container'>
-      <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
-        <div className='flex flex-col items-center justify-between lg:col-span-1'>
-          <div>
-            <PageTitle>{course.title}</PageTitle>
-            <p className='mb-6 font-thin'>{course.shortDescription}</p>
-          </div>
-          <div className='flex w-full flex-col gap-4 sm:flex-row'>
-            <div className='mx-auto w-full basis-full rounded-xl bg-surface-light p-4 shadow sm:basis-1/2 lg:basis-full dark:bg-surface-dark'>
-              <h4 className='mr-4 text-xs font-semibold text-subtext-light sm:text-sm dark:text-subtext-dark'>
-                هزینه و ثبت نام
-              </h4>
-              <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
-                <Button shadow className='w-3/4 self-center sm:py-3 lg:w-2/4'>
-                  ثبت نام
-                </Button>
-                <Price
-                  className='ml-4'
-                  basePrice={Number(course.basePrice)}
-                  price={Number(course.price)}
+    <>
+      <Header isLogin={session} />
+      <div className='container'>
+        <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
+          <div className='flex flex-col items-center justify-between lg:col-span-1'>
+            <div>
+              <PageTitle>{course.title}</PageTitle>
+              <p className='mb-6 font-thin'>{course.shortDescription}</p>
+            </div>
+            <div className='flex w-full flex-col gap-4 sm:flex-row'>
+              {isUserPurchased ? (
+                <CourseWatchCard
+                  shortAddress={shortAddress}
+                  className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                />
+              ) : (
+                <CoursePriceCard
+                  price={course.price}
+                  discount={course.discount}
+                  finalPrice={course.finalPrice}
+                  className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                />
+              )}
+              {/* for smaller screen */}
+              <div className='self-stretch sm:basis-1/2 lg:hidden'>
+                <InstructorCard
+                  instructor={course.instructor}
+                  className='h-full justify-between'
                 />
               </div>
             </div>
-            {/* for smaller screen */}
-            <div className='self-stretch sm:basis-1/2 lg:hidden'>
-              <InstructorCard
-                instructor={course.instructor}
-                className='h-full justify-between'
+          </div>
+          <div className='m-auto mt-10 items-center lg:col-span-1 lg:mt-0 lg:py-8 lg:pr-10'>
+            <VideoPlayer videoUrl={videoLink} posterUrl={course.cover} />
+          </div>
+        </div>
+
+        <div className='grid grid-cols-3 gap-2 sm:gap-4'>
+          <div className='col-span-3 lg:col-span-2'>
+            <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:gap-4'>
+              <CourseDetailsCard
+                icon={BsCameraVideo}
+                title='تعداد جلسات'
+                value={course.sessionCount}
+                horizontal={true}
+              />
+              <CourseDetailsCard
+                icon={WiTime4}
+                title='زمان دوره'
+                value={formatTime(course.duration, 'hh:mm:ss')}
+                horizontal={true}
+              />
+              <CourseDetailsCard
+                icon={BiBarChartAlt2}
+                title='سطح دوره'
+                value={getLevel(course.level)}
+                horizontal={true}
+              />
+              <CourseDetailsCard
+                icon={BiSupport}
+                title='پشتیبانی'
+                value='آنلاین'
+                horizontal={true}
+              />
+              <CourseDetailsCard
+                icon={GrGroup}
+                title='شرکت کنندگان'
+                value={course.participants}
+                horizontal={true}
+              />
+              <CourseDetailsCard
+                icon={FiMonitor}
+                title='نوع مشاهده'
+                value='آنلاین'
+                horizontal={true}
+              />
+            </div>
+            <CourseDescriptionCard
+              description={course.description}
+              className='mt-4'
+            />
+            <CourseLessonsCard
+              className='mt-4'
+              shortAddress={course.shortAddress}
+            />
+            <CommentsMainCard
+              className='mt-4'
+              isCourse={true}
+              referenceId={course.id}
+            />
+            <CourseFAQ className='my-4' />
+          </div>
+          {/* for larger screen */}
+          <div className='hidden lg:col-span-1 lg:block'>
+            <InstructorCard instructor={course.instructor} />
+            <div className='mt-3 grid grid-cols-2 gap-3'>
+              <CourseDetailsCard
+                icon={FaStar}
+                title='میزان رضایت'
+                value={course.rating}
+              />
+
+              <CourseDetailsCard
+                icon={BsInfoCircle}
+                title='وضعیت دوره'
+                value={getCourseStatus(course.status)}
               />
             </div>
           </div>
         </div>
-        <div className='m-auto mt-10 items-center lg:col-span-1 lg:mt-0 lg:py-8 lg:pr-10'>
-          <VideoPlayer videoUrl={videoLink} posterUrl={course.cover} />
-        </div>
       </div>
-
-      <div className='grid grid-cols-3 gap-2 sm:gap-4'>
-        <div className='col-span-3 lg:col-span-2'>
-          <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:gap-4'>
-            <CourseDetailsCard
-              icon={BsCameraVideo}
-              title='تعداد جلسات'
-              value={course.sessionCount}
-              horizontal={true}
-            />
-            <CourseDetailsCard
-              icon={WiTime4}
-              title='زمان دوره'
-              value={course.duration}
-              horizontal={true}
-            />
-            <CourseDetailsCard
-              icon={BiBarChartAlt2}
-              title='سطح دوره'
-              value={getLevel(course.level)}
-              horizontal={true}
-            />
-            <CourseDetailsCard
-              icon={BiSupport}
-              title='پشتیبانی'
-              value='آنلاین'
-              horizontal={true}
-            />
-            <CourseDetailsCard
-              icon={GrGroup}
-              title='شرکت کنندگان'
-              value={course.participants}
-              horizontal={true}
-            />
-            <CourseDetailsCard
-              icon={FiMonitor}
-              title='نوع مشاهده'
-              value='آنلاین'
-              horizontal={true}
-            />
-          </div>
-          <CourseDescriptionCard
-            description={course.description}
-            className='mt-4'
-          />
-          <CourseLessonsCard
-            className='mt-4'
-            shortAddress={course.shortAddress}
-          />
-          <CommentsMainCard
-            className='mt-4'
-            isCourse={true}
-            referenceId={course.id}
-          />
-          <CourseFAQ className='my-4' />
-        </div>
-        {/* for larger screen */}
-        <div className='hidden lg:col-span-1 lg:block'>
-          <InstructorCard instructor={course.instructor} />
-          <div className='mt-3 grid grid-cols-2 gap-3'>
-            <CourseDetailsCard
-              icon={FaStar}
-              title='میزان رضایت'
-              value={course.rating}
-            />
-
-            <CourseDetailsCard
-              icon={BsInfoCircle}
-              title='وضعیت دوره'
-              value={getCourseStatus(course.status)}
-            />
-          </div>
-        </div>
-      </div>
-    </div>
+      <Footer />
+    </>
   );
 }
 

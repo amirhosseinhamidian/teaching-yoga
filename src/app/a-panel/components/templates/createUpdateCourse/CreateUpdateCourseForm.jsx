@@ -31,10 +31,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
   const toast = createToastHandler(isDark);
   const router = useRouter();
 
-  const calculateDiscount = (basePrice, price) => {
-    return Math.ceil(((basePrice - price) / basePrice) * 100);
-  };
-
   const [coverLink, setCoverLink] = useState(courseToUpdate?.cover || '');
   const [introLink, setIntroLink] = useState(
     courseToUpdate?.introVideoUrl || '',
@@ -47,12 +43,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     courseToUpdate?.sessionCount || '',
   );
   const [time, setTime] = useState(courseToUpdate?.duration || '');
-  const [price, setPrice] = useState(courseToUpdate?.basePrice || '');
-  const [discount, setDiscount] = useState(
-    (courseToUpdate &&
-      calculateDiscount(courseToUpdate.basePrice, courseToUpdate.price)) ||
-      '',
-  );
+
   const [shortAddress, setShortAddress] = useState(
     courseToUpdate?.shortAddress || '',
   );
@@ -71,8 +62,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     shortDesc: '',
     sessionsCount: '',
     time: '',
-    price: '',
-    discount: '',
     firstDesc: '',
     completeDesc: '',
     shortAddress: '',
@@ -174,14 +163,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     }
   };
 
-  const calculateFinalPrice = () => {
-    const rawPrice = parseFloat(price.replace(/,/g, '')) || 0; // حذف کاماها و تبدیل به عدد
-    const rawDiscount = parseFloat(discount) || 0; // تبدیل تخفیف به عدد
-    const discountAmount = (rawPrice * rawDiscount) / 100; // مقدار تخفیف
-    return rawPrice - discountAmount; // قیمت نهایی
-  };
-  const finalPrice = calculateFinalPrice();
-
   const validateShortAddress = async () => {
     if (shortAddress.length < 4) {
       setShortAddressStatus('invalid');
@@ -251,14 +232,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       errors.time = 'مدت زمان باید یک عدد معتبر و بیشتر از صفر باشد.';
     }
 
-    if (!price || isNaN(price) || price <= 0) {
-      errors.price = 'قیمت باید یک عدد معتبر و بیشتر از صفر باشد.';
-    }
-
-    if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
-      errors.discount = 'تخفیف باید یک عدد بین ۰ تا ۱۰۰ باشد.';
-    }
-
     if (!firstDesc.trim()) {
       errors.firstDesc = 'توضیحات اولیه نمی‌تواند خالی باشد.';
     }
@@ -283,17 +256,13 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       errors.shortAddress = 'آدرس باید فقط شامل حروف انگلیسی یا اعداد باشد.';
     }
 
-    const coverRegex =
-      /^https:\/\/samane-yoga\.storage\.c2\.liara\.space\/images\/course_covers\/[\w-]+\.(jpg|jpeg|png)$/;
+    const coverRegex = /\.(jpg|jpeg|png)$/i;
     if (!coverRegex.test(coverLink)) {
-      errors.coverLink =
-        'لینک کاور نامعتبر است. مطمئن شوید که لینک با فرمت صحیح و مسیر درست باشد.';
+      errors.coverLink = 'لینک کاور باید با فرمت .jpg، .jpeg یا .png باشد.';
     }
-    const videoRegex =
-      /^https:\/\/samane-yoga\.storage\.c2\.liara\.space\/videos\/intros\/[\w-]+\.m3u8$/;
+    const videoRegex = /\.m3u8$/i;
     if (!videoRegex.test(introLink)) {
-      errors.introLink =
-        'لینک ویدیو معرفی نامعتبر است. مطمئن شوید که لینک با فرمت صحیح و مسیر درست باشد.';
+      errors.introLink = 'لینک ویدیو باید با فرمت .m3u8 باشد.';
     }
 
     setErrorMessages(errors);
@@ -324,7 +293,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       return;
     }
     setLoading(true);
-    const finalPrice = price - (discount / 100) * price;
 
     const payload = {
       title,
@@ -332,8 +300,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       shortDescription: shortDesc,
       description: completeDesc,
       cover: coverLink,
-      price: String(finalPrice),
-      basePrice: String(price),
       isHighPriority: highPriority,
       shortAddress,
       sessionCount: Number(sessionsCount),
@@ -496,32 +462,6 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           />
           <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
             {time && getStringTime(time)}
-          </p>
-        </div>
-        <Input
-          label='قیمت (تومان)'
-          placeholder='قیمت دوره را وارد کنید'
-          value={price}
-          onChange={setPrice}
-          errorMessage={errorMessages.price}
-          thousandSeparator={true}
-          className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-        />
-        <div>
-          <Input
-            label='تخفیف %'
-            placeholder='تخفیف دوره را وارد کنید (درصد)'
-            value={discount}
-            onChange={setDiscount}
-            errorMessage={errorMessages.discount}
-            type='number'
-            maxLength={2}
-            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-          />
-          <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
-            {price &&
-              discount &&
-              `قیمت نهایی: ${finalPrice.toLocaleString()} تومان`}
           </p>
         </div>
         <div className='relative'>

@@ -14,8 +14,8 @@ export default function CourseCard({ course }) {
   return (
     <div className='flex w-full flex-col rounded-xl bg-surface-light shadow-md dark:bg-surface-dark'>
       <Image
-        src='/images/c1.jpg'
-        alt=''
+        src={course.cover}
+        alt={course.title}
         className='h-auto w-full rounded-t-xl object-cover'
         width={600}
         height={540}
@@ -28,8 +28,9 @@ export default function CourseCard({ course }) {
           {course.subtitle}
         </p>
         <Price
-          price={Number(course.price)}
-          basePrice={Number(course.basePrice)}
+          finalPrice={course.finalPrice}
+          price={course.price}
+          discount={course.discount}
         />
         <CardActions mainBtnClick={detailClickHandler} />
       </div>

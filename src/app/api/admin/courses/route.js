@@ -8,18 +8,49 @@ export async function GET() {
         id: true,
         title: true,
         cover: true,
-        price: true,
         sessionCount: true,
         participants: true,
         activeStatus: true,
+        courseTerms: {
+          select: {
+            term: {
+              select: {
+                price: true,
+                discount: true,
+              },
+            },
+          },
+        },
       },
     });
 
-    return NextResponse.json(courses);
+    // محاسبه تعداد ترم‌ها، مجموع قیمت، مجموع تخفیف و میانگین درصد تخفیف
+    const coursesWithDetails = courses.map((course) => {
+      const termCount = course.courseTerms.length; // تعداد ترم‌ها
+      const totalPrice = course.courseTerms.reduce((sum, courseTerm) => {
+        return sum + courseTerm.term.price;
+      }, 0);
+
+      const totalDiscount = course.courseTerms.reduce((sum, courseTerm) => {
+        return sum + (courseTerm.term.discount || 0);
+      }, 0);
+
+      const averageDiscount =
+        termCount > 0 ? Math.ceil(totalDiscount / termCount) : 0; // میانگین درصد تخفیف
+
+      return {
+        ...course,
+        termCount,
+        totalPrice, // مجموع قیمت دوره
+        averageDiscount, // میانگین درصد تخفیف
+      };
+    });
+
+    return NextResponse.json(coursesWithDetails, { status: 200 });
   } catch (error) {
-    console.error('Error fetching courses:', error);
+    console.error(error);
     return NextResponse.json(
-      { error: 'Failed to fetch courses' },
+      { error: 'Something went wrong' },
       { status: 500 },
     );
   }

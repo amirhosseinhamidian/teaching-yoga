@@ -9,7 +9,7 @@ const CourseFAQ = async ({ className }) => {
 
   return (
     <div
-      className={`flex flex-col gap-2 rounded-xl bg-surface-light p-6 pb-1 pb-4 shadow dark:bg-surface-dark ${className}`}
+      className={`flex flex-col gap-2 rounded-xl bg-surface-light p-6 pb-4 shadow dark:bg-surface-dark ${className}`}
     >
       <h3 className='mb-4 font-semibold md:text-lg'>سوالات متداول</h3>
       {faqs.map((faq) => (

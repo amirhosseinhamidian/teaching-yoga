@@ -33,8 +33,8 @@ const CourseLessonsCard = async ({ shortAddress, className }) => {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.userId ? session.user.userId : '';
   const data = await fetchTermsData(shortAddress, userId);
-  const terms = data.terms;
-
+  const terms = data.courseTerms;
+  console.log('course terms => ', terms);
   return (
     <div
       className={`rounded-xl bg-surface-light p-6 pb-1 shadow dark:bg-surface-dark ${className}`}
@@ -43,13 +43,13 @@ const CourseLessonsCard = async ({ shortAddress, className }) => {
       {terms &&
         terms.map((term) => (
           <Accordion
-            key={term.id}
-            title={term.name}
-            subtitle={term.subtitle}
-            info1={`جلسات: ${term.sessions.length}`}
-            info2={`زمان: ${formatTime(term.duration, 'hh:mm:ss')}`}
+            key={term.term.id}
+            title={term.term.name}
+            subtitle={term.term.subtitle}
+            info1={`جلسات: ${term.term.sessions.length}`}
+            info2={`زمان: ${formatTime(term.term.duration, 'hh:mm:ss')}`}
             className='mb-4'
-            content={term.sessions.map((session, index) => (
+            content={term.term.sessions.map((session, index) => (
               <SessionRow
                 key={session.id}
                 session={session}

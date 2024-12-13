@@ -1,15 +1,25 @@
-"use client"
+'use client';
 /* eslint-disable react/prop-types */
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Price from '../Price/Price';
 import CardActions from './CardActions';
 import { useRouter } from 'next/navigation';
+import { prizeCountdown } from '@/utils/prizeCountdown';
+import Image from 'next/image';
 
 export default function CourseHighCard({ course }) {
-  const route = useRouter()
+  const route = useRouter();
+  const [countdown, setCountdown] = useState(prizeCountdown());
   const detailCourseClickHandler = () => {
-    route.push(`/courses/${course.shortAddress}`)
-  }
+    route.push(`/courses/${course.shortAddress}`);
+  };
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prizeCountdown());
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
   return (
     <div className='flex w-full flex-col-reverse rounded-xl bg-surface-light shadow-md md:flex-row dark:bg-surface-dark'>
       <div className='flex flex-1 flex-col p-5'>
@@ -24,21 +34,23 @@ export default function CourseHighCard({ course }) {
             پیشنهاد ویژه:
           </span>
           <span className='pt-1 font-fancy text-sm text-white sm:text-lg'>
-            {' '}
-            00:00:00
+            {countdown}
           </span>
         </div>
         <div className='mt-5 flex flex-col-reverse gap-5 md:flex-row md:justify-between'>
-          <CardActions mainBtnClick={detailCourseClickHandler}/>
+          <CardActions mainBtnClick={detailCourseClickHandler} />
           <Price
-            price={Number(course.price)}
-            basePrice={Number(course.basePrice)}
+            finalPrice={course.finalPrice}
+            price={course.price}
+            discount={course.discount}
           />
         </div>
       </div>
-      <img
-        src='/images/c1.jpg'
-        alt=''
+      <Image
+        src={course.cover}
+        alt={course.title}
+        width={600}
+        height={540}
         className='h-auto w-full rounded-t-xl object-cover md:w-1/3 md:rounded-none md:rounded-e-xl'
       />
     </div>

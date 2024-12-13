@@ -9,6 +9,8 @@ import ProgressBox from '@/components/templates/lesson/ProgressBox';
 import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Footer from '@/components/Footer/Footer';
+import Header from '@/components/Header/Header';
 
 // Fetch course details and progress
 async function fetchCourseDetails(courseShortAddress) {
@@ -79,44 +81,48 @@ const LessonPage = async ({ params }) => {
   const progress = await fetchCourseProgress(courseShortAddress, userId);
 
   return (
-    <div className='container'>
-      <div className='lg:px-20 xl:px-36'>
-        <PageTitle>{course.title}</PageTitle>
-        <VideoPlayer
-          videoUrl={session.videoLink}
-          posterUrl={course.cover}
-          sessionId={lessonId}
-          userId={userId}
-        />
-        <div className='my-4 grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7'>
-          <div className='col-span-1 md:col-span-2 xl:col-span-5'>
-            <div className='rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>
-              <h2 className='text-base font-semibold sm:text-lg lg:text-2xl'>
-                {session.name}
-              </h2>{' '}
-              <p className='ms:mt-3 mt-1 text-xs font-thin text-subtext-light sm:text-base dark:text-subtext-dark'>
-                {session.term.name}
-              </p>
-            </div>
+    <>
+      <Header isLogin={sessionAuth} />
+      <div className='container'>
+        <div className='lg:px-20 xl:px-36'>
+          <PageTitle>{course.title}</PageTitle>
+          <VideoPlayer
+            videoUrl={session.videoLink}
+            posterUrl={course.cover}
+            sessionId={lessonId}
+            userId={userId}
+          />
+          <div className='my-4 grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7'>
+            <div className='col-span-1 md:col-span-2 xl:col-span-5'>
+              <div className='rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>
+                <h2 className='text-base font-semibold sm:text-lg lg:text-2xl'>
+                  {session.name}
+                </h2>{' '}
+                <p className='ms:mt-3 mt-1 text-xs font-thin text-subtext-light sm:text-base dark:text-subtext-dark'>
+                  {session.term.name}
+                </p>
+              </div>
 
-            {/* List of course lessons */}
-            <CourseLessonsCard
-              className='mt-4'
-              shortAddress={courseShortAddress}
-            />
-            <QuestionBox
-              className='mt-4'
-              courseId={course.id}
-              sessionId={session.id}
-            />
-          </div>
-          <div className='col-span-1 flex flex-col gap-4 xl:col-span-2'>
-            <ProgressBox progress={progress.progress} />
-            <InstructorCard instructor={course.instructor} />
+              {/* List of course lessons */}
+              <CourseLessonsCard
+                className='mt-4'
+                shortAddress={courseShortAddress}
+              />
+              <QuestionBox
+                className='mt-4'
+                courseId={course.id}
+                sessionId={session.id}
+              />
+            </div>
+            <div className='col-span-1 flex flex-col gap-4 xl:col-span-2'>
+              <ProgressBox progress={progress.progress} />
+              <InstructorCard instructor={course.instructor} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      <Footer />
+    </>
   );
 };
 

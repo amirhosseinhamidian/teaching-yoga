@@ -1,6 +1,5 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import PropTypes from 'prop-types';
 import Table from '@/components/Ui/Table/Table';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
 import { LuTrash, LuPencil } from 'react-icons/lu';
@@ -42,7 +41,6 @@ const CoursesTable = () => {
 
   const toggleActiveStatus = async (id, row, currentStatus) => {
     row.activeStatus = !row.activeStatus;
-    console.log('current status =>', currentStatus);
     try {
       // به‌روزرسانی Optimistic
       setCourses((prevCourses) =>
@@ -123,6 +121,8 @@ const CoursesTable = () => {
       ),
     },
     { key: 'price', label: 'قیمت' },
+    { key: 'discount', label: '% تخفیف' },
+    { key: 'termCount', label: 'تعداد ترم' },
     { key: 'sessionCount', label: 'تعداد جلسات' },
     { key: 'participants', label: 'تعداد شرکت‌کنندگان' },
     {
@@ -166,12 +166,16 @@ const CoursesTable = () => {
     },
   ];
 
+  console.log(courses);
+
   // داده‌ها برای جدول (در اینجا از داده‌های API استفاده می‌کنیم)
   const data = courses.map((course) => ({
     id: course.id,
     name: course.title,
     cover: course.cover,
-    price: course.price,
+    price: course.totalPrice.toLocaleString('fa-IR'),
+    discount: course.averageDiscount,
+    termCount: course.termCount,
     sessionCount: course.sessionCount,
     participants: course.participants,
     activeStatus: course.activeStatus,
@@ -200,7 +204,5 @@ const CoursesTable = () => {
     </div>
   );
 };
-
-CoursesTable.propTypes = {};
 
 export default CoursesTable;

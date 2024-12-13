@@ -28,17 +28,25 @@ export async function GET(request) {
       select: {
         id: true,
         title: true,
-        terms: {
-          select: {
-            sessions: {
-              select: {
-                id: true,
-                sessionProgress: {
-                  where: {
-                    userId: userId,
-                  },
+        courseTerms: {
+          // استفاده از CourseTerm برای دریافت ترم‌ها
+          include: {
+            term: {
+              // دریافت ترم‌ها
+              include: {
+                sessions: {
+                  // دریافت جلسات برای هر ترم
                   select: {
-                    isCompleted: true,
+                    id: true,
+                    order: true,
+                    sessionProgress: {
+                      where: {
+                        userId: userId,
+                      },
+                      select: {
+                        isCompleted: true,
+                      },
+                    },
                   },
                 },
               },
@@ -58,7 +66,8 @@ export async function GET(request) {
     let completedVideos = 0;
 
     // برای هر ترم و هر جلسه، تعداد ویدیوها و وضعیت تکمیل بودن آن‌ها را بررسی می‌کنیم
-    course.terms.forEach((term) => {
+    course.courseTerms.forEach((courseTerm) => {
+      const term = courseTerm.term; // ترم مربوطه
       term.sessions.forEach((session) => {
         totalVideos += 1;
         if (session.sessionProgress[0]?.isCompleted) {

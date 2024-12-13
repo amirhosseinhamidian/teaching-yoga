@@ -84,9 +84,12 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
     >
       <div className='flex items-baseline justify-between'>
         <h3 className='mb-4 font-semibold md:text-lg'>نظرات کاربران</h3>
-        <Button className='text-xs sm:text-base' onClick={createToggleHandler}>
+        <OutlineButton
+          className='text-xs sm:text-base'
+          onClick={createToggleHandler}
+        >
           {showCreateCard ? 'بستن' : 'ایجاد نظر جدید'}
-        </Button>
+        </OutlineButton>
       </div>
       {showCreateCard && (
         <CreateCommentCard

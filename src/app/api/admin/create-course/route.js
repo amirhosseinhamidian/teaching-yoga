@@ -10,8 +10,6 @@ export async function POST(request) {
       shortDescription,
       description,
       cover,
-      price,
-      basePrice,
       isHighPriority,
       shortAddress,
       sessionCount,
@@ -28,7 +26,6 @@ export async function POST(request) {
       !subtitle ||
       !description ||
       !cover ||
-      !price ||
       !shortAddress ||
       !sessionCount ||
       !duration ||
@@ -50,8 +47,6 @@ export async function POST(request) {
         shortDescription,
         description,
         cover,
-        price,
-        basePrice,
         isHighPriority: isHighPriority || false,
         shortAddress,
         sessionCount,
