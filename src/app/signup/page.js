@@ -10,7 +10,7 @@ import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const page = () => {
+const Page = () => {
   const { username, setUsername, user } = useAuth();
   const { userPhone, setUserPhone } = useAuth();
   const { setToken } = useAuth();
@@ -125,4 +125,4 @@ const page = () => {
   );
 };
 
-export default page;
+export default Page;
