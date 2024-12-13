@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { getShamsiDate } from '@/utils/dateTimeHelper';
+import Image from 'next/image';
 
 const CommentReplyCard = ({ className, reply }) => {
   return (
@@ -9,9 +10,11 @@ const CommentReplyCard = ({ className, reply }) => {
     >
       <div className='border-b border-gray-300 pb-3 sm:pb-4 dark:border-gray-600'>
         <div className='mr-3 flex items-center gap-1'>
-          <img
+          <Image
             src={reply.user.avatar}
             alt='user profile picture'
+            width={240}
+            height={240}
             className='h-8 w-8 rounded-full object-cover sm:h-12 sm:w-12'
           />
           <div className='flex flex-col gap-0 sm:gap-1'>

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import HeadAction from '../components/templates/user/HeadAction';
@@ -25,7 +26,7 @@ const UserManagementPage = () => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/users?page=${page}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users?page=${page}`,
       );
       const data = await response.json();
 
@@ -50,7 +51,7 @@ const UserManagementPage = () => {
   const handleDeleteUser = async (username) => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/users/${username}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
         {
           method: 'DELETE',
         },

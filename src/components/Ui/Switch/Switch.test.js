@@ -37,20 +37,22 @@ describe('Switch Component', () => {
 
   test('renders with label', () => {
     // Check that the label is rendered when provided
-    const { getByText } = render(<Switch label="Test Label" />);
+    const { getByText } = render(<Switch label='Test Label' />);
     expect(getByText('Test Label')).toBeInTheDocument(); // Label should be rendered
   });
 
   test('applies custom class names', () => {
     // Check that custom class names are applied to the switch component
-    const { getByRole } = render(<Switch className="custom-class" />);
+    const { getByRole } = render(<Switch className='custom-class' />);
     const switchInput = getByRole('checkbox');
-    expect(switchInput.parentElement.parentElement).toHaveClass('custom-class');// Check for custom class
+    expect(switchInput.parentElement.parentElement).toHaveClass('custom-class'); // Check for custom class
   });
 
   test('renders with custom label class', () => {
     // Check that the custom label class is applied correctly
-    const { getByText } = render(<Switch label="Test Label" labelClass="custom-label" />);
+    const { getByText } = render(
+      <Switch label='Test Label' labelClass='custom-label' />,
+    );
     expect(getByText('Test Label')).toHaveClass('custom-label'); // Check for custom label class
   });
 });

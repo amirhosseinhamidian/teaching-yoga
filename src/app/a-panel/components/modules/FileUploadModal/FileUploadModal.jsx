@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useRef, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
@@ -63,7 +64,9 @@ const FileUploadModal = ({
     if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
 
     try {
-      const response = await fetch('http://localhost:3000/api/upload/progress');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
+      );
       const data = await response.json();
 
       setProgress(data.progress); // به‌روزرسانی درصد پیشرفت

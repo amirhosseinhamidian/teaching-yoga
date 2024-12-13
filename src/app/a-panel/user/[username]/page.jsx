@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import HeadAction from '../../components/templates/userDetail/HeadAction';
@@ -27,7 +28,7 @@ const DetailUserPage = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/users/${username}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
       );
       if (!response.ok) {
         toast.showErrorToast('کاربر پیدا نشد');
@@ -53,7 +54,7 @@ const DetailUserPage = () => {
   const deleteUser = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/users/${username}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
         {
           method: 'DELETE',
         },

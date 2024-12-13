@@ -27,7 +27,7 @@ describe('TextArea Component', () => {
     const handleChange = jest.fn();
     setup({ value: '', onChange: handleChange });
     const textarea = screen.getByRole('textbox');
-    
+
     fireEvent.change(textarea, { target: { value: 'New value' } });
     expect(handleChange).toHaveBeenCalledWith('New value');
   });

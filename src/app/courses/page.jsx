@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import CourseCard from '@/components/CourseCards/CourseCard';
 import CourseHighCard from '@/components/CourseCards/CourseHighCard';
 import React from 'react';
@@ -10,7 +11,9 @@ import { authOptions } from '../api/auth/[...nextauth]/route';
 async function CoursesPage() {
   const session = await getServerSession(authOptions);
 
-  const res = await fetch('http://localhost:3000/api/courses');
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
+  );
 
   const result = await res.json();
   if (!result.success) {

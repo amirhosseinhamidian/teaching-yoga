@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
@@ -51,7 +52,7 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/terms/${termId}/sessions`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions`,
         {
           method: 'POST',
           headers: {

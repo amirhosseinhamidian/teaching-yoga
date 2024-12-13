@@ -21,7 +21,7 @@ test('calls onClick function when clicked', () => {
 
 test('applies the correct color classes based on the color prop', () => {
   // Test to ensure the correct color class is applied based on the color prop (primary by default)
-  render(<OutlineButton color="red">Click Me</OutlineButton>);
+  render(<OutlineButton color='red'>Click Me</OutlineButton>);
   const buttonElement = screen.getByText(/Click Me/i);
 
   // Check if the button has the 'red' color classes for text, border, and hover effects
@@ -45,7 +45,7 @@ test('applies the default color classes when no color prop is provided', () => {
 
 test('applies custom className when provided', () => {
   // Test to check if additional custom className is applied to the button
-  render(<OutlineButton className="custom-class">Click Me</OutlineButton>);
+  render(<OutlineButton className='custom-class'>Click Me</OutlineButton>);
   const buttonElement = screen.getByText(/Click Me/i);
 
   // Check if the button has the custom class along with default classes
@@ -55,7 +55,7 @@ test('applies custom className when provided', () => {
 
 test('applies hover effect with transition when hovered', () => {
   // Test to verify that the hover effect is applied with transition when hovered
-  render(<OutlineButton color="blue">Click Me</OutlineButton>);
+  render(<OutlineButton color='blue'>Click Me</OutlineButton>);
   const buttonElement = screen.getByText(/Click Me/i);
 
   // Simulate hover and check if the hover background and text color change
@@ -63,4 +63,3 @@ test('applies hover effect with transition when hovered', () => {
   expect(buttonElement).toHaveClass('hover:bg-blue');
   expect(buttonElement).toHaveClass('hover:text-background-light');
 });
-

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
@@ -17,7 +18,7 @@ const CourseWatchCard = ({ shortAddress, className }) => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3000/api/courses/${shortAddress}/first-session`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}/first-session`,
       );
       if (response.ok) {
         const { sessionId } = await response.json();

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable react/prop-types */
 import CreateCourseUpdateForm from '@/app/a-panel/components/templates/createUpdateCourse/CreateUpdateCourseForm';
 import React from 'react';
@@ -5,7 +6,7 @@ import React from 'react';
 const fetchCourseData = async (id) => {
   try {
     const response = await fetch(
-      `http://localhost:3000/api/admin/courses/${id}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${id}`,
     );
     const data = await response.json();
 

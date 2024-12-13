@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import PropTypes from 'prop-types';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
@@ -105,10 +106,13 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     formData.append('folderPath', folderPath);
 
     try {
-      const response = await fetch('http://localhost:3000/api/upload/image', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/image`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -140,7 +144,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/api/upload/video/courseIntro',
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video/courseIntro`,
         {
           method: 'POST',
           body: formData,
@@ -315,7 +319,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       if (courseToUpdate) {
         // Update course
         response = await fetch(
-          `http://localhost:3000/api/admin/courses/${courseToUpdate.id}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseToUpdate.id}`,
           {
             method: 'PUT',
             headers: {
@@ -327,7 +331,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       } else {
         // Create course
         response = await fetch(
-          'http://localhost:3000/api/admin/create-course',
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/create-course`,
           {
             method: 'POST',
             headers: {

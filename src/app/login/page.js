@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
@@ -36,13 +37,16 @@ const Login = () => {
     const checkResponse = await CheckPhoneAction(userPhone);
     if (checkResponse) {
       try {
-        const response = await fetch('http://localhost:3000/api/send-otp', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/send-otp`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone: userPhone }),
           },
-          body: JSON.stringify({ phone: userPhone }),
-        });
+        );
 
         const data = await response.json();
         if (data.success) {

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import CourseDetailsCard from '@/components/CourseCards/CourseDetailsCard';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import React from 'react';
@@ -35,10 +36,9 @@ import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
 import { formatTime } from '@/utils/dateTimeHelper';
 
 const fetchCourseData = async (shortAddress) => {
-  console.log('short address to fetch api => ', shortAddress);
   try {
     const response = await fetch(
-      `http://localhost:3000/api/courses/${shortAddress}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}`,
       {
         method: 'GET',
         headers: headers(),
@@ -63,7 +63,7 @@ const fetchCourseData = async (shortAddress) => {
 const checkUserBuyCourse = async (shortAddress, userId) => {
   try {
     const purchaseResponse = await fetch(
-      `http://localhost:3000/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`,
     );
     if (!purchaseResponse.ok) {
       const errorData = await purchaseResponse.json();

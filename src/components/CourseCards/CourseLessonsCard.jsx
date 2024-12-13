@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import React from 'react';
 import PropTypes from 'prop-types';
 import Accordion from '../Ui/Accordion/Accordion';
@@ -9,7 +10,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 const fetchTermsData = async (shortAddress, userId) => {
   try {
     const response = await fetch(
-      `http://localhost:3000/api/courses/${shortAddress}/terms`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}/terms`,
       {
         cache: 'no-cache',
         method: 'GET',
@@ -34,7 +35,6 @@ const CourseLessonsCard = async ({ shortAddress, className }) => {
   const userId = session?.user?.userId ? session.user.userId : '';
   const data = await fetchTermsData(shortAddress, userId);
   const terms = data.courseTerms;
-  console.log('course terms => ', terms);
   return (
     <div
       className={`rounded-xl bg-surface-light p-6 pb-1 shadow dark:bg-surface-dark ${className}`}

@@ -1,16 +1,20 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import UserCourseRow from './UserCourseRow';
 
 async function fetchCourseProgress(userId) {
-  const res = await fetch(`http://localhost:3000/api/admin/courses-progress`, {
-    cache: 'no-store', // Ensures SSR by disabling caching
-    method: 'GET',
-    headers: {
-      userId: userId,
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses-progress`,
+    {
+      cache: 'no-store', // Ensures SSR by disabling caching
+      method: 'GET',
+      headers: {
+        userId: userId,
+      },
     },
-  });
+  );
 
   if (!res.ok) {
     throw new Error('Failed to fetch course data');

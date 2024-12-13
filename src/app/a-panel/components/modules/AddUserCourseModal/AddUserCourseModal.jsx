@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -7,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import Button from '@/components/Ui/Button/Button';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import Image from 'next/image';
 
 function AddUserCourseModal({ onClose, onSuccess, userId }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -35,12 +37,15 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
   // تابع دریافت دوره‌ها از API
   const fetchCourses = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/admin/courses', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      });
+      );
 
       if (!res.ok) {
         throw new Error('Failed to fetch courses');
@@ -52,9 +57,11 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
         value: course.id,
         label: (
           <div className='flex items-center gap-2'>
-            <img
+            <Image
               src={course.cover} // آدرس تصویر کاور
               alt={course.title}
+              width={128}
+              height={96}
               className='h-9 w-12 rounded-md object-cover'
             />
             <span>{course.title}</span> {/* عنوان دوره */}
@@ -80,7 +87,7 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
     try {
       setIsLoading(true);
       const response = await fetch(
-        'http://localhost:3000/api/admin/users/course',
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/course`,
         {
           method: 'POST',
           headers: {

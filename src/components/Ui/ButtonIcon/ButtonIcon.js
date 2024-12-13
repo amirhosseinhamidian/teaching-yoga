@@ -17,7 +17,7 @@ const IconButton = ({
       className={`group rounded-xl bg-background-light p-2 transition duration-300 ease-in hover:bg-secondary dark:bg-background-dark ${className}`}
     >
       <Icon
-        data-testid="icon"
+        data-testid='icon'
         size={size}
         color={color}
         className='fill-primary transition-colors duration-300 group-hover:fill-secondary-light dark:group-hover:fill-secondary-dark'

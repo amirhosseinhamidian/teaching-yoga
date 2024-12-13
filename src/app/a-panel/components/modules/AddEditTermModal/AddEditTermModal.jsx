@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -35,7 +36,9 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
   useEffect(() => {
     const fetchTerms = async () => {
       try {
-        const response = await fetch('http://localhost:3000/api/admin/terms');
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`,
+        );
         if (!response.ok) throw new Error('Failed to fetch terms');
         const data = await response.json();
         const formattedOptions = data.map((term) => ({
@@ -106,14 +109,14 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
 
     let url;
     if (term) {
-      url = `http://localhost:3000/api/admin/terms/${term.id}`; // بروزرسانی ترم موجود
+      url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${term.id}`; // بروزرسانی ترم موجود
     } else {
       if (selectedTermId) {
         // اتصال ترم موجود به دوره
-        url = `http://localhost:3000/api/admin/courses/${courseId}/terms`; // ارسال ترم انتخابی برای ارتباط
+        url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`; // ارسال ترم انتخابی برای ارتباط
       } else {
         // افزودن ترم جدید
-        url = `http://localhost:3000/api/admin/courses/${courseId}/terms`;
+        url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`;
       }
     }
 

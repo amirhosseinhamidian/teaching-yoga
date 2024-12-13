@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
+import Image from 'next/image';
 
 const InstructorCard = ({ instructor, className }) => {
   const user = instructor.user;
@@ -13,9 +14,11 @@ const InstructorCard = ({ instructor, className }) => {
           مدرس دوره
         </h4>
         <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
-          <img
+          <Image
             src={user.avatar}
             alt='instructor avatar'
+            width={240}
+            height={240}
             className='h-14 w-14 rounded-full'
           />
           <h5 className='text-sm sm:text-base'>

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 'use client';
 import React, { useEffect, useState } from 'react';
@@ -82,13 +83,12 @@ const AddTermSessionPage = () => {
   const fetchTerms = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/courses/${courseId}/terms`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`,
       );
       if (!response.ok) {
         throw new Error('Failed to fetch terms');
       }
       const data = await response.json();
-      console.log(data);
       setTerms(data);
     } catch (error) {
       console.error(error);
@@ -111,7 +111,9 @@ const AddTermSessionPage = () => {
 
     setLoadingSessions((prev) => ({ ...prev, [termId]: true }));
     try {
-      const response = await fetch(`/api/admin/terms/${termId}/sessions`);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions`,
+      );
       const data = await response.json();
       setSessions((prev) => ({ ...prev, [termId]: data }));
     } catch (error) {
@@ -145,7 +147,7 @@ const AddTermSessionPage = () => {
   const handleDeleteSession = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/terms/${termTempId}/sessions/${sessionTempId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termTempId}/sessions/${sessionTempId}`,
         {
           method: 'DELETE',
         },
@@ -175,7 +177,7 @@ const AddTermSessionPage = () => {
   const handleDeleteTerm = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/terms/${termTempId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termTempId}`,
         {
           method: 'DELETE',
         },
@@ -199,7 +201,6 @@ const AddTermSessionPage = () => {
   };
 
   const uploadVideoSession = (termId, sessionId) => {
-    console.log('termId =>', termId, ' sessionId => ', sessionId);
     setTermTempId(termId);
     setSessionTempId(sessionId);
     setShowUploadVideoSessionModal(true);
@@ -218,10 +219,13 @@ const AddTermSessionPage = () => {
     formData.append('sessionId', sessionTempId);
 
     try {
-      const response = await fetch('http://localhost:3000/api/upload/video', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video`,
+        {
+          method: 'POST',
+          body: formData,
+        },
+      );
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -285,7 +289,7 @@ const AddTermSessionPage = () => {
     try {
       setVideoLoadingId(videoId);
       const response = await fetch(
-        'http://localhost:3000/api/generate-video-link',
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate-video-link`,
         {
           method: 'POST',
           headers: {
@@ -320,7 +324,7 @@ const AddTermSessionPage = () => {
         ),
       }));
       const response = await fetch(
-        `http://localhost:3000/api/session/${row.id}/active-status`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session/${row.id}/active-status`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },

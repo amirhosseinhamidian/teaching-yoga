@@ -1,7 +1,6 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
-import Button from '../Ui/Button/Button';
 import CommentCard from './CommentCard';
 import OutlineButton from '../Ui/OutlineButton/OutlineButton';
 import { FaSpinner, FaAngleDown } from 'react-icons/fa6';
@@ -12,7 +11,6 @@ import EmptyComment from './EmptyComment';
 const CommentsMainCard = ({ className, referenceId, isCourse }) => {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [finishComments, setFinishComments] = useState(true);
@@ -27,7 +25,6 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
     const controller = new AbortController();
     const fetchComments = async () => {
       setLoading(true);
-      setError(null);
       try {
         const response = await fetch(
           `/api/comments?courseId=${referenceId}&page=${page}`,
@@ -54,7 +51,6 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
-          setError(error.message);
           console.error('Error comment fetching =>', error.message);
         }
       }
@@ -74,7 +70,6 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
   };
 
   const addComment = (newComment) => {
-    console.log('add new comment => ', newComment);
     setComments((prevComments) => [newComment, ...prevComments]);
   };
 

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import React from 'react';
 import PropTypes from 'prop-types';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
@@ -15,7 +16,7 @@ import Header from '@/components/Header/Header';
 // Fetch course details and progress
 async function fetchCourseDetails(courseShortAddress) {
   const res = await fetch(
-    `http://localhost:3000/api/course-details?shortAddress=${courseShortAddress}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/course-details?shortAddress=${courseShortAddress}`,
     {
       cache: 'no-store', // Ensures SSR by disabling caching
       method: 'GET',
@@ -33,7 +34,7 @@ async function fetchCourseDetails(courseShortAddress) {
 async function fetchSessionDetails(sessionId) {
   try {
     const res = await fetch(
-      `http://localhost:3000/api/lesson?sessionId=${sessionId}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/lesson?sessionId=${sessionId}`,
       {
         cache: 'no-store', // Ensures SSR by disabling caching
         method: 'GET',
@@ -52,7 +53,7 @@ async function fetchSessionDetails(sessionId) {
 
 async function fetchCourseProgress(courseShortAddress, userId) {
   const res = await fetch(
-    `http://localhost:3000/api/session-progress?shortAddress=${courseShortAddress}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress?shortAddress=${courseShortAddress}`,
     {
       cache: 'no-store', // Ensures SSR by disabling caching
       method: 'GET',

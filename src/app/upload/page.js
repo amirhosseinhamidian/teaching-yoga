@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState, useEffect } from 'react';
 
@@ -32,7 +33,7 @@ export default function UploadPage() {
 
     try {
       const response = await fetch(
-        'http://localhost:3000/api/upload/video/courseIntro',
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video/courseIntro`,
         {
           method: 'POST',
           body: formData,
@@ -43,7 +44,6 @@ export default function UploadPage() {
 
       if (response.ok) {
         setMessage('File uploaded and converted successfully');
-        console.log(data);
       } else {
         setError(data.error);
       }
@@ -57,7 +57,9 @@ export default function UploadPage() {
     if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
 
     try {
-      const response = await fetch('http://localhost:3000/api/upload/progress');
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
+      );
       const data = await response.json();
 
       setProgress(data.progress); // به‌روزرسانی درصد پیشرفت

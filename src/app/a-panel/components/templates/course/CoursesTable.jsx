@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState, useEffect } from 'react';
 import Table from '@/components/Ui/Table/Table';
@@ -24,7 +25,9 @@ const CoursesTable = () => {
   // فانکشن ریکوئست برای گرفتن داده‌ها از API
   const fetchCourses = async () => {
     try {
-      const response = await fetch('http://localhost:3000/api/admin/courses'); // درخواست به API برای دریافت دوره‌ها
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses`,
+      ); // درخواست به API برای دریافت دوره‌ها
       const data = await response.json(); // تبدیل داده‌ها به فرمت JSON
       setCourses(data); // ذخیره داده‌ها در state
     } catch (error) {
@@ -52,7 +55,7 @@ const CoursesTable = () => {
       );
 
       const response = await fetch(
-        `http://localhost:3000/api/admin/courses/${id}/active-status`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${id}/active-status`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -84,7 +87,7 @@ const CoursesTable = () => {
   const handleDeleteCourse = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/admin/courses/${deleteTempId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${deleteTempId}`,
         {
           method: 'DELETE',
         },
@@ -165,8 +168,6 @@ const CoursesTable = () => {
       ),
     },
   ];
-
-  console.log(courses);
 
   // داده‌ها برای جدول (در اینجا از داده‌های API استفاده می‌کنیم)
   const data = courses.map((course) => ({

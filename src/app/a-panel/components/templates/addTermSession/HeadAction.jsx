@@ -5,7 +5,6 @@ import Button from '@/components/Ui/Button/Button';
 import AddEditTermModal from '../../modules/AddEditTermModal/AddEditTermModal';
 
 const HeadAction = ({ courseId, courseTitle, addTermSuccessfully }) => {
-  console.log('course id in head action => ', courseId);
   const [showAddTermModal, setShowAddTermModal] = useState(false);
   return (
     <>

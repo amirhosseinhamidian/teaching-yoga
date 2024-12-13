@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -38,7 +39,7 @@ const UserCourseRow = ({
   const deleteCourse = async () => {
     try {
       const response = await fetch(
-        'http://localhost:3000/api/admin/users/course',
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/course`,
         {
           method: 'DELETE',
           body: JSON.stringify({

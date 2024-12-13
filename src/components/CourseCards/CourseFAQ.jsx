@@ -1,10 +1,11 @@
+/* eslint-disable no-undef */
 import React from 'react';
 import Accordion from '../Ui/Accordion/Accordion';
 import PropTypes from 'prop-types';
 
 const CourseFAQ = async ({ className }) => {
-  const res = await fetch('http://localhost:3000/api/faqs');
-  if (!res.ok) console.log('error faqs => ', res);
+  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/faqs`);
+  if (!res.ok) console.error('error faqs => ', res);
   const faqs = await res.json();
 
   return (

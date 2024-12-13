@@ -45,7 +45,7 @@ export async function middleware(request) {
 
     try {
       const videoResponse = await fetch(
-        `http://localhost:3000/api/check-video-access?sessionId=${sessionId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-video-access?sessionId=${sessionId}`,
       );
 
       if (videoResponse.status !== 200) {
@@ -73,7 +73,7 @@ export async function middleware(request) {
         }
 
         const purchaseResponse = await fetch(
-          `http://localhost:3000/api/check-purchase?userId=${token.userId}&shortAddress=${shortAddress}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${token.userId}&shortAddress=${shortAddress}`,
         );
 
         if (purchaseResponse.status !== 200) {

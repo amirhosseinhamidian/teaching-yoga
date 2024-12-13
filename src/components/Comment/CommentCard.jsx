@@ -3,17 +3,19 @@ import PropTypes from 'prop-types';
 import CommentReplyCard from './CommentReplyCard';
 import { getShamsiDate } from '@/utils/dateTimeHelper';
 import { PENDING, REJECTED } from '@/constants/commentStatus';
+import Image from 'next/image';
 
 const CommentCard = ({ className, comment }) => {
-  console.log(comment.status);
   return (
     <div
       className={`rounded-xl bg-background-light p-2 sm:p-4 dark:bg-background-dark ${className}`}
     >
       <div className='border-b border-gray-300 pb-2 sm:pb-4 dark:border-gray-600'>
         <div className='mr-3 flex items-center gap-1'>
-          <img
+          <Image
             src={comment.user.avatar}
+            width={240}
+            height={240}
             alt='user profile picture'
             className='h-8 w-8 rounded-full object-cover sm:h-12 sm:w-12'
           />

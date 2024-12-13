@@ -22,8 +22,6 @@ export async function GET(request) {
       },
     });
 
-    console.log('session video in check video api =>', sessionVideo);
-
     if (!sessionVideo) {
       return NextResponse.json(
         { error: 'Session video not found' },

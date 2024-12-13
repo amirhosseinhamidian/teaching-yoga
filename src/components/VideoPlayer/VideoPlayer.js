@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -21,7 +22,7 @@ const VideoPlayer = ({
   const markVideoAsCompleted = async () => {
     try {
       await fetch(
-        `http://localhost:3000/api/session-progress/${sessionId}/complete`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'POST',
           headers: {
@@ -39,7 +40,7 @@ const VideoPlayer = ({
   const fetchVideoCompletionStatus = async () => {
     try {
       const response = await fetch(
-        `http://localhost:3000/api/session-progress/${sessionId}/complete`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'GET',
           headers: {
@@ -126,10 +127,9 @@ const VideoPlayer = ({
 
   useEffect(() => {
     if (isVideoCompleted) {
-      console.log('set complete watch video when user 80% watched...');
       markVideoAsCompleted();
     }
-  }, [isVideoCompleted]);
+  }, [isVideoCompleted, markVideoAsCompleted]);
 
   return (
     <div className='plyr-container overflow-hidden rounded-xl'>

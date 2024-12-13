@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
@@ -100,8 +101,8 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
     try {
       const method = editUser ? 'PUT' : 'POST';
       const url = editUser
-        ? `http://localhost:3000/api/admin/users/${editUser.username}`
-        : `http://localhost:3000/api/admin/users`;
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${editUser.username}`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users`;
       const response = await fetch(url, {
         method,
         headers: {
