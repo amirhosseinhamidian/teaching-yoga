@@ -60,7 +60,7 @@ export async function GET(req, { params }) {
     }
 
     // Calculate total price, average discount, and final price
-    const terms = course.terms || [];
+    const terms = course.courseTerms.map((courseTerm) => courseTerm.term) || [];
     const totalPrice = terms.reduce((sum, term) => sum + (term.price || 0), 0);
 
     const totalDiscount = terms.reduce(
