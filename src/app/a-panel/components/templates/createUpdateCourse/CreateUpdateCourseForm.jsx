@@ -134,6 +134,14 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     }
   };
 
+  const handleOpenUploadVideoModal = () => {
+    if (!title) {
+      toast.showErrorToast('ابتدا عنوان دوره را وارد کنید.');
+      return;
+    }
+    setOpenUploadIntroModal(true);
+  };
+
   const handleIntroVideoUpload = async (file) => {
     if (!file) {
       toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
@@ -141,6 +149,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     }
     const formData = new FormData();
     formData.append('video', file);
+    formData.append('courseName', title);
 
     try {
       const response = await fetch(
@@ -425,7 +434,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
             icon={FiPlus}
             color='accent'
             className='absolute left-1 top-[38px]'
-            onClick={() => setOpenUploadIntroModal(true)}
+            onClick={handleOpenUploadVideoModal}
           />
         </div>
         <DropDown

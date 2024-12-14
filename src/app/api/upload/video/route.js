@@ -190,8 +190,6 @@ export async function POST(req) {
   const outputDir = path.join(tempDir, `${uuidv4()}`);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  ffmpeg.setFfmpegPath('C:\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe');
-
   try {
     // Convert video to HLS (0% to 50%)
     await convertToHLS(tempFilePath, outputDir);
@@ -205,8 +203,12 @@ export async function POST(req) {
     const videoKey = await uploadFilesToS3(files, outputDir, folderKey);
 
     // Clean up temporary files
-    fs.unlinkSync(tempFilePath);
-    fs.rmSync(outputDir, { recursive: true, force: true });
+    try {
+      fs.unlinkSync(tempFilePath);
+      fs.rmSync(outputDir, { recursive: true, force: true });
+    } catch (cleanupError) {
+      console.error('Error cleaning up temporary files:', cleanupError);
+    }
 
     // Save video information in the database
     const sessionVideoId = await saveSessionVideo(

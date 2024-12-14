@@ -120,8 +120,9 @@ const uploadFilesToS3 = async (files, outputDir, folderKey) => {
 export async function POST(req) {
   const data = await req.formData();
   const file = data.get('video');
+  const courseName = data.get('courseName');
 
-  if (!file) {
+  if (!file || !courseName) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
       { status: 400 },
@@ -136,8 +137,6 @@ export async function POST(req) {
   const outputDir = path.join(tempDir, `${uuidv4()}`);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  ffmpeg.setFfmpegPath('C:\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe');
-
   try {
     // Convert video to HLS (0% to 50%)
     await convertToHLS(tempFilePath, outputDir);
@@ -147,7 +146,7 @@ export async function POST(req) {
 
     // Upload files to S3 (50% to 100%)
     const files = fs.readdirSync(outputDir);
-    const folderKey = `videos/intros`;
+    const folderKey = `videos/${courseName}/intro`;
     const videoKey = await uploadFilesToS3(files, outputDir, folderKey);
 
     // Clean up temporary files
