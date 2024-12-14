@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import Image from 'next/image';
 
 export default function Logo({ size = 'medium', className }) {
   // Define size classes
@@ -12,11 +11,9 @@ export default function Logo({ size = 'medium', className }) {
 
   return (
     <div className={`flex items-end gap-2 ${sizeClasses[size]} ${className}`}>
-      <Image
+      <img
         src='/images/logo.png'
         alt='samaneh yoga logo'
-        width={120}
-        height={120}
         className={`block ${sizeClasses[size]}`}
       />
       <h2
