@@ -1,27 +1,7 @@
 /* eslint-disable no-undef */
+import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
-import AWS from 'aws-sdk';
-
-// AWS S3 Client Initialization
-const s3 = new AWS.S3();
-
-// Generate a temporary link
-async function generateTemporaryLink(videoKey) {
-  const params = {
-    Bucket: process.env.AWS_S3_BUCKET_NAME,
-    Key: videoKey,
-    Expires: 7200, // Expiry time in seconds (2 hours)
-  };
-
-  try {
-    const signedUrl = await s3.getSignedUrlPromise('getObject', params);
-    return signedUrl;
-  } catch (error) {
-    console.error('Error generating temporary link:', error);
-    throw new Error('Unable to generate temporary link');
-  }
-}
 
 export async function GET(req, { params }) {
   try {
