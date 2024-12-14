@@ -8,10 +8,10 @@
     "start": "next start",
     "lint": "next lint",
     "test": "jest",
-    "postinstall": "prisma generate --schema=./prisma/schema.prisma"
+    "postinstall": "echo 'Current Directory:' && pwd && ls -R && prisma generate --schema=./prisma/schema.prisma"
   },
   "prisma": {
-    "schema": "prisma/schema.prisma"
+    "schema": "/prisma/schema.prisma"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.689.0",
