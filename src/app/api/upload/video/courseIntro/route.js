@@ -38,47 +38,65 @@ const uploadToS3 = async (filePath, key) => {
 };
 
 // Convert video to HLS
-const convertToHLS = async (tempFilePath, outputDir) => {
+export const convertToHLS = async (tempFilePath, outputDir) => {
+  const dimensions = await getVideoDimensions(tempFilePath);
+  const qualities = getQualities(dimensions);
+  const qualitiesForMaster = qualities;
+
   let totalProgress = 0;
-  const numTasks = resolutions.length;
+  const numTasks = qualities.length;
 
-  return Promise.all(
-    resolutions.map(
-      (quality) =>
-        new Promise((resolve, reject) => {
-          const fileName = `${quality.resolution}.m3u8`;
-          const outputPath = path.join(outputDir, fileName);
+  const processQuality = async (quality) => {
+    const fileName = `${quality.resolution}.m3u8`;
 
-          // تبدیل ویدیو به فرمت HLS
-          ffmpeg(tempFilePath)
-            .outputOptions([
-              '-preset veryfast',
-              '-g 48',
-              '-sc_threshold 0',
-              `-s ${quality.resolution}`,
-              `-b:v ${quality.bitrate}`,
-              '-hls_time 6', // این مقدار باید کم باشد تا فایل TS در اندازه مناسب تقسیم شود
-              '-hls_list_size 0', // جلوگیری از محدودیت در تعداد فایل‌های TS
-              '-f hls',
-              '-hls_segment_filename',
-              `${path.join(outputDir, `${quality.resolution}-%03d.ts`)}`,
-            ])
-            .output(outputPath)
-            .on('progress', (progress) => {
-              const progressPercent = progress.percent || 0;
-              const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
-              totalProgress += ffmpegProgress;
-              setProgress(Math.min(totalProgress, 5)); // درصد پیشرفت
-            })
-            .on('end', resolve)
-            .on('error', (error) => {
-              console.error('Error during ffmpeg processing', error);
-              reject(error);
-            })
-            .run();
-        }),
-    ),
+    return new Promise((resolve, reject) => {
+      ffmpeg(tempFilePath)
+        .outputOptions([
+          '-preset ultrafast',
+          '-g 48',
+          '-sc_threshold 0',
+          `-s ${quality.resolution}`,
+          `-b:v ${quality.bitrate}`,
+          '-hls_time 10',
+          '-hls_list_size 0',
+          '-f hls',
+          '-crf 28',
+        ])
+        .output(path.join(outputDir, fileName))
+        .on('progress', (progress) => {
+          const progressPercent = progress.percent || 0;
+          const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
+          totalProgress += ffmpegProgress;
+          setProgress(Math.min(totalProgress, 5));
+        })
+        .on('end', () => {
+          console.log(`Conversion for ${quality.resolution} completed.`);
+          resolve();
+        })
+        .on('error', (error) => {
+          console.error(
+            `Error during ffmpeg processing for ${quality.resolution}`,
+            error,
+          );
+          reject(error);
+        })
+        .run();
+    });
+  };
+
+  // محدود کردن وظایف همزمان
+  const tasks = qualities.map((quality) =>
+    limit(() => processQuality(quality)),
   );
+
+  try {
+    await Promise.all(tasks);
+    console.log('All qualities processed successfully!');
+    return qualitiesForMaster;
+  } catch (error) {
+    console.error('Error during HLS conversion:', error);
+    throw error;
+  }
 };
 
 // Create the master.m3u8 file

@@ -8,6 +8,9 @@ import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import prismadb from '@/libs/prismadb';
 import { setProgress } from '../progress/route'; // Import the progress setter
+import pLimit from 'p-limit';
+
+const limit = pLimit(2); // حداکثر دو وظیفه همزمان
 
 // Set up S3 configuration
 const s3 = new S3({
@@ -88,47 +91,65 @@ const getVideoDimensions = (filePath) => {
   });
 };
 
-// Convert video to HLS
-const convertToHLS = async (tempFilePath, outputDir) => {
+export const convertToHLS = async (tempFilePath, outputDir) => {
   const dimensions = await getVideoDimensions(tempFilePath);
   const qualities = getQualities(dimensions);
-  qualitiesForMaster = qualities;
+  const qualitiesForMaster = qualities;
 
   let totalProgress = 0;
   const numTasks = qualities.length;
 
-  return Promise.all(
-    qualities.map(
-      (quality) =>
-        new Promise((resolve, reject) => {
-          const fileName = `${quality.resolution}.m3u8`;
-          ffmpeg(tempFilePath)
-            .outputOptions([
-              '-preset veryfast',
-              '-g 48',
-              '-sc_threshold 0',
-              `-s ${quality.resolution}`,
-              `-b:v ${quality.bitrate}`,
-              '-hls_time 6',
-              '-hls_list_size 0',
-              '-f hls',
-            ])
-            .output(path.join(outputDir, fileName))
-            .on('progress', (progress) => {
-              const progressPercent = progress.percent || 0;
-              const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
-              totalProgress += ffmpegProgress;
-              setProgress(Math.min(totalProgress, 5));
-            })
-            .on('end', resolve)
-            .on('error', (error) => {
-              console.error('Error during ffmpeg processing', error);
-              reject(error);
-            })
-            .run();
-        }),
-    ),
+  const processQuality = async (quality) => {
+    const fileName = `${quality.resolution}.m3u8`;
+
+    return new Promise((resolve, reject) => {
+      ffmpeg(tempFilePath)
+        .outputOptions([
+          '-preset ultrafast',
+          '-g 48',
+          '-sc_threshold 0',
+          `-s ${quality.resolution}`,
+          `-b:v ${quality.bitrate}`,
+          '-hls_time 10',
+          '-hls_list_size 0',
+          '-f hls',
+          '-crf 28',
+        ])
+        .output(path.join(outputDir, fileName))
+        .on('progress', (progress) => {
+          const progressPercent = progress.percent || 0;
+          const ffmpegProgress = (progressPercent / 100 / numTasks) * 5;
+          totalProgress += ffmpegProgress;
+          setProgress(Math.min(totalProgress, 5));
+        })
+        .on('end', () => {
+          console.log(`Conversion for ${quality.resolution} completed.`);
+          resolve();
+        })
+        .on('error', (error) => {
+          console.error(
+            `Error during ffmpeg processing for ${quality.resolution}`,
+            error,
+          );
+          reject(error);
+        })
+        .run();
+    });
+  };
+
+  // محدود کردن وظایف همزمان
+  const tasks = qualities.map((quality) =>
+    limit(() => processQuality(quality)),
   );
+
+  try {
+    await Promise.all(tasks);
+    console.log('All qualities processed successfully!');
+    return qualitiesForMaster;
+  } catch (error) {
+    console.error('Error during HLS conversion:', error);
+    throw error;
+  }
 };
 
 // Create the master.m3u8 file
