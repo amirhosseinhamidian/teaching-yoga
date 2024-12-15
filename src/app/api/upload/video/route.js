@@ -190,6 +190,11 @@ export async function POST(req) {
   const outputDir = path.join(tempDir, `${uuidv4()}`);
   fs.mkdirSync(outputDir, { recursive: true });
 
+  const ffmpegPath =
+    process.env.FFMPEG_PATH ||
+    'C:\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe';
+  ffmpeg.setFfmpegPath(ffmpegPath);
+
   try {
     // Convert video to HLS (0% to 50%)
     await convertToHLS(tempFilePath, outputDir);
