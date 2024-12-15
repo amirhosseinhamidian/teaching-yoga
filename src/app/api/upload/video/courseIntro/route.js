@@ -71,6 +71,8 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
   const processQuality = async (quality) => {
     const fileName = `${quality.resolution}.m3u8`;
 
+    console.log('start ffmpeg');
+
     return new Promise((resolve, reject) => {
       ffmpeg(tempFilePath)
         .outputOptions([
@@ -94,7 +96,10 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
           console.log(`Conversion for ${quality.resolution} completed.`);
           resolve();
         })
-        .on('error', (error) => {
+        .on('error', (error, stdout, stderr) => {
+          console.error('FFmpeg error:', error.message);
+          console.log('FFmpeg stdout:', stdout);
+          console.log('FFmpeg stderr:', stderr);
           console.error(
             `Error during ffmpeg processing for ${quality.resolution}`,
             error,
