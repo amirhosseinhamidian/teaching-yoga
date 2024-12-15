@@ -26,6 +26,29 @@ const resolutions = [
   { resolution: '426x240', bitrate: '400k' },
 ];
 
+// Helper function to get video dimensions
+const getVideoDimensions = async (filePath) => {
+  return new Promise((resolve, reject) => {
+    ffmpeg.ffprobe(filePath, (err, metadata) => {
+      if (err) {
+        reject(err);
+      } else {
+        const { width, height } = metadata.streams[0];
+        resolve({ width, height });
+      }
+    });
+  });
+};
+
+// Filter resolutions based on video dimensions
+const getQualities = ({ width, height }) => {
+  return resolutions.filter(
+    (res) =>
+      parseInt(res.resolution.split('x')[0]) <= width &&
+      parseInt(res.resolution.split('x')[1]) <= height,
+  );
+};
+
 // Function to upload a file to S3
 const uploadToS3 = async (filePath, key) => {
   const fileContent = fs.readFileSync(filePath);
@@ -41,7 +64,6 @@ const uploadToS3 = async (filePath, key) => {
 export const convertToHLS = async (tempFilePath, outputDir) => {
   const dimensions = await getVideoDimensions(tempFilePath);
   const qualities = getQualities(dimensions);
-  const qualitiesForMaster = qualities;
 
   let totalProgress = 0;
   const numTasks = qualities.length;
@@ -60,7 +82,6 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
           '-hls_time 10',
           '-hls_list_size 0',
           '-f hls',
-          '-crf 28',
         ])
         .output(path.join(outputDir, fileName))
         .on('progress', (progress) => {
@@ -84,29 +105,21 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
     });
   };
 
-  // محدود کردن وظایف همزمان
-  const tasks = qualities.map((quality) =>
-    limit(() => processQuality(quality)),
-  );
-
-  try {
-    await Promise.all(tasks);
-    console.log('All qualities processed successfully!');
-    return qualitiesForMaster;
-  } catch (error) {
-    console.error('Error during HLS conversion:', error);
-    throw error;
-  }
+  // Process all qualities
+  await Promise.all(qualities.map(processQuality));
+  return qualities;
 };
 
 // Create the master.m3u8 file
-const createMasterM3u8 = async (outputDir) => {
+const createMasterM3u8 = async (outputDir, qualities) => {
   const masterFilePath = path.join(outputDir, 'master.m3u8');
   const masterContent =
     `#EXTM3U\n` +
-    resolutions
+    qualities
       .map((quality) => {
-        return `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(quality.bitrate)},RESOLUTION=${quality.resolution}\n${quality.resolution}.m3u8`;
+        return `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(
+          quality.bitrate,
+        )},RESOLUTION=${quality.resolution}\n${quality.resolution}.m3u8`;
       })
       .join('\n');
 
@@ -123,15 +136,14 @@ const uploadFilesToS3 = async (files, outputDir, folderKey) => {
     const s3Key = `${folderKey}/${fileName}`;
     await uploadToS3(filePath, s3Key);
 
-    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95; // Map upload progress to 50%-100%
+    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95;
     setProgress(uploadProgress);
 
-    // Return fileKey immediately if "master.m3u8" is found
     if (s3Key.endsWith('master.m3u8')) {
       fileKey = s3Key;
     }
   }
-  return fileKey; // If no master.m3u8 was found, return empty string
+  return fileKey;
 };
 
 // Route handler
@@ -155,28 +167,21 @@ export async function POST(req) {
   const outputDir = path.join(tempDir, `${uuidv4()}`);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const ffmpegPath =
-    process.env.FFMPEG_PATH ||
-    'C:\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe';
+  const ffmpegPath = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg';
   ffmpeg.setFfmpegPath(ffmpegPath);
 
   try {
-    // Convert video to HLS (0% to 50%)
-    await convertToHLS(tempFilePath, outputDir);
+    const qualities = await convertToHLS(tempFilePath, outputDir);
 
-    // Create master.m3u8 file
-    await createMasterM3u8(outputDir);
+    await createMasterM3u8(outputDir, qualities);
 
-    // Upload files to S3 (50% to 100%)
     const files = fs.readdirSync(outputDir);
     const folderKey = `videos/${courseName}/intro`;
     const videoKey = await uploadFilesToS3(files, outputDir, folderKey);
 
-    // Clean up temporary files
     fs.unlinkSync(tempFilePath);
     fs.rmSync(outputDir, { recursive: true, force: true });
 
-    // Send final completion progress (100%)
     setProgress(100);
 
     return NextResponse.json({

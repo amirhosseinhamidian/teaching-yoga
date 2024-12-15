@@ -10,9 +10,10 @@ import prismadb from '@/libs/prismadb';
 import { setProgress } from '../progress/route'; // Import the progress setter
 import pLimit from 'p-limit';
 
-const limit = pLimit(2); // حداکثر دو وظیفه همزمان
+const CONCURRENT_LIMIT = 2; // حداکثر وظایف همزمان
+const limit = pLimit(CONCURRENT_LIMIT);
 
-// Set up S3 configuration
+// تنظیمات S3
 const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -20,13 +21,13 @@ const s3 = new S3({
   s3ForcePathStyle: true,
 });
 
-const bucketName = process.env.AWS_S3_BUCKET_NAME;
+const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
 
-// Function to upload a file to S3
+// آپلود فایل به S3
 const uploadToS3 = async (filePath, key) => {
   const fileContent = fs.readFileSync(filePath);
   const params = {
-    Bucket: bucketName,
+    Bucket: BUCKET_NAME,
     Key: key,
     Body: fileContent,
   };
@@ -36,27 +37,26 @@ const uploadToS3 = async (filePath, key) => {
 let qualitiesForMaster = [];
 
 const getQualities = ({ width, height }) => {
-  if (width >= height) {
-    // horizontal
-    return [
-      { resolution: '1920x1080', bitrate: '5000k' },
-      { resolution: '1280x720', bitrate: '3000k' },
-      { resolution: '854x480', bitrate: '1500k' },
-      { resolution: '640x360', bitrate: '800k' },
-      { resolution: '426x240', bitrate: '400k' },
-    ];
-  } else {
-    // vertical
-    return [
-      { resolution: '1080x1920', bitrate: '5000k' },
-      { resolution: '720x1280', bitrate: '3000k' },
-      { resolution: '480x854', bitrate: '1500k' },
-      { resolution: '360x640', bitrate: '800k' },
-      { resolution: '240x426', bitrate: '400k' },
-    ];
-  }
+  const resolutions =
+    width >= height
+      ? [
+          { resolution: '1920x1080', bitrate: '5000k' },
+          { resolution: '1280x720', bitrate: '3000k' },
+          { resolution: '854x480', bitrate: '1500k' },
+          { resolution: '640x360', bitrate: '800k' },
+          { resolution: '426x240', bitrate: '400k' },
+        ]
+      : [
+          { resolution: '1080x1920', bitrate: '5000k' },
+          { resolution: '720x1280', bitrate: '3000k' },
+          { resolution: '480x854', bitrate: '1500k' },
+          { resolution: '360x640', bitrate: '800k' },
+          { resolution: '240x426', bitrate: '400k' },
+        ];
+  return resolutions;
 };
-// Function to save session video info in database
+
+// ذخیره اطلاعات ویدیو در پایگاه داده
 const saveSessionVideo = async (videoKey, accessLevel, status, sessionId) => {
   try {
     const newSessionVideo = await prismadb.sessionVideo.create({
@@ -67,10 +67,12 @@ const saveSessionVideo = async (videoKey, accessLevel, status, sessionId) => {
         session: { connect: { id: sessionId } },
       },
     });
+
     await prismadb.session.update({
       where: { id: sessionId },
-      data: { isActive: true }, // مقدار isActive به true تغییر می‌کند
+      data: { isActive: true },
     });
+
     return newSessionVideo.id;
   } catch (error) {
     console.error('Error saving session video:', error);
@@ -81,20 +83,18 @@ const saveSessionVideo = async (videoKey, accessLevel, status, sessionId) => {
 const getVideoDimensions = (filePath) => {
   return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err, metadata) => {
-      if (err) {
-        reject(err);
-      } else {
-        const { width, height } = metadata.streams[0];
-        resolve({ width, height });
-      }
+      if (err) return reject(err);
+
+      const { width, height } = metadata.streams[0];
+      resolve({ width, height });
     });
   });
 };
 
-export const convertToHLS = async (tempFilePath, outputDir) => {
+const convertToHLS = async (tempFilePath, outputDir) => {
   const dimensions = await getVideoDimensions(tempFilePath);
   const qualities = getQualities(dimensions);
-  const qualitiesForMaster = qualities;
+  qualitiesForMaster = qualities;
 
   let totalProgress = 0;
   const numTasks = qualities.length;
@@ -122,22 +122,12 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
           totalProgress += ffmpegProgress;
           setProgress(Math.min(totalProgress, 5));
         })
-        .on('end', () => {
-          console.log(`Conversion for ${quality.resolution} completed.`);
-          resolve();
-        })
-        .on('error', (error) => {
-          console.error(
-            `Error during ffmpeg processing for ${quality.resolution}`,
-            error,
-          );
-          reject(error);
-        })
+        .on('end', () => resolve())
+        .on('error', (error) => reject(error))
         .run();
     });
   };
 
-  // محدود کردن وظایف همزمان
   const tasks = qualities.map((quality) =>
     limit(() => processQuality(quality)),
   );
@@ -152,48 +142,47 @@ export const convertToHLS = async (tempFilePath, outputDir) => {
   }
 };
 
-// Create the master.m3u8 file
-const createMasterM3u8 = async (outputDir) => {
+const createMasterM3u8 = (outputDir) => {
   const masterFilePath = path.join(outputDir, 'master.m3u8');
   const masterContent =
     `#EXTM3U\n` +
     qualitiesForMaster
-      .map((quality) => {
-        return `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(quality.bitrate)},RESOLUTION=${quality.resolution}\n${quality.resolution}.m3u8`;
-      })
+      .map(
+        (quality) =>
+          `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(quality.bitrate)},RESOLUTION=${quality.resolution}\n${quality.resolution}.m3u8`,
+      )
       .join('\n');
 
   fs.writeFileSync(masterFilePath, masterContent);
 };
 
-// Upload files to S3
 const uploadFilesToS3 = async (files, outputDir, folderKey) => {
   const totalFiles = files.length;
   let fileKey = '';
+
   for (let i = 0; i < totalFiles; i++) {
     const fileName = files[i];
     const filePath = path.join(outputDir, fileName);
     const s3Key = `${folderKey}/${fileName}`;
     await uploadToS3(filePath, s3Key);
 
-    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95; // Map upload progress to 50%-100%
+    const uploadProgress = 5 + ((i + 1) / totalFiles) * 95;
     setProgress(uploadProgress);
 
-    // Return fileKey immediately if "master.m3u8" is found
     if (s3Key.endsWith('master.m3u8')) {
       fileKey = s3Key;
     }
   }
-  return fileKey; // If no master.m3u8 was found, return empty string
+  return fileKey;
 };
 
-// Route handler
 export async function POST(req) {
   const data = await req.formData();
   const file = data.get('video');
   const courseName = data.get('courseName');
   const termId = data.get('termId');
   const sessionId = data.get('sessionId');
+
   setProgress(0);
 
   if (!file || !courseName || !termId || !sessionId) {
@@ -211,24 +200,17 @@ export async function POST(req) {
   const outputDir = path.join(tempDir, `${uuidv4()}`);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const ffmpegPath =
-    process.env.FFMPEG_PATH ||
-    'C:\\ffmpeg-master-latest-win64-gpl\\bin\\ffmpeg.exe';
+  const ffmpegPath = process.env.FFMPEG_PATH || '/usr/bin/ffmpeg';
   ffmpeg.setFfmpegPath(ffmpegPath);
 
   try {
-    // Convert video to HLS (0% to 50%)
     await convertToHLS(tempFilePath, outputDir);
-
-    // Create master.m3u8 file
     createMasterM3u8(outputDir);
 
-    // Upload files to S3 (50% to 100%)
     const files = fs.readdirSync(outputDir);
     const folderKey = `videos/${courseName}/${termId}/${sessionId}`;
     const videoKey = await uploadFilesToS3(files, outputDir, folderKey);
 
-    // Clean up temporary files
     try {
       fs.unlinkSync(tempFilePath);
       fs.rmSync(outputDir, { recursive: true, force: true });
@@ -236,7 +218,6 @@ export async function POST(req) {
       console.error('Error cleaning up temporary files:', cleanupError);
     }
 
-    // Save video information in the database
     const sessionVideoId = await saveSessionVideo(
       videoKey,
       'REGISTERED',
@@ -244,7 +225,6 @@ export async function POST(req) {
       sessionId,
     );
 
-    // Send final completion progress (100%)
     setProgress(100);
 
     return NextResponse.json({
