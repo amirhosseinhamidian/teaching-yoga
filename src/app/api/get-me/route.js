@@ -13,6 +13,11 @@ export async function GET() {
   try {
     const user = await prismadb.user.findUnique({
       where: { id: session.user.userId },
+      include: {
+        questions: true,
+        comments: true,
+        courses: true,
+      },
     });
 
     if (!user) {

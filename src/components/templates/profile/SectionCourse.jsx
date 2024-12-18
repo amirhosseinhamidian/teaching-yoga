@@ -1,0 +1,74 @@
+/* eslint-disable no-undef */
+import { useAuth } from '@/contexts/AuthContext';
+import React, { useEffect, useState } from 'react';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import ProfileCourseItem from './ProfileCourseItem';
+
+async function fetchUserCourse(userId) {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/user`,
+      {
+        cache: 'no-store', // Ensures SSR by disabling caching
+        method: 'GET',
+        headers: {
+          userId: userId,
+        },
+      },
+    );
+
+    // اگر پاسخ از سرور موفقیت‌آمیز نبود، خطا پرتاب می‌شود
+    if (!res.ok) {
+      throw new Error('Failed to fetch course data');
+    }
+
+    // بازگشت داده‌ها در صورتی که درخواست موفقیت‌آمیز باشد
+    return res.json();
+  } catch (error) {
+    // در صورت بروز هرگونه خطا، پیام خطا در کنسول ثبت می‌شود
+    console.error('Error fetching data:', error);
+  }
+}
+
+const SectionCourse = () => {
+  const { user } = useAuth();
+  const [courses, setCourses] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const getCourseProgress = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchUserCourse(user.id);
+      setCourses(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getCourseProgress();
+  }, [user]);
+
+  return (
+    <>
+      {isLoading ? (
+        <div className='flex h-full w-full items-center justify-center'>
+          <AiOutlineLoading3Quarters
+            size={46}
+            className='animate-spin text-secondary'
+          />
+        </div>
+      ) : (
+        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
+          {courses.map((course) => (
+            <ProfileCourseItem key={course.courseId} course={course} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+};
+
+export default SectionCourse;

@@ -188,19 +188,22 @@ model SessionProgress {
 
   @@unique([userId, sessionId]) // Ensures each user has only one progress entry per session
 }
-
 model Question {
-  id            String   @id @default(uuid())             // شناسه یکتا
-  userId        String                                    // شناسه کاربر
-  courseId      Int                                       // شناسه دوره
-  sessionId     String                                    // شناسه جلسه
-  questionText  String   @db.Text                         // متن سوال
-  createdAt     DateTime @default(now())                  // تاریخ ایجاد
-  updatedAt     DateTime @updatedAt                       // تاریخ آخرین تغییر
+  id            String   @id @default(uuid())             
+  userId        String                                   
+  courseId      Int                                       
+  sessionId     String                                   
+  questionText  String   @db.Text                         
+  answerText    String?  @db.Text                         
+  isAnswered    Boolean  @default(false)                  
+  isReadByUser  Boolean  @default(false)                 
+  answeredAt    DateTime?                                
+  createdAt     DateTime @default(now())                 
+  updatedAt     DateTime @updatedAt                       
 
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)  // ارتباط با مدل User
-  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)  // ارتباط با مدل Course
-  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  // ارتباط با مدل Session
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)  
+  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)  
+  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  
 }
 
 

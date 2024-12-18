@@ -33,6 +33,7 @@ export async function POST(req) {
   const data = await req.formData();
   const file = data.get('file');
   const folderPath = data.get('folderPath');
+  const fileName = data.get('fileName');
 
   if (!file || typeof file.arrayBuffer !== 'function' || !folderPath) {
     return NextResponse.json(
@@ -55,14 +56,17 @@ export async function POST(req) {
   }
 
   const tempDir = os.tmpdir();
-  const tempFilePath = path.join(tempDir, `${uuidv4()}_${file.name}`);
+  const tempFilePath = path.join(
+    tempDir,
+    `${uuidv4()}_${fileName ? fileName : file.name}`,
+  );
 
   try {
     // Save file to temp directory
     await fs.writeFile(tempFilePath, Buffer.from(await file.arrayBuffer()));
 
     // Upload to S3
-    const key = `${folderPath}/${uuidv4()}_${file.name}`;
+    const key = `${folderPath}/${uuidv4()}_${fileName ? fileName : file.name}`;
     const fileUrl = await uploadToS3(tempFilePath, key);
 
     return NextResponse.json({
