@@ -24,6 +24,15 @@ export async function middleware(request) {
     }
   }
 
+  // مسیرهای دسترسی غیر مجاز برای کاربری که وارد حساب کاربری نشده است
+  const accessDeniedRoutes = ['/payment'];
+  const isAccessDeniedRoutes = accessDeniedRoutes.some((route) =>
+    new RegExp(route).test(request.nextUrl.pathname),
+  );
+  if (isAccessDeniedRoutes && !token) {
+    return NextResponse.redirect(new URL('/access-denied', request.url));
+  }
+
   // مسیرهای محافظت‌شده (Protected Routes)
   const protectedRoutes = ['/profile', '/courses/:path*/lesson/:path*'];
 
@@ -93,5 +102,5 @@ export async function middleware(request) {
 
 // تنظیم matcher برای مسیرهای خاص
 export const config = {
-  matcher: ['/profile', '/courses/:path*', '/a-panel/:path*'],
+  matcher: ['/profile', '/courses/:path*', '/a-panel/:path*', '/payment'],
 };

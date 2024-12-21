@@ -44,6 +44,7 @@ model User {
   lastname String?
   username String       @unique
   phone String    @unique
+  email String?   @unique
   role Role             @default(USER)
   avatar String?
   sessionProgress SessionProgress[]   @relation("SessionProgress")
@@ -57,6 +58,9 @@ model User {
   instructor    Instructor?
   comments      Comment[]
   questions     Question[]
+  terms         UserTerm[]      @relation("UserTerms")
+  carts         Cart[]          @relation("UserCarts")
+  payments       Payment[]       @relation("UserToPayments")
 }
 
 enum CourseLevel {
@@ -130,6 +134,8 @@ model Term {
   discount      Int?    @default(0)  // درصد تخفیف ترم
   sessions      Session[] @relation("TermToSessions") // جلسات ترم
   courseTerms   CourseTerm[] @relation("TermToCourses") // ارتباط با دوره‌ها
+  cartTerms     CartTerm[] @relation("CartToTerms")
+  userTerms     UserTerm[]    @relation("UserTerms")
   createAt      DateTime   @default(now())
   updatedAt     DateTime   @updatedAt
 }
@@ -206,7 +212,6 @@ model Question {
   session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  
 }
 
-
 model Instructor {
   id          Int      @id @unique @default(autoincrement())
   userId      String   @unique
@@ -219,6 +224,78 @@ model Instructor {
   updatedAt   DateTime @updatedAt
 
   courses     Course[] 
+}
+
+model UserTerm {
+  id           Int       @id @default(autoincrement())
+  userId       String
+  termId       Int
+  purchasedAt  DateTime  @default(now())
+
+  user         User      @relation("UserTerms", fields: [userId], references: [id])
+  term         Term      @relation("UserTerms", fields: [termId], references: [id])
+
+  @@unique([userId, termId])
+}
+
+model Cart {
+  id         Int        @id @unique @default(autoincrement())
+  userId     String
+  status     CartStatus      @default(PENDING)
+  user       User       @relation("UserCarts", fields: [userId], references: [id])
+  payment    Payment?     @relation("CartToPayment") 
+  cartTerms  CartTerm[] @relation("CartToCartTerms")
+  totalPrice Int?
+  totalDiscount Int?
+  createAt   DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
+model CartTerm {
+  id         Int      @id @unique @default(autoincrement())
+  cartId     Int      
+  termId     Int
+  price      Int      // قیمت نهایی ترم در سبد خرید
+  discount   Int?     // تخفیف اعمال‌شده روی ترم
+  cart       Cart     @relation("CartToCartTerms", fields: [cartId], references: [id])
+  term       Term     @relation("CartToTerms", fields: [termId], references: [id])
+  createAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([cartId, termId]) // جلوگیری از تکرار ترم در یک سبد خرید
+}
+
+model Payment {
+  id          Int      @id @unique @default(autoincrement())
+  userId      String
+  cartId      Int     @unique 
+  amount      Int      // مبلغ کل پرداخت‌شده
+  status      PaymentStatus
+  method      PaymentMethod
+  transactionId String?
+  authority   String   @unique
+  user        User     @relation("UserToPayments", fields: [userId], references: [id])
+  cart        Cart     @relation("CartToPayment", fields: [cartId], references: [id])
+  createAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  ONLINE
+}
+
+enum CartStatus {
+  PENDING
+  PAID
+  CANCELLED
+  COMPLETED
 }
 
 enum CommentStatus {

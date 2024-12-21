@@ -79,9 +79,3 @@
     scrollbar-width: none; /* برای مرورگرهای Gecko مثل Firefox */
   }
 }
-
-.swiper-button-prev,
-.swiper-button-next {
-  color: #64f4ab; /* رنگ پیکان‌ها */
-  font-size: 24px; /* اندازه پیکان‌ها */
-}

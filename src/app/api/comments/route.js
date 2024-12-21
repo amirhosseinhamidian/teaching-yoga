@@ -5,15 +5,15 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
-  const courseId = searchParams.get('courseId');
-  const page = parseInt(searchParams.get('page')) || 1;
-
-  // Get the session and extract the userId
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.userId || null;
-
   try {
+    const { searchParams } = new URL(request.url);
+    const courseId = parseInt(searchParams.get('courseId'));
+    const page = parseInt(searchParams.get('page')) || 1;
+
+    // Get the session and extract the userId
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.userId || null;
+
     const commentsData = await getCourseComments(courseId, userId, page);
     return NextResponse.json(commentsData);
   } catch (error) {

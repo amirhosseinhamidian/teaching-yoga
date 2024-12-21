@@ -20,16 +20,18 @@ import { LuLogOut } from 'react-icons/lu';
 import Modal from '../modules/Modal/Modal';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import CartModal from '../modules/CartModal/CartModal';
 
 export default function Header({ isLogin }) {
   const { isDark, toggleTheme } = useTheme();
   const [isShowProfileModal, setShowProfileModal] = useState(false);
+  const [isShowCartModal, setIsShowCartModal] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const { user, setUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleCloseModal = () => {
+  const handleCloseProfileModal = () => {
     setShowProfileModal(false);
   };
 
@@ -42,6 +44,14 @@ export default function Header({ isLogin }) {
   const loginClickHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
     router.push('/login');
+  };
+
+  const getNumberOfCart = () => {
+    return user.carts.map((cart) => {
+      if (cart.status === 'PENDING') {
+        return cart.uniqueCourses.length;
+      }
+    });
   };
 
   return (
@@ -60,7 +70,16 @@ export default function Header({ isLogin }) {
             icon={isDark ? MdOutlineLightMode : MdOutlineDarkMode}
             onClick={toggleTheme}
           />
-          <IconButton icon={BsCart3} />
+          <div className='relative' onClick={() => setIsShowCartModal(true)}>
+            <IconButton icon={BsCart3} />
+            <div
+              className={`absolute -right-1 -top-3 h-5 w-5 items-center justify-center rounded-full bg-red pt-1 ${getNumberOfCart() === 0 ? 'hidden' : 'flex'}`}
+            >
+              <span className='font-faNa text-xs text-white sm:text-sm'>
+                {getNumberOfCart()}
+              </span>
+            </div>
+          </div>
           {isLogin ? (
             <IconButton
               icon={MdOutlinePerson}
@@ -76,7 +95,16 @@ export default function Header({ isLogin }) {
           )}
         </div>
         <div className='flex items-center gap-2 md:hidden'>
-          <IconButton icon={BsCart3} size={20} />
+          <div className='relative' onClick={() => setIsShowCartModal(true)}>
+            <IconButton icon={BsCart3} size={20} />
+            <div
+              className={`absolute -right-1 -top-2 h-4 w-4 items-center justify-center rounded-full bg-red pt-1 ${getNumberOfCart() === 0 ? 'hidden' : 'flex'}`}
+            >
+              <span className='font-faNa text-xs text-white'>
+                {getNumberOfCart()}
+              </span>
+            </div>
+          </div>
           <NavbarMobileMenu
             isDark={isDark}
             handelDarkMode={toggleTheme}
@@ -87,10 +115,13 @@ export default function Header({ isLogin }) {
       </div>
       {isShowProfileModal && (
         <ProfileModal
-          onClose={handleCloseModal}
+          onClose={handleCloseProfileModal}
           setShowSignOutModal={setShowSignOutModal}
           user={user}
         />
+      )}
+      {isShowCartModal && (
+        <CartModal onClose={() => setIsShowCartModal(false)} />
       )}
       {showSignOutModal && (
         <Modal

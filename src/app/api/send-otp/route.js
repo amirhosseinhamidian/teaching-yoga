@@ -69,10 +69,10 @@ export async function POST(request) {
       token,
     });
   } catch (error) {
-    console.error('Error in send-otp API:', error);
+    console.error('Error in send-otp API:', error.response.data);
     return NextResponse.json({
       success: false,
-      error: 'خطا در پردازش درخواست.',
+      error: error.response.data.return.message || 'خطا در پردازش درخواست.',
     });
   }
 }

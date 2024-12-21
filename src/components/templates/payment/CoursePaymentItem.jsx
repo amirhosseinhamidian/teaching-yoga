@@ -1,0 +1,62 @@
+'use client';
+import React, { useState } from 'react';
+import PropTypes from 'prop-types';
+import Image from 'next/image';
+import { LuTrash } from 'react-icons/lu';
+import Modal from '@/components/modules/Modal/Modal';
+
+const CoursePaymentItem = ({ data, onDeleteItem }) => {
+  const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
+  const handleDeleteCourse = async (courseId) => {
+    await onDeleteItem(courseId);
+    setShowDeleteItemModal(false);
+  };
+  return (
+    <>
+      <div className='flex items-start justify-between gap-2 pb-6'>
+        <div className='flex flex-wrap gap-2 sm:flex-nowrap'>
+          <Image
+            src={data.courseCoverImage}
+            alt={data.courseTitle}
+            width={280}
+            height={160}
+            className='h-9 w-14 rounded-lg object-cover sm:h-14 sm:w-20'
+          />
+          <div>
+            <h3 className='text-sm md:text-base'>{data.courseTitle}</h3>
+            <LuTrash
+              size={18}
+              className='ml-4 mt-2 text-red md:cursor-pointer'
+              onClick={() => setShowDeleteItemModal(true)}
+            />
+          </div>
+        </div>
+        <div className='flex items-baseline gap-1'>
+          <h3 className='font-faNa text-sm font-semibold sm:text-base'>
+            {data.finalPrice.toLocaleString('fa-IR')}
+          </h3>
+          <h6 className='text-2xs sm:text-xs'>تومان</h6>
+        </div>
+      </div>
+      {showDeleteItemModal && (
+        <Modal
+          title='حذف دوره از سبد خرید'
+          desc={`آیا از حذف ${data.courseTitle} از سبد خرید خود مطمئن هستید؟`}
+          icon={LuTrash}
+          iconSize={32}
+          primaryButtonText='خیر'
+          secondaryButtonText='بله'
+          primaryButtonClick={() => setShowDeleteItemModal(false)}
+          secondaryButtonClick={() => handleDeleteCourse(data.courseId)}
+        />
+      )}
+    </>
+  );
+};
+
+CoursePaymentItem.propTypes = {
+  data: PropTypes.object.isRequired,
+  onDeleteItem: PropTypes.func.isRequired,
+};
+
+export default CoursePaymentItem;

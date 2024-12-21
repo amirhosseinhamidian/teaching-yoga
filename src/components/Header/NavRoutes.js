@@ -29,7 +29,7 @@ const routes = [
 const NavbarRoutes = ({ vertical = false, toggleOpen }) => {
   return (
     <div
-      className={`flex items-start justify-start gap-3 ${vertical ? 'flex-col' : ''}`}
+      className={`flex items-start justify-start gap-3 ${vertical ? 'flex-col' : ''}`.trim()}
     >
       {routes.map(({ label, path }) => (
         <Link

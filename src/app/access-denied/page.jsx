@@ -3,6 +3,7 @@ import Header from '@/components/Header/Header';
 import { getServerSession } from 'next-auth';
 import React from 'react';
 import { authOptions } from '../api/auth/[...nextauth]/route';
+import AccessDeniedView from '@/components/templates/access-denied/AccessDeniedView';
 
 async function AccessDeniedPage() {
   const session = await getServerSession(authOptions);
@@ -10,7 +11,7 @@ async function AccessDeniedPage() {
   return (
     <div>
       <Header isLogin={session} />
-      access Denied
+      <AccessDeniedView />
       <Footer />
     </div>
   );
