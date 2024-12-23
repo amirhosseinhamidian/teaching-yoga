@@ -41,8 +41,11 @@ const PaymentPage = async () => {
       <div className='container'>
         <PageCheckoutTitle icon={GoCreditCard}>پرداخت</PageCheckoutTitle>
         <div className='mb-10 mt-4 grid grid-cols-1 gap-10 md:mb-16 md:mt-8 md:grid-cols-2 lg:gap-28'>
-          <UserInformationCard className='self-start' />
-          <UserOrderCard data={cartData.cart} className='self-start' />
+          <UserInformationCard className='order-last self-start md:order-first' />
+          <UserOrderCard
+            data={cartData.cart}
+            className='order-first self-start md:order-last'
+          />
         </div>
       </div>
       <Footer />

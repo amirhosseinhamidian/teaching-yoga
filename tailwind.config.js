@@ -19,7 +19,7 @@ module.exports = {
         blue: '#25A4F8',
         green: '#327A56',
         background: {
-          light: '#F6F6F6',
+          light: '#f0f0f0',
           dark: '#2D2E32',
         },
         foreground: {
@@ -27,7 +27,7 @@ module.exports = {
           dark: '#35363A',
         },
         surface: {
-          light: '#FFFFFF',
+          light: '#fafaff',
           dark: '#25262A',
         },
         text: {

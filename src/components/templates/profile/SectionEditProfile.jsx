@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
 import React, { useState } from 'react';
-import PropTypes from 'prop-types';
 import Input from '@/components/Ui/Input/Input';
 import Button from '@/components/Ui/Button/Button';
 import { useAuth } from '@/contexts/AuthContext';
@@ -144,7 +143,5 @@ const SectionEditProfile = () => {
     </div>
   );
 };
-
-SectionEditProfile.propTypes = {};
 
 export default SectionEditProfile;

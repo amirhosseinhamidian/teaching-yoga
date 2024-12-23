@@ -9,7 +9,7 @@ const DetailOrderCard = ({ data, className }) => {
   const [discountCode, setDiscountCode] = useState('');
   return (
     <div
-      className={`rounded-xl bg-surface-light p-6 sm:p-8 dark:bg-surface-dark ${className}`}
+      className={`rounded-xl bg-surface-light p-6 shadow sm:p-8 dark:bg-surface-dark ${className}`}
     >
       <h2 className='mb-6 text-lg font-semibold md:text-xl'>جزئیات سفارش</h2>
       <div className='flex w-full items-center justify-between'>

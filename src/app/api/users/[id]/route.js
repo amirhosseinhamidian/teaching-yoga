@@ -15,7 +15,7 @@ export async function PUT(request, { params }) {
     }
 
     // دریافت داده‌های جدید کاربر از بدنه درخواست
-    const { firstname, lastname, username } = await request.json();
+    const { firstname, lastname, username, email } = await request.json();
 
     // چک کردن اینکه داده‌ها کامل هستند یا نه
     if (!username) {
@@ -42,6 +42,7 @@ export async function PUT(request, { params }) {
         firstname,
         lastname,
         username,
+        email,
       },
     });
 

@@ -35,8 +35,14 @@ export default async function CartPage() {
           <>
             <PageCheckoutTitle icon={BsHandbag}>سبد خرید</PageCheckoutTitle>
             <div className='mb-10 mt-4 grid grid-cols-1 gap-10 md:mb-16 md:mt-8 md:grid-cols-2 lg:gap-28'>
-              <CourseItemsCard data={cartData.cart} className='self-start' />
-              <DetailOrderCard data={cartData.cart} className='self-start' />
+              <CourseItemsCard
+                data={cartData.cart}
+                className='order-last self-start md:order-first'
+              />
+              <DetailOrderCard
+                data={cartData.cart}
+                className='order-first self-start md:order-last'
+              />
             </div>
           </>
         ) : (

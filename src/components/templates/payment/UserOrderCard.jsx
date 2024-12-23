@@ -7,59 +7,32 @@ import Checkbox from '@/components/Ui/Checkbox/Checkbox';
 import Link from 'next/link';
 import Button from '@/components/Ui/Button/Button';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-
-async function removeCourseFromCart(courseId) {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cart`,
-      {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ courseId }),
-      },
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Error:', errorData.message);
-      return;
-    }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error removing course from cart:', error);
-  }
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
 
 const UserOrderCard = ({ data, className }) => {
-  const [cartData, setCartData] = useState(data);
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
+  const { user } = useAuth();
   const [roleCheck, setRoleCheck] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
-  const handleDeleteItem = async (courseId) => {
-    const res = await removeCourseFromCart(courseId);
-    if (res.success) {
-      // بررسی موفقیت درخواست
-      setCartData((prev) => ({
-        ...prev,
-        courses: prev.courses.filter((course) => course.courseId !== courseId),
-      }));
+  const paymentClickHandler = async () => {
+    if (!user.firstname || !user.lastname) {
+      toast.showErrorToast('لطفا نام و نام خانوادگی خود را وارد کنید.');
+      return;
     }
   };
+
   return (
     <div
-      className={`rounded-xl bg-surface-light p-4 sm:p-6 dark:bg-surface-dark ${className}`}
+      className={`rounded-xl bg-surface-light p-4 shadow sm:p-6 dark:bg-surface-dark ${className}`}
     >
       <h2 className='mb-6 text-lg font-semibold md:text-xl'>سفارش شما</h2>
-      {cartData.courses.map((course) => (
+      {data.courses.map((course) => (
         <div key={course.courseId}>
-          <CoursePaymentItem
-            data={course}
-            onDeleteItem={(courseId) => handleDeleteItem(courseId)}
-          />
+          <CoursePaymentItem data={course} />
         </div>
       ))}
       <hr className='my-2 border-t border-gray-300 dark:border-gray-700' />
@@ -69,7 +42,7 @@ const UserOrderCard = ({ data, className }) => {
         </h3>
         <div className='flex items-baseline gap-1 text-green'>
           <h3 className='text-lg font-bold sm:text-xl lg:text-2xl'>
-            {cartData.totalPrice.toLocaleString('fa-IR')}
+            {data.totalPrice.toLocaleString('fa-IR')}
           </h3>
           <h5 className='text-2xs sm:text-xs'>تومان</h5>
         </div>
@@ -92,16 +65,19 @@ const UserOrderCard = ({ data, className }) => {
           size='small'
         />
       </div>
-      <Button
-        shadow
-        disable={paymentLoading}
-        className='mt-6 flex w-full items-center justify-center gap-2'
-      >
-        پرداخت
-        {paymentLoading && (
-          <AiOutlineLoading3Quarters className='animate-spin' />
-        )}
-      </Button>
+      <div className='flex w-full justify-center'>
+        <Button
+          shadow
+          disable={paymentLoading}
+          onClick={paymentClickHandler}
+          className='mt-6 flex w-full items-center justify-center gap-2 sm:w-2/3 lg:w-1/2'
+        >
+          پرداخت
+          {paymentLoading && (
+            <AiOutlineLoading3Quarters className='animate-spin' />
+          )}
+        </Button>
+      </div>
     </div>
   );
 };
