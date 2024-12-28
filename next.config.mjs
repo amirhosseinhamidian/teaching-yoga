@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
@@ -15,6 +16,23 @@ const nextConfig = {
     });
 
     return config;
+  },
+  async headers() {
+    return [
+      {
+        source: '/(.*)', // اعمال تنظیمات روی تمام صفحات
+        headers: [
+          {
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin',
+          },
+          {
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'require-corp',
+          },
+        ],
+      },
+    ];
   },
 };
 
