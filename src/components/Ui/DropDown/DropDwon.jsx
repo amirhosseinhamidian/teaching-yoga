@@ -47,17 +47,17 @@ const DropDown = ({
       <div
         className={`relative rounded-xl border border-solid ${
           errorMessage ? 'border-red' : 'border-accent'
-        } bg-surface-light px-4 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 dark:bg-surface-dark dark:text-subtext-dark ${
+        } bg-surface-light px-1 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 sm:px-4 dark:bg-surface-dark dark:text-subtext-dark ${
           isOpen ? 'ring-1 ring-accent' : ''
         } ${className}`}
         onClick={toggleDropdown}
       >
         {/* Placeholder or Selected Value */}
         <div
-          className={`flex cursor-pointer items-center justify-between transition-all ${
+          className={`flex cursor-pointer items-center justify-between gap-1 transition-all sm:gap-2 ${
             value
-              ? 'text-sm font-medium text-text-light dark:text-subtext-dark'
-              : 'text-sm text-gray-400'
+              ? 'text-xs font-medium text-text-light sm:text-sm dark:text-subtext-dark'
+              : 'text-xs text-gray-400 sm:text-sm'
           }`}
         >
           <span>

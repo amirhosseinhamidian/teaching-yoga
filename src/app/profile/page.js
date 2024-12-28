@@ -1,10 +1,14 @@
+import ProfileHead from '@/components/templates/profile/ProfileHead';
+import ProfileMainBox from '@/components/templates/profile/ProfileMainBox';
 import React from 'react';
-import PropTypes from 'prop-types';
 
-const page = (props) => {
-  return <div>profile</div>;
+const page = async () => {
+  return (
+    <div className='container'>
+      <ProfileHead />
+      <ProfileMainBox />
+    </div>
+  );
 };
-
-page.propTypes = {};
 
 export default page;

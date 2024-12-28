@@ -1,12 +1,11 @@
 /* eslint-disable no-undef */
 /* eslint-disable no-unused-vars */
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import HeadAction from '@/app/a-panel/components/templates/addTermSession/HeadAction';
 import { useSearchParams } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import Accordion from '@/components/Ui/Accordion/Accordion';
-import { formatTime } from '@/utils/dateTimeHelper';
 import { ImSpinner2 } from 'react-icons/im';
 import AddSessionModal from '@/app/a-panel/components/modules/AddSessionModal/AddSessionModal';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
@@ -23,6 +22,8 @@ import AddEditTermModal from '@/app/a-panel/components/modules/AddEditTermModal/
 import EditSessionModal from '@/app/a-panel/components/modules/EditSessionModal/EditSessionModal';
 import VideoModal from '@/app/a-panel/components/modules/VideoModal/VideoModal';
 import Switch from '@/components/Ui/Switch/Switch';
+import { processVideo } from '@/services/videoProcessor';
+import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -31,6 +32,7 @@ const AddTermSessionPage = () => {
   const courseTitle = searchParams.get('courseTitle');
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const ffmpeg = useRef();
 
   const [terms, setTerms] = useState([]);
   const [termTempId, setTermTempId] = useState(null);
@@ -206,14 +208,22 @@ const AddTermSessionPage = () => {
     setShowUploadVideoSessionModal(true);
   };
 
-  const handleSessionVideoUpload = async (file) => {
-    if (!file) {
+  const handleSessionVideoUpload = async (
+    outFiles,
+    isVertical,
+    accessLevel,
+  ) => {
+    if (!outFiles) {
       toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
       return;
     }
 
+    console.log('access Level in page function ====>', accessLevel);
+
     const formData = new FormData();
-    formData.append('video', file);
+    outFiles.forEach((file, index) => {
+      formData.append(`file_${index}`, new Blob([file.data]), file.name);
+    });
     formData.append('courseName', courseTitle);
     formData.append('termId', termTempId);
     formData.append('sessionId', sessionTempId);
@@ -233,11 +243,30 @@ const AddTermSessionPage = () => {
         console.error('خطا در آپلود:', errorData.error || 'خطایی رخ داده است.');
         return;
       }
-      const result = await response.json();
-      toast.showSuccessToast(result.message);
+      const { videoKey, message } = await response.json();
 
-      // فراخوانی دوباره برای دریافت جلسات جدید
-      await fetchSessions(termTempId, true);
+      const resSave = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-video`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            videoKey,
+            accessLevel,
+            sessionId: sessionTempId,
+          }),
+        },
+      );
+
+      if (resSave.ok) {
+        toast.showSuccessToast(message);
+        // فراخوانی دوباره برای دریافت جلسات جدید
+        await fetchSessions(termTempId, true);
+      } else {
+        toast.showErrorToast('خطا در ذخیره سازی.');
+      }
 
       setShowUploadVideoSessionModal(false);
     } catch (error) {
@@ -348,6 +377,18 @@ const AddTermSessionPage = () => {
       }));
     }
   };
+
+  useEffect(() => {
+    (async () => {
+      ffmpeg.current = createFFmpeg({
+        log: true,
+        corePath:
+          'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+      });
+
+      await ffmpeg.current.load();
+    })();
+  }, []);
 
   const tableColumns = [
     { key: 'order', label: 'شماره' },

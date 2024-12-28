@@ -99,7 +99,7 @@ const LessonPage = async ({ params }) => {
                 <h2 className='text-base font-semibold sm:text-lg lg:text-2xl'>
                   {session.name}
                 </h2>{' '}
-                <p className='ms:mt-3 mt-1 text-xs font-thin text-subtext-light sm:text-base dark:text-subtext-dark'>
+                <p className='ms:mt-3 mt-1 font-faNa text-xs font-thin text-subtext-light sm:text-base dark:text-subtext-dark'>
                   {session.term.name}
                 </p>
               </div>

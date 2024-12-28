@@ -8,6 +8,7 @@ const Checkbox = ({
   className,
   label,
   labelClass,
+  color = 'accent',
 }) => {
   const [isChecked, setIsChecked] = useState(checked);
 
@@ -49,7 +50,7 @@ const Checkbox = ({
         />
         <span
           className={`relative block cursor-pointer rounded-sm ${backgroundClasses[size]} transition-colors duration-300 ${
-            isChecked ? 'bg-accent' : 'bg-subtext-dark'
+            isChecked ? `bg-${color}` : `border border-${color}`
           }`}
         ></span>
         {isChecked && (
@@ -92,6 +93,7 @@ Checkbox.propTypes = {
   className: PropTypes.string, // Custom class names
   labelClass: PropTypes.string, // Custom class names for label
   label: PropTypes.string, // Optional label text
+  color: PropTypes.string, // Optional color
 };
 
 export default Checkbox;

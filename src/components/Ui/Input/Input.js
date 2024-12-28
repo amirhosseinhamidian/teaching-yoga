@@ -15,6 +15,8 @@ const Input = ({
   focus = false,
   maxLength,
   thousandSeparator = false,
+  fontDefault = true,
+  isUppercase = false,
 }) => {
   // تابع فرمت جداکننده هزارگان
   const formatWithThousandSeparator = (num) => {
@@ -34,7 +36,13 @@ const Input = ({
   }, [value, thousandSeparator]);
 
   const handleChange = (event) => {
-    const rawValue = event.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
+    let rawValue = event.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
+
+    // تبدیل به uppercase اگر isUppercase فعال باشد
+    if (isUppercase) {
+      rawValue = rawValue.toUpperCase();
+    }
+
     if (!maxLength || rawValue.length <= maxLength) {
       if (thousandSeparator) {
         setDisplayValue(formatWithThousandSeparator(rawValue));
@@ -58,7 +66,7 @@ const Input = ({
         placeholder={placeholder}
         value={displayValue}
         onChange={handleChange}
-        className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus:outline-none focus:ring-1 dark:bg-background-dark dark:text-subtext-dark ${className}`}
+        className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 ${fontDefault ? 'font-faNa' : 'font-main'} font-medium transition duration-200 ease-in placeholder:text-subtext-light focus:outline-none focus:ring-1 dark:bg-background-dark placeholder:dark:text-subtext-dark ${className}`}
       />
       {errorMessage && (
         <p className={`mt-1 text-xs text-red ${errorClassName}`}>
@@ -82,6 +90,8 @@ Input.propTypes = {
   focus: PropTypes.bool,
   maxLength: PropTypes.number,
   thousandSeparator: PropTypes.bool,
+  fontDefault: PropTypes.bool,
+  isUppercase: PropTypes.bool,
 };
 
 export default Input;

@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
@@ -31,28 +32,34 @@ const Page = () => {
     setIsSubmitting(true);
 
     // validation for correct phone number, unique phone number and username
-    const response = await fetch('/api/signup-validation', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+    const response = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/signup-validation`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username,
+          userPhone,
+        }),
       },
-      body: JSON.stringify({
-        username,
-        userPhone,
-      }),
-    });
+    );
 
     const data = await response.json();
 
     if (data.success) {
       try {
-        const result = await fetch('/api/send-otp', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const result = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/send-otp`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ phone: userPhone }),
           },
-          body: JSON.stringify({ phone: userPhone }),
-        });
+        );
 
         const data = await result.json();
         if (data.success) {
@@ -69,7 +76,9 @@ const Page = () => {
         toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
       }
     } else {
-      toast.showErrorToast('خطا در ثبت نام. لطفاً دوباره تلاش کنید.');
+      toast.showErrorToast(
+        data.error || 'خطا در ثبت نام. لطفاً دوباره تلاش کنید.',
+      );
     }
 
     setIsSubmitting(false);

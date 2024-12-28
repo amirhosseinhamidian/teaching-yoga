@@ -17,10 +17,58 @@ export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions);
 
   let user = null;
+
   if (session?.user?.userId) {
-    user = await prismadb.user.findUnique({
+    const rawUser = await prismadb.user.findUnique({
       where: { id: session.user.userId },
+      include: {
+        questions: true,
+        comments: true,
+        courses: true,
+        carts: {
+          include: {
+            cartTerms: {
+              include: {
+                term: {
+                  include: {
+                    courseTerms: {
+                      include: {
+                        course: {
+                          select: {
+                            id: true,
+                            title: true,
+                            cover: true,
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
+
+    // استخراج دوره‌های یکتا از هر سبد خرید
+    user = {
+      ...rawUser,
+      carts: rawUser.carts.map((cart) => {
+        const courses = cart.cartTerms.flatMap((cartTerm) =>
+          cartTerm.term.courseTerms.map((courseTerm) => courseTerm.course),
+        );
+
+        const uniqueCourses = Array.from(
+          new Map(courses.map((course) => [course.id, course])).values(),
+        );
+
+        return {
+          ...cart,
+          uniqueCourses, // اضافه کردن لیست دوره‌های یکتا
+        };
+      }),
+    };
   }
 
   return (

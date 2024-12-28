@@ -509,7 +509,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
         </div>
         <Checkbox
           label='آیا این دوره با اولیت بالا است؟'
-          value={highPriority}
+          checked={highPriority}
           onChange={setHighPriority}
         />
         <div className='col-span-1 sm:col-span-2'>

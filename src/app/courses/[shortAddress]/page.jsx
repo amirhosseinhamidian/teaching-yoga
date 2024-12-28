@@ -159,6 +159,7 @@ async function page({ params }) {
                   price={course.price}
                   discount={course.discount}
                   finalPrice={course.finalPrice}
+                  courseId={course.id}
                   className='w-full basis-full sm:basis-1/2 lg:basis-full'
                 />
               )}

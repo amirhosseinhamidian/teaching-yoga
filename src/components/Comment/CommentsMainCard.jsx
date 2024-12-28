@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
@@ -25,9 +26,10 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
     const controller = new AbortController();
     const fetchComments = async () => {
       setLoading(true);
+
       try {
         const response = await fetch(
-          `/api/comments?courseId=${referenceId}&page=${page}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`,
           {
             signal: controller.signal,
             method: 'GET',
@@ -37,6 +39,7 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
             credentials: 'include',
           },
         );
+
         if (!response.ok) {
           throw new Error('Network response was not ok');
         }

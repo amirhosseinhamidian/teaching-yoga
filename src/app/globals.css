@@ -71,4 +71,11 @@
     -webkit-appearance: none;
     margin: 0;
   }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* برای مرورگرهای WebKit */
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none; /* برای مرورگرهای Gecko مثل Firefox */
+  }
 }
