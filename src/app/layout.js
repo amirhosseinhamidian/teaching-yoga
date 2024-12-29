@@ -19,25 +19,28 @@ export default async function RootLayout({ children }) {
   let user = null;
 
   if (session?.user?.userId) {
-    const rawUser = await prismadb.user.findUnique({
-      where: { id: session.user.userId },
-      include: {
-        questions: true,
-        comments: true,
-        courses: true,
-        carts: {
-          include: {
-            cartTerms: {
-              include: {
-                term: {
-                  include: {
-                    courseTerms: {
-                      include: {
-                        course: {
-                          select: {
-                            id: true,
-                            title: true,
-                            cover: true,
+    try {
+      // دریافت اطلاعات کاربر از پایگاه داده
+      const rawUser = await prismadb.user.findUnique({
+        where: { id: session.user.userId },
+        include: {
+          questions: true,
+          comments: true,
+          courses: true,
+          carts: {
+            include: {
+              cartTerms: {
+                include: {
+                  term: {
+                    include: {
+                      courseTerms: {
+                        include: {
+                          course: {
+                            select: {
+                              id: true,
+                              title: true,
+                              cover: true,
+                            },
                           },
                         },
                       },
@@ -48,27 +51,35 @@ export default async function RootLayout({ children }) {
             },
           },
         },
-      },
-    });
+      });
 
-    // استخراج دوره‌های یکتا از هر سبد خرید
-    user = {
-      ...rawUser,
-      carts: rawUser.carts.map((cart) => {
-        const courses = cart.cartTerms.flatMap((cartTerm) =>
-          cartTerm.term.courseTerms.map((courseTerm) => courseTerm.course),
-        );
+      // مدیریت مقدار null برای carts
+      if (!rawUser) {
+        console.warn('User not found in the database');
+        user = null; // یا مقدار پیش‌فرض مناسب
+      } else {
+        user = {
+          ...rawUser,
+          carts: (rawUser.carts || []).map((cart) => {
+            const courses = cart.cartTerms.flatMap((cartTerm) =>
+              cartTerm.term.courseTerms.map((courseTerm) => courseTerm.course),
+            );
 
-        const uniqueCourses = Array.from(
-          new Map(courses.map((course) => [course.id, course])).values(),
-        );
+            const uniqueCourses = Array.from(
+              new Map(courses.map((course) => [course.id, course])).values(),
+            );
 
-        return {
-          ...cart,
-          uniqueCourses, // اضافه کردن لیست دوره‌های یکتا
+            return {
+              ...cart,
+              uniqueCourses, // اضافه کردن لیست دوره‌های یکتا
+            };
+          }),
         };
-      }),
-    };
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error.message);
+      user = null; // مقدار پیش‌فرض در صورت بروز خطا
+    }
   }
 
   return (
