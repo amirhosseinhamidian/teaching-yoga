@@ -24,7 +24,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
       <div className='absolute left-14 top-14 w-72 rounded-xl bg-surface-light dark:bg-background-dark'>
         <div className='m-4 flex items-center gap-3'>
           <Image
-            src={'/images/default-profile.png'}
+            src={user.avatar || '/images/default-profile.png'}
             alt='profile'
             width={50}
             height={50}
@@ -33,7 +33,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
           <h4 className='text-lg'>{user.username}</h4>
         </div>
         <div className='mx-4 border-b'></div>
-        {user.userRole !== 'Admin' && (
+        {user.userRole === 'Admin' && (
           <Link
             href='/a-panel'
             className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'

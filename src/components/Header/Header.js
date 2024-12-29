@@ -81,7 +81,7 @@ export default function Header({ isLogin }) {
               </span>
             </div>
           </div>
-          {isLogin ? (
+          {isLogin && user ? (
             <IconButton
               icon={MdOutlinePerson}
               onClick={() => setShowProfileModal(true)}

@@ -60,6 +60,7 @@ const Login = () => {
           }
         }
       } catch (error) {
+        console.log(error);
         toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
       }
     } else {

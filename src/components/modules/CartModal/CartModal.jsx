@@ -7,6 +7,7 @@ import { ImSpinner2 } from 'react-icons/im';
 import Button from '@/components/Ui/Button/Button';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import { useRouter } from 'next/navigation';
+import { TbShoppingCartOff } from 'react-icons/tb';
 
 const CartModal = ({ onClose }) => {
   const [cartData, setCartData] = useState({});
@@ -63,63 +64,72 @@ const CartModal = ({ onClose }) => {
             <ImSpinner2 className='animate-spin text-secondary' size={42} />
           </div>
         ) : (
-          <div>
-            <h2 className='mb-3 text-sm font-semibold xs:text-base md:text-lg'>
-              سبد خرید
-            </h2>
-            {cartData.cart.courses.map((course, index) => (
-              <div key={course.courseId}>
-                <div className='flex items-center justify-between gap-2'>
-                  <div className='flex flex-wrap items-center gap-2 sm:flex-nowrap'>
-                    <Image
-                      src={course.courseCoverImage}
-                      alt={course.courseTitle}
-                      width={280}
-                      height={160}
-                      className='h-8 w-12 rounded-lg object-cover xs:h-12 xs:w-16'
-                    />
-                    <h3 className='text-xs font-thin md:text-sm'>
-                      {course.courseTitle}
-                    </h3>
+          <>
+            {cartData.cart ? (
+              <div>
+                <h2 className='mb-3 text-sm font-semibold xs:text-base md:text-lg'>
+                  سبد خرید
+                </h2>
+                {cartData.cart.courses.map((course, index) => (
+                  <div key={course.courseId}>
+                    <div className='flex items-center justify-between gap-2'>
+                      <div className='flex flex-wrap items-center gap-2 sm:flex-nowrap'>
+                        <Image
+                          src={course.courseCoverImage}
+                          alt={course.courseTitle}
+                          width={280}
+                          height={160}
+                          className='h-8 w-12 rounded-lg object-cover xs:h-12 xs:w-16'
+                        />
+                        <h3 className='text-xs font-thin md:text-sm'>
+                          {course.courseTitle}
+                        </h3>
+                      </div>
+                      <div className='flex items-baseline gap-1'>
+                        <h3 className='font-faNa text-xs sm:text-sm'>
+                          {course.finalPrice.toLocaleString('fa-IR')}
+                        </h3>
+                        <h6 className='text-2xs sm:text-xs'>تومان</h6>
+                      </div>
+                    </div>
+                    {index < cartData.cart.courses.length - 1 && (
+                      <hr className='mx-4 my-3 border-t border-gray-300 dark:border-gray-700' />
+                    )}
                   </div>
+                ))}
+
+                <hr className='my-5 border-t border-gray-300 dark:border-gray-700' />
+                <div className='flex items-center justify-between gap-2'>
+                  <h3 className='text-sm sm:text-base'>مبلغ کل</h3>
                   <div className='flex items-baseline gap-1'>
-                    <h3 className='font-faNa text-xs sm:text-sm'>
-                      {course.finalPrice.toLocaleString('fa-IR')}
+                    <h3 className='font-faNa text-sm sm:text-base'>
+                      {cartData.cart.totalPrice.toLocaleString('fa-IR')}
                     </h3>
                     <h6 className='text-2xs sm:text-xs'>تومان</h6>
                   </div>
                 </div>
-                {index < cartData.cart.courses.length - 1 && (
-                  <hr className='mx-4 my-3 border-t border-gray-300 dark:border-gray-700' />
-                )}
+                <div className='mt-5 flex w-full flex-wrap gap-2'>
+                  <Button
+                    className='flex-1 whitespace-nowrap text-xs xs:text-sm sm:text-base'
+                    onClick={goToPayment}
+                  >
+                    پرداخت
+                  </Button>
+                  <OutlineButton
+                    className='flex-1 whitespace-nowrap text-xs xs:text-sm sm:text-base'
+                    onClick={goToCart}
+                  >
+                    سبد خرید
+                  </OutlineButton>
+                </div>
               </div>
-            ))}
-
-            <hr className='my-5 border-t border-gray-300 dark:border-gray-700' />
-            <div className='flex items-center justify-between gap-2'>
-              <h3 className='text-sm sm:text-base'>مبلغ کل</h3>
-              <div className='flex items-baseline gap-1'>
-                <h3 className='font-faNa text-sm sm:text-base'>
-                  {cartData.cart.totalPrice.toLocaleString('fa-IR')}
-                </h3>
-                <h6 className='text-2xs sm:text-xs'>تومان</h6>
+            ) : (
+              <div className='flex min-h-36 min-w-52 flex-col items-center justify-center gap-4 sm:min-h-48 md:min-h-60'>
+                <TbShoppingCartOff size={42} className='text-secondary' />
+                <span className='text-secondary'>سبد خرید خالی است.</span>
               </div>
-            </div>
-            <div className='mt-5 flex w-full flex-wrap gap-2'>
-              <Button
-                className='flex-1 whitespace-nowrap text-xs xs:text-sm sm:text-base'
-                onClick={goToPayment}
-              >
-                پرداخت
-              </Button>
-              <OutlineButton
-                className='flex-1 whitespace-nowrap text-xs xs:text-sm sm:text-base'
-                onClick={goToCart}
-              >
-                سبد خرید
-              </OutlineButton>
-            </div>
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
