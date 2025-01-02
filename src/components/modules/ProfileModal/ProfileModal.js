@@ -3,7 +3,7 @@
 import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { GrHomeRounded } from 'react-icons/gr';
+import { TbMessageCircleQuestion } from 'react-icons/tb';
 import { CgFolder } from 'react-icons/cg';
 import { IoChatbubblesOutline } from 'react-icons/io5';
 import { IoPersonOutline } from 'react-icons/io5';
@@ -33,7 +33,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
           <h4 className='text-lg'>{user.username}</h4>
         </div>
         <div className='mx-4 border-b'></div>
-        {user.userRole === 'Admin' && (
+        {user.role === 'ADMIN' && (
           <Link
             href='/a-panel'
             className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
@@ -42,16 +42,9 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
             پنل ادمین
           </Link>
         )}
-        <Link
-          href='/'
-          className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
-        >
-          <GrHomeRounded className='text-xl' />
-          پیشخوان
-        </Link>
 
         <Link
-          href='/'
+          href='/profile?active=0'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
           <CgFolder className='text-xl' />
@@ -59,7 +52,15 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
         </Link>
 
         <Link
-          href='/'
+          href='/profile?active=1'
+          className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
+        >
+          <TbMessageCircleQuestion className='text-xl' />
+          سوالات
+        </Link>
+
+        <Link
+          href='/profile?active=3'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
           <IoChatbubblesOutline className='text-xl' />
@@ -67,11 +68,11 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
         </Link>
 
         <Link
-          href='/'
+          href='/profile?active=4'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
           <IoPersonOutline className='text-xl' />
-          جزییات حساب
+          ویرایش
         </Link>
 
         <div

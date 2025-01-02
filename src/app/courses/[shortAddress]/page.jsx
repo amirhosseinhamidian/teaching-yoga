@@ -43,7 +43,7 @@ const fetchCourseData = async (shortAddress) => {
         method: 'GET',
         headers: headers(),
         next: {
-          revalidate: 7200, // 2به hours
+          revalidate: 7200, // 2 hours
         },
       },
     );
@@ -87,7 +87,6 @@ async function page({ params }) {
   const { shortAddress } = params;
 
   const { course, videoLink } = await fetchCourseData(shortAddress);
-  console.log('video link => ', videoLink);
   const isUserPurchased = await checkUserBuyCourse(
     shortAddress,
     session?.user.userId,

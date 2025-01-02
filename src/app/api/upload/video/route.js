@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { S3 } from 'aws-sdk';
 import { setProgress } from '../progress/route';
 
-// تنظیمات S3
+// S3 configuration
 const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -82,10 +82,10 @@ export async function POST(req) {
 
     return NextResponse.json({
       videoKey,
-      message: 'Upload successful',
+      message: 'آپلود موفقیت‌آمیز بود',
     });
   } catch (error) {
     console.error('Error uploading video:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return NextResponse.json({ error: 'خطا در پردازش آپلود' }, { status: 500 });
   }
 }

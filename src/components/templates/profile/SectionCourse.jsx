@@ -1,8 +1,11 @@
 /* eslint-disable no-undef */
+'use client';
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useEffect, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import ProfileCourseItem from './ProfileCourseItem';
+import Link from 'next/link';
+import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 
 async function fetchUserCourse(userId) {
   try {
@@ -61,11 +64,26 @@ const SectionCourse = () => {
           />
         </div>
       ) : (
-        <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
-          {courses.map((course) => (
-            <ProfileCourseItem key={course.courseId} course={course} />
-          ))}
-        </div>
+        <>
+          {courses.length !== 0 ? (
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4'>
+              {courses.map((course) => (
+                <ProfileCourseItem key={course.courseId} course={course} />
+              ))}
+            </div>
+          ) : (
+            <div className='flex h-full w-full flex-col items-center justify-center gap-5'>
+              <p className='text-xs font-medium text-subtext-light xs:text-base md:text-lg lg:text-xl dark:text-subtext-dark'>
+                شما در دوره ای عضو نیستید.
+              </p>
+              <Link href='/courses'>
+                <OutlineButton className='text-xs sm:text-sm md:text-base'>
+                  مشاهده دوره ها
+                </OutlineButton>
+              </Link>
+            </div>
+          )}
+        </>
       )}
     </>
   );

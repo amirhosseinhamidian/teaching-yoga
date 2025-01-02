@@ -1,12 +1,10 @@
 import React from 'react';
 import Logo from '../Logo/Logo';
 import Link from 'next/link';
-import IconButton from '../Ui/ButtonIcon/ButtonIcon';
-import { AiOutlineInstagram } from 'react-icons/ai';
-import { LiaTelegram } from 'react-icons/lia';
-import { AiOutlineYoutube } from 'react-icons/ai';
+
 import LicenseCard from './LicenseCard';
 import { getYear } from '@/utils/dateTimeHelper';
+import Socials from '../modules/Socials/Socials';
 
 export default function Footer() {
   return (
@@ -22,12 +20,7 @@ export default function Footer() {
               تولید سادگی نامفهوم از صنعت چاپ است. نامفهوم از صنعت چاپ است.
             </p>
 
-            <div className='mt-6 flex items-center gap-4'>
-              <IconButton icon={AiOutlineInstagram} size={30} />{' '}
-              {/*TODO: Add link */}
-              <IconButton icon={LiaTelegram} size={30} />
-              <IconButton icon={AiOutlineYoutube} size={30} />
-            </div>
+            <Socials size={30} />
           </div>
           {/* Second section: Links category 1 */}
           <div className='mb-4 flex flex-col gap-3 md:mb-0'>

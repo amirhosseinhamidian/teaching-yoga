@@ -1,8 +1,11 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+export async function GET(req) {
   try {
+    const url = new URL(req.url);
+    const onlyLastThree = url.searchParams.get('lastThree') === 'true'; // بررسی کوئری پارامتر
+
     const courses = await prismadb.course.findMany({
       select: {
         id: true,
@@ -22,6 +25,11 @@ export async function GET() {
           },
         },
       },
+      orderBy: [
+        { isHighPriority: 'desc' }, // مرتب‌سازی بر اساس اولویت بالا
+        { id: 'desc' }, // مرتب‌سازی نزولی بر اساس ID برای شناسایی سه دوره آخر
+      ],
+      take: onlyLastThree ? 3 : undefined, // محدود کردن نتایج به 3 دوره آخر در صورت درخواست
     });
 
     // محاسبه قیمت کل و میانگین تخفیف برای هر دوره

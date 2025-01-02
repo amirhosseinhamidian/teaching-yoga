@@ -18,7 +18,7 @@ const SearchBox = ({
         onChange={onChange}
         className='mr-2 shrink border-none bg-transparent text-xs outline-none sm:w-60 sm:text-sm'
       />
-      <button className='shadow-search rounded-xl bg-accent p-2 shadow active:opacity-75'>
+      <button className='shadow-search rounded-xl bg-accent p-2 active:opacity-75'>
         <IoIosSearch className='text-white' size={24} />
       </button>
     </div>

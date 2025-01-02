@@ -6,13 +6,13 @@ import CardActions from './CardActions';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 
-export default function CourseCard({ course }) {
+export default function CourseCard({ course, className }) {
   const router = useRouter();
   const detailClickHandler = () => {
     router.push(`/courses/${course.shortAddress}`);
   };
   return (
-    <div className='flex w-full flex-col rounded-xl bg-surface-light shadow-md dark:bg-surface-dark'>
+    <div className={`flex w-full flex-col rounded-xl shadow-md ${className}`}>
       <Image
         src={course.cover}
         alt={course.title}
@@ -20,7 +20,7 @@ export default function CourseCard({ course }) {
         width={600}
         height={540}
       />
-      <div className='flex flex-col gap-2 px-3 pb-3 pt-1 md:px-6 md:pb-4 md:pt-2'>
+      <div className='flex h-full flex-col gap-2 px-3 pb-3 pt-1 md:px-6 md:pb-4 md:pt-2'>
         <h2 className='text-center text-lg font-semibold text-text-light md:text-xl dark:text-text-dark'>
           {course.title}
         </h2>
@@ -32,7 +32,11 @@ export default function CourseCard({ course }) {
           price={course.price}
           discount={course.discount}
         />
-        <CardActions mainBtnClick={detailClickHandler} />
+        <CardActions
+          mainBtnClick={detailClickHandler}
+          className='mt-auto'
+          courseId={course.id}
+        />
       </div>
     </div>
   );

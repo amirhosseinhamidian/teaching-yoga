@@ -327,8 +327,9 @@ model Article {
   id          Int       @id @default(autoincrement())
   title       String
   content     String
+  subtitle    String
   comments    Comment[] 
-
+  cover       String
   createAt DateTime     @default(now())
   updatedAt DateTime    @updatedAt
 }
@@ -344,10 +345,26 @@ model FAQ {
   id        Int      @id @default(autoincrement()) 
   question  String  
   answer    String  
+  category  CategoryFAQ @default(GENERAL) // دسته‌بندی سوالات
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt 
 }
 
+
+model Newsletter {
+  id        Int   @id @default(autoincrement())  // شناسه‌ی یکتا
+  email     String   @unique              // ایمیل کاربر
+  userId    String?                       // در صورتی که کاربر لاگین باشد
+  createdAt DateTime @default(now())      // زمان ایجاد رکورد
+
+  @@index([email]) // ایندکس برای بهبود عملکرد جستجو
+}
+
+enum CategoryFAQ {
+  COURSE        // سوالات متداول مربوط به دوره‌ها
+  ONLINE_CLASS  // سوالات متداول مربوط به کلاس‌های آنلاین
+  GENERAL       // سوالات متداول عمومی
+}
 
 // Enum for video access levels
 enum VideoAccessLevel {

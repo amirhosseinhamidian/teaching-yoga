@@ -38,7 +38,10 @@ export default function CourseHighCard({ course }) {
           </span>
         </div>
         <div className='mt-5 flex flex-col-reverse gap-5 md:flex-row md:justify-between'>
-          <CardActions mainBtnClick={detailCourseClickHandler} />
+          <CardActions
+            mainBtnClick={detailCourseClickHandler}
+            courseId={course.id}
+          />
           <Price
             finalPrice={course.finalPrice}
             price={course.price}

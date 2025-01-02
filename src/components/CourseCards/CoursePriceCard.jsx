@@ -7,6 +7,7 @@ import Price from '../Price/Price';
 import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 async function addCourseToCart(courseId) {
   try {
@@ -44,11 +45,17 @@ const CoursePriceCard = ({
   const [isLoading, setIsLoading] = useState(false);
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const { setUser } = useAuth();
   const handleAddCourseToCart = async () => {
     setIsLoading(true);
     const result = await addCourseToCart(courseId);
     setIsLoading(false);
     if (result.success) {
+      const userRes = await fetch('/api/get-me');
+      const user = await userRes.json();
+      if (user.success) {
+        setUser(user.user);
+      }
       toast.showSuccessToast(result.cart.message);
     } else {
       toast.showErrorToast(result.error);

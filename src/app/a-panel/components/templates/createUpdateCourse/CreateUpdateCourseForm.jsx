@@ -142,16 +142,18 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     setOpenUploadIntroModal(true);
   };
 
-  const handleIntroVideoUpload = async (file) => {
-    if (!file) {
+  const handleIntroVideoUpload = async (outFiles) => {
+    if (!outFiles) {
       toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
       return;
     }
-    const formData = new FormData();
-    formData.append('video', file);
-    formData.append('courseName', title);
 
     try {
+      const formData = new FormData();
+      outFiles.forEach((file, index) => {
+        formData.append(`file_${index}`, new Blob([file.data]), file.name);
+      });
+      formData.append('courseName', title);
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video/courseIntro`,
         {
@@ -546,6 +548,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           title='آپلود ویدیو معرفی دوره'
           desc='برای آپلود ویدیو معرفی دوره فایل خود را در اینجا بکشید و رها کنید  یا کلیک و انتخاب کنید.'
           progressbar={true}
+          isVideo={true}
           onUpload={handleIntroVideoUpload}
           onClose={() => setOpenUploadIntroModal(false)}
         />

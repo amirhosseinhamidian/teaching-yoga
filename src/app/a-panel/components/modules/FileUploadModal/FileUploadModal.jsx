@@ -1,10 +1,11 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoClose } from 'react-icons/io5';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Button from '@/components/Ui/Button/Button';
+import { processVideo } from '@/services/videoProcessor';
 
 const FileUploadModal = ({
   title,
@@ -12,13 +13,16 @@ const FileUploadModal = ({
   onUpload,
   onClose,
   progressbar = false,
+  isVideo = false,
   uploadButtonText = 'آپلود',
 }) => {
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0); // state برای پیشرفت
-  const fileInputRef = useRef(null);
+  const [progress, setProgress] = useState(0);
+  1;
+  const [currentStage, setCurrentStage] = useState('processing'); // وضعیت مرحله‌ای
   const [isComplete, setIsComplete] = useState(false);
+  const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     const uploadedFile = e.target.files[0];
@@ -41,56 +45,64 @@ const FileUploadModal = ({
     e.stopPropagation();
   };
 
-  const handleUpload = async () => {
-    if (!file) return;
-
-    setIsLoading(true);
-    try {
-      await onUpload(file, setProgress); // ارسال تابع برای آپدیت پیشرفت
-    } finally {
-      setIsLoading(false);
-      setProgress(100);
-    }
-  };
-
-  const openFilePicker = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // تابعی برای دریافت درصد پیشرفت از API
   const fetchProgress = async () => {
-    if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
-
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
       );
       const data = await response.json();
-
-      setProgress(data.progress); // به‌روزرسانی درصد پیشرفت
+      setProgress(data.progress);
 
       if (data.progress >= 100) {
-        setIsComplete(true); // نشان دادن اینکه پردازش کامل شده
+        setIsComplete(true);
+        setIsLoading(false); // اتمام آپلود
       }
     } catch (error) {
-      console.error('Error fetching progress:', error);
+      console.error('Error fetching upload progress:', error);
     }
   };
 
-  // استفاده از Polling برای درخواست پیشرفت هر 5 ثانیه
-  useEffect(() => {
-    if (progressbar) {
-      const interval = setInterval(() => {
-        if (!isComplete) {
-          fetchProgress();
-        }
-      }, 5000);
+  const startPolling = () => {
+    const interval = setInterval(() => {
+      if (!isComplete) {
+        fetchProgress();
+      } else {
+        clearInterval(interval); // توقف پولینگ
+      }
+    }, 5000);
 
-      return () => clearInterval(interval);
+    return () => clearInterval(interval);
+  };
+
+  const handleUpload = async () => {
+    if (!file) return;
+
+    setIsLoading(true);
+    setCurrentStage('processing'); // شروع پردازش ویدیو
+
+    try {
+      if (isVideo) {
+        // پردازش ویدیو
+        const outFiles = await processVideo(file, false, (progress) => {
+          setProgress(progress);
+        });
+        if (!outFiles || outFiles.length === 0) {
+          throw new Error('No output files generated.');
+        }
+        setCurrentStage('uploading'); // تغییر به مرحله آپلود
+        setProgress(0); // ریست پروگرس بار
+        startPolling(); // شروع پولینگ برای آپلود
+        await onUpload(outFiles); // ارسال فایل برای آپلود
+      } else {
+        await onUpload(file, setProgress);
+      }
+    } finally {
+      if (!isVideo) {
+        setIsLoading(false);
+        setProgress(0); // اتمام آپلود
+      }
     }
-  }, [isComplete]);
+  };
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
@@ -106,16 +118,14 @@ const FileUploadModal = ({
             />
           </button>
         </div>
-        {/* Description */}
         <p className='py-4 text-sm text-subtext-light dark:text-subtext-dark'>
           {desc}
         </p>
-        {/* Upload Area */}
         <div
           className='mt-4 flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark'
           onDrop={handleDrop}
           onDragOver={handleDragOver}
-          onClick={openFilePicker}
+          onClick={() => fileInputRef.current?.click()}
         >
           <input
             type='file'
@@ -136,19 +146,18 @@ const FileUploadModal = ({
             )}
           </label>
         </div>
-        {/* Progress Bar */}
-        {progressbar && (
-          <div className={`${isLoading ? 'block' : 'hidden'}`}>
-            <div
-              className={`mt-4 h-3 w-full rounded-full bg-foreground-light dark:bg-foreground-dark`}
-            >
+        {progressbar && isLoading && (
+          <div>
+            <div className='mt-4 h-3 w-full rounded-full bg-foreground-light dark:bg-foreground-dark'>
               <div
                 className='h-3 rounded-full bg-primary'
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <div className={`mt-2 text-center font-faNa text-sm`}>
-              {progress}% {/* نمایش درصد پیشرفت */}
+            <div className='mt-2 text-center font-faNa text-sm'>
+              {currentStage === 'processing'
+                ? `پردازش ویدیو: ${progress}%`
+                : `آپلود ویدیو: ${progress}%`}
             </div>
           </div>
         )}
@@ -178,6 +187,7 @@ FileUploadModal.propTypes = {
   onUpload: PropTypes.func.isRequired,
   onClose: PropTypes.func.isRequired,
   progressbar: PropTypes.bool,
+  isVideo: PropTypes.bool,
   uploadButtonText: PropTypes.string,
 };
 

@@ -1,26 +1,38 @@
 'use client';
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
+import React, { useEffect, useState } from 'react';
 import SectionEditProfile from './SectionEditProfile';
 import { useAuth } from '@/contexts/AuthContext';
 import SectionCourse from './SectionCourse';
 import SectionQuestion from './SectionQuestion';
+import PropTypes from 'prop-types';
+import { useRouter } from 'next/navigation';
 
-const ProfileMainBox = () => {
+const ProfileMainBox = ({ status }) => {
   const { user } = useAuth();
-  console.log('user =>', user);
+  const router = useRouter();
+
   const questionsCount = user.questions.length;
   const coursesCount = user.courses.length;
 
   const [activeIndex, setActiveIndex] = useState(0);
+  useEffect(() => {
+    if (status >= 0 && status <= 4) {
+      setActiveIndex(status);
+    }
+  }, [status]);
   const profileItems = [
-    { name: 'ویرایش پروفایل', statusNumber: 0 },
     { name: 'دوره ها', statusNumber: coursesCount },
-    { name: 'کلاس آنلاین', statusNumber: 0 },
+    // { name: 'کلاس آنلاین', statusNumber: 0 },
+    { name: 'سوالات', statusNumber: questionsCount },
     { name: 'سوابق خرید', statusNumber: 0 },
     { name: 'تیکت', statusNumber: 0 },
-    { name: 'سوالات', statusNumber: questionsCount },
+    { name: 'ویرایش پروفایل', statusNumber: 0 },
   ];
+
+  const handleButtonClick = (index) => {
+    setActiveIndex(index);
+    router.push(`?active=${index}`);
+  };
 
   return (
     <div className='my-7 flex w-full flex-col rounded-xl bg-surface-light sm:my-14 sm:flex-row dark:bg-surface-dark'>
@@ -28,7 +40,7 @@ const ProfileMainBox = () => {
         {profileItems.map((item, index) => (
           <button
             key={index}
-            onClick={() => setActiveIndex(index)}
+            onClick={() => handleButtonClick(index)}
             className={`relative flex items-center whitespace-nowrap text-right text-xs transition-all duration-200 ease-in-out after:absolute after:right-[-16px] after:top-1/2 after:h-1 after:w-0 after:rounded-full after:bg-secondary after:transition-all after:duration-200 after:ease-in-out hover:text-secondary hover:after:w-3 sm:ml-8 ${activeIndex === index ? 'text-secondary after:w-3' : ''} sm:text-base md:cursor-pointer`}
           >
             {item.name}
@@ -43,14 +55,16 @@ const ProfileMainBox = () => {
         ))}
       </div>
       <div className='w-full p-4 sm:p-6'>
-        {activeIndex === 0 && <SectionEditProfile />}
-        {activeIndex === 1 && <SectionCourse />}
-        {activeIndex === 5 && <SectionQuestion />}
+        {activeIndex === 0 && <SectionCourse />}
+        {activeIndex === 1 && <SectionQuestion />}
+        {activeIndex === 4 && <SectionEditProfile />}
       </div>
     </div>
   );
 };
 
-ProfileMainBox.propTypes = {};
+ProfileMainBox.propTypes = {
+  status: PropTypes.number,
+};
 
 export default ProfileMainBox;
