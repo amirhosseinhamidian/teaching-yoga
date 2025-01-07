@@ -20,10 +20,12 @@ const createPayment = async ({ amountInRial, mobile, description }) => {
         }),
       },
     );
-    const data = response.data.data;
+
+    const data = await response.json();
+
     return {
-      paymentUrl: process.env.ZARINPAL_PAYMENT_BASE_URL + data.authority,
-      authority: data.authority,
+      paymentUrl: process.env.ZARINPAL_PAYMENT_BASE_URL + data.data.authority,
+      authority: data.data.authority,
     };
   } catch (error) {
     console.error('create payment error =>', error);
@@ -46,7 +48,9 @@ const verifyPayment = async ({ amountInRial, authority }) => {
         }),
       },
     );
-    return response.data;
+    const data = await response.json();
+
+    return data;
   } catch (error) {
     return error.response?.data || error;
   }

@@ -1,12 +1,102 @@
+/* eslint-disable no-undef */
 'use client';
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import { MdOutlineDiscount } from 'react-icons/md';
+import Link from 'next/link';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { useRouter } from 'next/navigation';
 
 const DetailOrderCard = ({ data, className }) => {
   const [discountCode, setDiscountCode] = useState('');
+  const [addCourseLoading, setAddCourseLoading] = useState(false);
+  const router = useRouter();
+
+  const getDiscount = (discount) => {
+    return discount === 0 ? (
+      <h3 className='font-faNa text-base font-semibold sm:text-lg'>-</h3>
+    ) : (
+      <>
+        <h3 className='font-faNa text-base font-semibold sm:text-lg'>
+          {discount.toLocaleString('fa-IR')}
+        </h3>
+        <h6 className='text-2xs sm:text-xs'>تومان</h6>
+      </>
+    );
+  };
+
+  const getPriceWithoutDiscount = (price) => {
+    return price === 0 ? (
+      <h3 className='font-faNa text-base font-semibold sm:text-lg'>رایگان</h3>
+    ) : (
+      <div className='flex items-baseline gap-1'>
+        <h3 className='font-faNa text-base font-semibold sm:text-lg'>
+          {price.toLocaleString('fa-IR')}
+        </h3>
+        <h6 className='text-2xs sm:text-xs'>تومان</h6>
+      </div>
+    );
+  };
+
+  const getTotalPrice = (price) => {
+    return price === 0 ? (
+      <h3 className='font-faNa text-lg font-semibold text-green sm:text-xl'>
+        رایگان
+      </h3>
+    ) : (
+      <div className='flex items-baseline gap-1 text-green'>
+        <h3 className='font-faNa text-lg font-semibold sm:text-xl'>
+          {price.toLocaleString('fa-IR')}
+        </h3>
+        <h6 className='text-2xs sm:text-xs'>تومان</h6>
+      </div>
+    );
+  };
+
+  const addFreeCourse = async (courses, cartId) => {
+    try {
+      // استخراج آرایه از courseId ها
+      const courseIds = courses.map((course) => course.courseId);
+
+      setAddCourseLoading(true);
+
+      // ارسال داده‌ها به API
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/courses`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ courseIds, cartId }), // ارسال لیست آی‌دی‌های دوره‌ها و شناسه سبد خرید
+        },
+      );
+
+      // بررسی وضعیت پاسخ
+      if (!response.ok) {
+        throw new Error('Failed to add courses');
+      }
+
+      // دریافت پاسخ از API
+      const data = await response.json();
+      console.log('Courses added successfully:', data);
+
+      // استخراج paymentId از پاسخ
+      const paymentId = data.paymentId;
+
+      // انتقال به صفحه تکمیل پرداخت
+      router.replace(`/complete-payment?token=${paymentId}&status=OK`);
+    } catch (error) {
+      console.error('Error adding courses:', error);
+      // انتقال به صفحه خطا
+      router.replace('/complete-payment?status=NOK');
+    } finally {
+      setAddCourseLoading(false);
+    }
+  };
+
   return (
     <div
       className={`rounded-xl bg-surface-light p-6 shadow sm:p-8 dark:bg-surface-dark ${className}`}
@@ -14,56 +104,62 @@ const DetailOrderCard = ({ data, className }) => {
       <h2 className='mb-6 text-lg font-semibold md:text-xl'>جزئیات سفارش</h2>
       <div className='flex w-full items-center justify-between'>
         <h3 className='font-medium'>کل مبلغ</h3>
-        <div className='flex items-baseline gap-1'>
-          <h3 className='font-faNa text-base font-semibold sm:text-lg'>
-            {data.totalPriceWithoutDiscount.toLocaleString('fa-IR')}
-          </h3>
-          <h6 className='text-2xs sm:text-xs'>تومان</h6>
-        </div>
+        {getPriceWithoutDiscount(data.totalPriceWithoutDiscount)}
       </div>
       <div className='mt-2 flex w-full items-center justify-between sm:mt-3'>
         <h3 className='font-medium'>تخفیف</h3>
         <div className='flex items-baseline gap-1 text-red'>
-          <h3 className='font-faNa text-base font-semibold sm:text-lg'>
-            {data.totalDiscount.toLocaleString('fa-IR')}
-          </h3>
-          <h6 className='text-2xs sm:text-xs'>تومان</h6>
+          {getDiscount(data.totalDiscount)}
         </div>
       </div>
       <hr className='my-3 border-t border-gray-300 sm:my-4 dark:border-gray-700' />
       <div className='flex w-full items-center justify-between'>
-        <h3 className='font-medium'>کل مبلغ</h3>
-        <div className='flex items-baseline gap-1 text-green'>
-          <h3 className='font-faNa text-lg font-semibold sm:text-xl'>
-            {data.totalPrice.toLocaleString('fa-IR')}
-          </h3>
-          <h6 className='text-2xs sm:text-xs'>تومان</h6>
-        </div>
+        <h3 className='font-medium'>مبلغ قابل پرداخت</h3>
+        {getTotalPrice(data.totalPrice)}
       </div>
-      <div className='my-10 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4'>
-        <div className='relative xs:w-full xs:flex-1'>
-          <Input
-            value={discountCode}
-            onChange={setDiscountCode}
-            placeholder='کد تخفیف'
-            fontDefault={false}
-            className='w-full pr-10'
-            isUppercase
-          />
-          <MdOutlineDiscount
-            size={20}
-            className='absolute right-2 top-2.5 text-subtext-light dark:text-subtext-dark'
-          />
-        </div>
-        <Button className='text-xs sm:text-sm' shadow>
-          ثبت
+      {data.totalPrice !== 0 ? (
+        <>
+          <div className='my-10 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4'>
+            <div className='relative xs:w-full xs:flex-1'>
+              <Input
+                value={discountCode}
+                onChange={setDiscountCode}
+                placeholder='کد تخفیف'
+                fontDefault={false}
+                className='w-full pr-10'
+                isUppercase
+              />
+              <MdOutlineDiscount
+                size={20}
+                className='absolute right-2 top-2.5 text-subtext-light dark:text-subtext-dark'
+              />
+            </div>
+            <Button className='text-xs sm:text-sm' shadow>
+              ثبت
+            </Button>
+          </div>
+          <Link className='flex w-full justify-center' href='/payment'>
+            <Button
+              className='mb-2 flex w-full items-center justify-center gap-1 sm:mb-4'
+              shadow
+            >
+              تایید و ادامه پرداخت
+            </Button>
+          </Link>
+        </>
+      ) : (
+        <Button
+          className='mb-2 mt-10 flex w-full items-center justify-center gap-1 sm:mb-4'
+          shadow
+          disable={addCourseLoading}
+          onClick={() => addFreeCourse(data.courses, data.id)}
+        >
+          افزودن دوره
+          {addCourseLoading && (
+            <AiOutlineLoading3Quarters className='animate-spin' />
+          )}
         </Button>
-      </div>
-      <div className='flex w-full justify-center'>
-        <Button className='mb-2 w-full sm:mb-4 sm:w-2/3' shadow>
-          ادامه تسویه حساب
-        </Button>
-      </div>
+      )}
     </div>
   );
 };

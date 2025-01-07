@@ -19,21 +19,14 @@ export async function GET() {
         courses: true,
         carts: {
           include: {
-            cartTerms: {
+            cartCourses: {
               include: {
-                term: {
-                  include: {
-                    courseTerms: {
-                      include: {
-                        course: {
-                          select: {
-                            id: true,
-                            title: true,
-                            cover: true,
-                          },
-                        },
-                      },
-                    },
+                course: {
+                  select: {
+                    id: true,
+                    title: true,
+                    cover: true,
+                    shortAddress: true,
                   },
                 },
               },
@@ -51,12 +44,9 @@ export async function GET() {
     const user = {
       ...rawUser,
       carts: (rawUser.carts || []).map((cart) => {
-        // استخراج تمام دوره‌ها از cartTerms
-        const courses = cart.cartTerms.flatMap((cartTerm) =>
-          cartTerm.term.courseTerms.map((courseTerm) => courseTerm.course),
-        );
+        // استخراج فقط دوره‌ها از cartCourses
+        const courses = cart.cartCourses.map((cartCourse) => cartCourse.course);
 
-        // حذف دوره‌های تکراری
         const uniqueCourses = Array.from(
           new Map(courses.map((course) => [course.id, course])).values(),
         );
@@ -67,7 +57,6 @@ export async function GET() {
         };
       }),
     };
-
     return NextResponse.json({ success: true, user });
   } catch (error) {
     console.error('Error fetching user data:', error);

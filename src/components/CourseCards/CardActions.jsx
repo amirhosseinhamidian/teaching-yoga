@@ -8,6 +8,10 @@ import PropTypes from 'prop-types';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { updateUser } from '@/app/actions/updateUser';
+import Modal from '../modules/Modal/Modal';
+import { LuLogIn } from 'react-icons/lu';
+import { usePathname, useRouter } from 'next/navigation';
 
 async function addCourseToCart(courseId) {
   try {
@@ -37,24 +41,33 @@ async function addCourseToCart(courseId) {
 
 export default function CardActions({ mainBtnClick, courseId, className }) {
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { setUser } = useAuth();
+  const { user, setUser } = useAuth();
 
   const addToCart = async () => {
+    if (!user) {
+      setShowLoginModal(true);
+      return;
+    }
     setIsLoading(true);
     const result = await addCourseToCart(courseId);
     setIsLoading(false);
     if (result.success) {
-      const userRes = await fetch('/api/get-me');
-      const user = await userRes.json();
-      if (user.success) {
-        setUser(user.user);
-      }
+      await updateUser(setUser);
       toast.showSuccessToast(result.cart.message);
     } else {
       toast.showErrorToast(result.error);
     }
+  };
+
+  const loginHandler = () => {
+    sessionStorage.setItem('previousPage', pathname);
+    router.push('/login');
   };
 
   return (
@@ -70,6 +83,18 @@ export default function CardActions({ mainBtnClick, courseId, className }) {
         <IconButton loading />
       ) : (
         <IconButton icon={BiCartAdd} onClick={addToCart} size={28} />
+      )}
+      {showLoginModal && (
+        <Modal
+          title='ثبت نام یا ورود به حساب کاربری'
+          desc='برای تهیه دوره لطفا ابتدا وارد حساب کاربری خود شوید یا در سایت ثبت نام کنید.'
+          icon={LuLogIn}
+          iconSize={36}
+          primaryButtonClick={loginHandler}
+          secondaryButtonClick={() => setShowLoginModal(false)}
+          primaryButtonText='ورود | ثبت نام'
+          secondaryButtonText='لغو'
+        />
       )}
     </div>
   );

@@ -14,8 +14,12 @@ const Newsletter = () => {
   const [email, setEmail] = useState('');
 
   const handleSubmitNewsletterEmail = async () => {
+    if (!email.trim()) {
+      toast.showErrorToast('لطفا ایمیل خود را وارد کنید');
+      return;
+    }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email.trim() && !emailRegex.test(email)) {
+    if (!emailRegex.test(email)) {
       toast.showErrorToast('لطفا یک ایمیل معتبر وارد کنید');
       return;
     }
@@ -52,8 +56,8 @@ const Newsletter = () => {
           خبردار شو
         </h2>
         <p className='mt-4 text-sm text-subtext-light sm:text-base dark:text-subtext-dark'>
-          برای دریافت اخرین اطلاعات از دوره های جدید و اطلاعات جدید ما ایمیل تون
-          رو وارد کنید.
+          برای دریافت اخرین اطلاعات از دوره ها و اطلاعات جدید، ایمیل تون رو وارد
+          کنید.
         </p>
         <div className='my-10 flex w-full flex-wrap items-center justify-center gap-4'>
           <Input

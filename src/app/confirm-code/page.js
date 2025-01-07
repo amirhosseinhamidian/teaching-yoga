@@ -11,6 +11,7 @@ import { FaArrowRight } from 'react-icons/fa6';
 import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { updateUser } from '../actions/updateUser';
 
 const ConfirmCodePage = () => {
   const { userPhone, username, token, setToken, setUser } = useAuth();
@@ -106,12 +107,8 @@ const ConfirmCodePage = () => {
       });
 
       if (result?.ok) {
-        const userRes = await fetch('/api/get-me');
-        const user = await userRes.json();
+        await updateUser(setUser);
         toast.showSuccessToast('با موفقیت وارد شدید');
-        if (user.success) {
-          setUser(user.user);
-        }
         const previousPage = sessionStorage.getItem('previousPage');
         sessionStorage.removeItem('previousPage');
         router.replace(previousPage);

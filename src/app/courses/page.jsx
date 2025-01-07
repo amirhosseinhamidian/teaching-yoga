@@ -18,7 +18,7 @@ async function CoursesPage() {
       method: 'GET',
       headers: headers(),
       next: {
-        revalidate: 21600, // 6 hours
+        revalidate: 7200, // 2 hours
       },
     },
   );
@@ -44,12 +44,12 @@ async function CoursesPage() {
             return course.isHighPriority ? (
               <div
                 key={course.id}
-                className='col-span-1 sm:col-span-2 md:col-span-3'
+                className='col-span-1 sm:col-span-2 lg:col-span-3'
               >
                 <CourseHighCard course={course} />
               </div>
             ) : (
-              <div key={course.id} className='col-span-1'>
+              <div key={course.id}>
                 <CourseCard
                   course={course}
                   className='h-full bg-surface-light dark:bg-surface-dark'

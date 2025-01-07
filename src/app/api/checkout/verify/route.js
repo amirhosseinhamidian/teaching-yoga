@@ -1,12 +1,12 @@
+/* eslint-disable no-undef */
 import { verifyPayment } from '@/app/actions/zarinpal';
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
 export const GET = async (req) => {
   const { searchParams } = req.nextUrl;
-  const { Authority: authority, Status } = Object.fromEntries(
-    searchParams.entries(),
-  );
+  const authority = searchParams.get('Authority');
+  const status = searchParams.get('Status');
 
   if (!authority) {
     return NextResponse.json(
@@ -16,15 +16,13 @@ export const GET = async (req) => {
   }
 
   try {
-    // جستجوی رکورد پرداخت در پایگاه داده
     const paymentRecord = await prismadb.payment.findUnique({
       where: { authority },
     });
 
     if (!paymentRecord) {
-      return NextResponse.json(
-        { error: 'Payment not found.' },
-        { status: 404 },
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/complete-payment?token=error-not-found&status=${status}`,
       );
     }
 
@@ -34,25 +32,83 @@ export const GET = async (req) => {
     });
 
     if (![100, 101].includes(payment.data.code)) {
-      return NextResponse.json(
-        { error: 'Payment not verified.' },
-        { status: 400 },
+      await prismadb.payment.update({
+        where: { authority },
+        data: { status: 'FAILED' },
+      });
+
+      return NextResponse.redirect(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/complete-payment?token=error-payment-failed&status=${status}`,
       );
     }
-    // اگر رکورد پیدا شد، اطلاعات آن را برگردانید
-    return NextResponse.json(
-      {
-        message: 'Payment verified.',
-        payment: paymentRecord,
-        status: Status, // وضعیت دریافتی از زرین‌پال
+
+    // ذخیره ref_id به عنوان transactionId
+    const updatedPayment = await prismadb.payment.update({
+      where: { authority },
+      data: {
+        status: 'SUCCESSFUL',
+        transactionId: payment.data.ref_id,
       },
-      { status: 201 },
+    });
+
+    // به‌روزرسانی وضعیت سبد خرید
+    await prismadb.cart.update({
+      where: { id: updatedPayment.cartId },
+      data: {
+        status: 'COMPLETED',
+      },
+    });
+
+    // دریافت اطلاعات سبد خرید و دوره‌های موجود در آن
+    const cart = await prismadb.cart.findUnique({
+      where: { id: updatedPayment.cartId },
+      include: {
+        cartCourses: {
+          include: {
+            course: true,
+          },
+        },
+      },
+    });
+
+    // بررسی صحت یافتن سبد خرید
+    if (!cart) {
+      throw new Error('Cart not found');
+    }
+
+    // استخراج دوره‌ها از cartCourses
+    const courses = cart.cartCourses.map((cartCourse) => cartCourse.course);
+
+    // اضافه کردن دوره‌ها به کاربر
+    for (const course of courses) {
+      await prismadb.userCourse.upsert({
+        where: {
+          userId_courseId: {
+            userId: paymentRecord.userId,
+            courseId: course.id,
+          },
+        },
+        update: {}, // در صورت موجود بودن فقط آپدیت انجام نمی‌شود
+        create: {
+          userId: paymentRecord.userId,
+          courseId: course.id,
+        },
+      });
+    }
+
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/complete-payment?token=${updatedPayment.id}&status=${status}`,
     );
   } catch (error) {
-    console.error('Error finding payment record:', error.message);
-    return NextResponse.json(
-      { error: 'Something went wrong.' },
-      { status: 500 },
+    console.error('Error verifying payment:', error.message);
+
+    await prismadb.payment.update({
+      where: { authority },
+      data: { status: 'FAILED' },
+    });
+
+    return NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/complete-payment?token=error-something-went-wrong&status=NOK`,
     );
   }
 };

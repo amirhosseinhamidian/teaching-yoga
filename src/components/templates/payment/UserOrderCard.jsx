@@ -20,8 +20,63 @@ const UserOrderCard = ({ data, className }) => {
 
   const paymentClickHandler = async () => {
     if (!user.firstname || !user.lastname) {
-      toast.showErrorToast('لطفا نام و نام خانوادگی خود را وارد کنید.');
+      toast.showErrorToast('لطفا نام و نام خانوادگی خود را ثبت کنید.');
       return;
+    }
+    if (!roleCheck) {
+      toast.showErrorToast(
+        'برای پرداخت لازم است قوانین و مقررات را تایید کنید.',
+      );
+      return;
+    }
+    try {
+      setPaymentLoading(true);
+      const payload = {
+        amount: data.totalPrice,
+        desc: getPaymentDescription(data.courses),
+        cartId: data.id,
+      };
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // هدایت کاربر به صفحه پرداخت
+        if (data.paymentResponse?.paymentUrl) {
+          window.location.href = data.paymentResponse.paymentUrl;
+        }
+      } else {
+        const errorData = await response.json();
+        toast.showErrorToast(errorData.error || 'خطای درخواست پرداخت.');
+        console.error('Payment error: ', errorData);
+      }
+    } catch (error) {
+      toast.showErrorToast('خطای ناشناخته در پرداخت');
+      console.error('checkout error: ', error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const getPaymentDescription = (courses) => {
+    const titles = courses.map((course) => {
+      return course.courseTitle;
+    });
+    if (titles.length > 1) {
+      const courseList =
+        titles.slice(0, -1).join('، ') + ' و ' + titles[titles.length - 1];
+      return `پرداخت برای خرید دوره‌های ${courseList}`;
+    } else if (titles.length === 1) {
+      return `پرداخت برای خرید دوره ${titles[0]}`;
     }
   };
 

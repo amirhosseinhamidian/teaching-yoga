@@ -32,7 +32,12 @@ async function ArticlesSection() {
 
   return (
     <div className='flex flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
-      <h2 className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'>
+      <h2
+        className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
+        data-aos='fade-up'
+        data-aos-delay='200'
+        data-aos-duration='1000'
+      >
         آخرین مقالات
       </h2>
       <div className='container my-0 grid grid-cols-1 gap-4 sm:my-3 sm:grid-cols-2 sm:gap-6 md:gap-8 lg:grid-cols-3 lg:gap-12 xl:px-32'>

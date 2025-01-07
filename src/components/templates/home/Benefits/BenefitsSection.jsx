@@ -50,7 +50,12 @@ const BenefitsSection = () => {
 
   return (
     <div className='flex flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
-      <h2 className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'>
+      <h2
+        className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
+        data-aos='fade-up'
+        data-aos-delay='200'
+        data-aos-duration='1000'
+      >
         چرا یوگا و مدیتیشن
       </h2>
       <div className='container grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 md:gap-8 lg:gap-12 xl:px-32'>

@@ -12,7 +12,7 @@ const fetchCourseData = async () => {
         method: 'GET',
         headers: headers(),
         next: {
-          revalidate: 21600, // 6 hours
+          revalidate: 7200, // 2 hours
         },
       },
     );
@@ -30,9 +30,14 @@ const fetchCourseData = async () => {
 async function CoursesSection() {
   const { data } = await fetchCourseData();
   return (
-    <div className='shadow-accent-custom mt-2 -skew-y-6 transform bg-surface-light sm:mt-10 dark:bg-surface-dark'>
+    <div className='mt-2 -skew-y-6 transform bg-surface-light shadow-accent-custom sm:mt-10 dark:bg-surface-dark'>
       <div className='flex skew-y-6 flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
-        <h2 className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'>
+        <h2
+          className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
+          data-aos='fade-up'
+          data-aos-delay='200'
+          data-aos-duration='1000'
+        >
           دوره ها
         </h2>
         <div className='container my-5 grid grid-cols-1 gap-4 sm:my-7 sm:grid-cols-2 sm:gap-6 md:gap-8 lg:grid-cols-3 lg:gap-12 xl:px-32'>

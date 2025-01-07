@@ -35,21 +35,14 @@ export default async function RootLayout({ children }) {
           courses: true,
           carts: {
             include: {
-              cartTerms: {
+              cartCourses: {
                 include: {
-                  term: {
-                    include: {
-                      courseTerms: {
-                        include: {
-                          course: {
-                            select: {
-                              id: true,
-                              title: true,
-                              cover: true,
-                            },
-                          },
-                        },
-                      },
+                  course: {
+                    select: {
+                      id: true,
+                      title: true,
+                      cover: true,
+                      shortAddress: true,
                     },
                   },
                 },
@@ -67,8 +60,9 @@ export default async function RootLayout({ children }) {
         user = {
           ...rawUser,
           carts: (rawUser.carts || []).map((cart) => {
-            const courses = cart.cartTerms.flatMap((cartTerm) =>
-              cartTerm.term.courseTerms.map((courseTerm) => courseTerm.course),
+            // استخراج فقط دوره‌ها از cartCourses
+            const courses = cart.cartCourses.map(
+              (cartCourse) => cartCourse.course,
             );
 
             const uniqueCourses = Array.from(

@@ -9,11 +9,12 @@ import Image from 'next/image';
 
 export default function CourseHighCard({ course }) {
   const route = useRouter();
-  const [countdown, setCountdown] = useState(prizeCountdown());
+  const [countdown, setCountdown] = useState('');
   const detailCourseClickHandler = () => {
     route.push(`/courses/${course.shortAddress}`);
   };
   useEffect(() => {
+    setCountdown(prizeCountdown());
     const timer = setInterval(() => {
       setCountdown(prizeCountdown());
     }, 1000);
@@ -54,7 +55,7 @@ export default function CourseHighCard({ course }) {
         alt={course.title}
         width={600}
         height={540}
-        className='h-auto w-full rounded-t-xl object-cover md:w-1/3 md:rounded-none md:rounded-e-xl'
+        className='w-full rounded-t-xl object-cover xs:h-40 sm:h-auto md:w-1/3 md:rounded-none md:rounded-e-xl'
       />
     </div>
   );

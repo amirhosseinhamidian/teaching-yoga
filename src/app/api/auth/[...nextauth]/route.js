@@ -40,6 +40,7 @@ export const authOptions = {
         ...session.user,
         userId: token.userId,
         userRole: token.userRole,
+        userPhone: token.userPhone,
       };
       return session;
     },
@@ -47,6 +48,7 @@ export const authOptions = {
       if (user) {
         token.userId = user.id;
         token.userRole = user.role;
+        token.userPhone = user.phone;
       }
       return token;
     },

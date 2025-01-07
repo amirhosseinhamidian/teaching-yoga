@@ -8,13 +8,14 @@ export async function GET() {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
-        { message: 'You must be logged in to ask a question.' },
+        { message: 'You must be logged in to view the cart.' },
         { status: 401 },
       );
     }
+
     const userId = session.user.userId;
 
-    // پیدا کردن سبد خرید کاربر با وضعیت PENDING
+    // دریافت سبد خرید کاربر
     const cart = await prismadb.cart.findFirst({
       where: {
         userId: userId,
@@ -40,34 +41,62 @@ export async function GET() {
             },
           },
         },
+        cartCourses: {
+          include: {
+            course: {
+              select: {
+                id: true,
+                title: true,
+                cover: true,
+              },
+            },
+          },
+        },
       },
     });
 
+    // اگر سبد خرید پیدا نشد، مقدار خالی برگردانید
     if (!cart) {
-      return NextResponse.json({ message: 'No pending cart found', cart });
+      return NextResponse.json(
+        {
+          cart: {
+            id: null,
+            totalPrice: 0,
+            totalDiscount: 0,
+            totalPriceWithoutDiscount: 0,
+            courses: [],
+          },
+        },
+        { status: 200 },
+      );
     }
 
-    // ایجاد یک Map برای جلوگیری از تکرار دوره‌ها
-    const coursesMap = new Map();
-    let totalDiscount = 0;
-    let totalPrice = 0;
-    let totalPriceWithoutDiscount = 0;
+    // دریافت دوره‌های خریداری‌شده توسط کاربر
+    const purchasedCourses = await prismadb.userCourse.findMany({
+      where: {
+        userId: userId,
+        status: 'ACTIVE',
+      },
+      select: {
+        courseId: true,
+      },
+    });
 
+    const purchasedCourseIds = new Set(
+      purchasedCourses.map((userCourse) => userCourse.courseId),
+    );
+
+    // ایجاد لیست ترم‌های مجاز (غیر تکراری)
+    const termSet = new Set();
     cart.cartTerms.forEach((cartTerm) => {
-      const course = cartTerm.term.courseTerms[0]?.course;
+      termSet.add(cartTerm.term.id);
+    });
 
-      if (!course) return;
+    // ایجاد ساختار برای ذخیره اطلاعات دوره‌ها
+    const coursesMap = new Map();
 
-      const termPrice = cartTerm.price;
-      const discount = cartTerm.discount || 0;
-
-      // محاسبه مبلغ تخفیف و قیمت نهایی ترم
-      const discountAmount = (termPrice * discount) / 100;
-      const finalTermPrice = termPrice - discountAmount;
-
-      totalDiscount += discountAmount;
-      totalPrice += finalTermPrice;
-      totalPriceWithoutDiscount += termPrice;
+    cart.cartCourses.forEach((cartCourse) => {
+      const course = cartCourse.course;
 
       if (!coursesMap.has(course.id)) {
         coursesMap.set(course.id, {
@@ -80,15 +109,53 @@ export async function GET() {
         });
       }
 
-      const courseInfo = coursesMap.get(course.id);
-      courseInfo.finalPrice += finalTermPrice;
-      courseInfo.discount += discountAmount;
-      courseInfo.finalPriceWithoutDiscount += termPrice;
+      // محاسبه قیمت و تخفیف دوره از ترم‌های مرتبط
+      cart.cartTerms.forEach((cartTerm) => {
+        const term = cartTerm.term;
+
+        // بررسی اینکه ترم در دوره خریداری‌شده نباشد
+        const isPurchased = term.courseTerms.some((ct) =>
+          purchasedCourseIds.has(ct.course.id),
+        );
+
+        if (
+          termSet.has(term.id) &&
+          !isPurchased && // حذف ترم‌های خریداری‌شده
+          term.courseTerms.some((ct) => ct.course.id === course.id)
+        ) {
+          const termPrice = term.price;
+          const discount = term.discount || 0;
+          const discountAmount = (termPrice * discount) / 100;
+          const finalTermPrice = termPrice - discountAmount;
+
+          const courseInfo = coursesMap.get(course.id);
+          courseInfo.finalPrice += finalTermPrice;
+          courseInfo.discount += discountAmount;
+          courseInfo.finalPriceWithoutDiscount += termPrice;
+
+          // ترم را از لیست مجاز حذف کنید تا دوباره محاسبه نشود
+          termSet.delete(term.id);
+        }
+      });
     });
 
-    // تبدیل Map به آرایه
     const coursesInfo = Array.from(coursesMap.values());
 
+    // محاسبه مجموع قیمت‌ها و تخفیف‌ها
+    const totalPrice = coursesInfo.reduce(
+      (sum, course) => sum + course.finalPrice,
+      0,
+    );
+    const totalDiscount = coursesInfo.reduce(
+      (sum, course) => sum + course.discount,
+      0,
+    );
+    const totalPriceWithoutDiscount = coursesInfo.reduce(
+      (sum, course) => sum + course.finalPriceWithoutDiscount,
+      0,
+    );
+
+    // بازگشت داده‌ها
     return NextResponse.json({
       cart: {
         id: cart.id,
@@ -101,7 +168,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error fetching cart:', error);
     return NextResponse.json(
-      { message: 'Internal server error' },
+      { message: 'Internal server error.' },
       { status: 500 },
     );
   }
@@ -118,13 +185,26 @@ export async function POST(req) {
     }
 
     const userId = session.user.userId;
-
     const body = await req.json();
     const { courseId } = body;
 
     if (!courseId) {
       return NextResponse.json(
         { message: 'Course ID is required' },
+        { status: 400 },
+      );
+    }
+
+    const existingUserCourse = await prismadb.userCourse.findFirst({
+      where: {
+        userId,
+        courseId: parseInt(courseId),
+      },
+    });
+
+    if (existingUserCourse) {
+      return NextResponse.json(
+        { message: 'شما قبلاً این دوره را تهیه کرده‌اید.' },
         { status: 400 },
       );
     }
@@ -141,6 +221,21 @@ export async function POST(req) {
       });
     }
 
+    // بررسی وجود دوره در سبد خرید
+    const existingCartCourses = await prismadb.cartCourse.findMany({
+      where: {
+        cartId: cart.id,
+        courseId: parseInt(courseId),
+      },
+    });
+
+    if (existingCartCourses.length > 0) {
+      return NextResponse.json(
+        { message: 'این دوره قبلاً به سبد خرید شما اضافه شده است.' },
+        { status: 400 },
+      );
+    }
+
     // پیدا کردن ترم‌های دوره
     const courseTerms = await prismadb.courseTerm.findMany({
       where: { courseId: parseInt(courseId) },
@@ -150,38 +245,66 @@ export async function POST(req) {
     if (!courseTerms.length) {
       return NextResponse.json(
         { message: 'Course terms not found' },
-        { status: 404 },
-      );
-    }
-
-    // بررسی وجود ترم‌های دوره در سبد خرید
-    const existingCartTerms = await prismadb.cartTerm.findMany({
-      where: {
-        cartId: cart.id,
-        termId: {
-          in: courseTerms.map((ct) => ct.termId), // لیست شناسه‌های ترم‌های دوره
-        },
-      },
-    });
-
-    if (existingCartTerms.length > 0) {
-      return NextResponse.json(
-        { message: 'این دوره قبلا به سبد خرید شما اضافه شده است.' },
         { status: 400 },
       );
     }
 
-    // افزودن ترم‌های جدید به سبد خرید
-    const newCartTerms = courseTerms.map((ct) => ({
+    // افزودن دوره به CartCourse
+    const newCartCourse = {
       cartId: cart.id,
-      termId: ct.termId,
-      price: ct.term.price,
-      discount: ct.term.discount,
-    }));
+      courseId: parseInt(courseId), // دوره به سبد خرید اضافه می‌شود
+    };
 
-    await prismadb.cartTerm.createMany({
-      data: newCartTerms,
+    await prismadb.cartCourse.create({
+      data: newCartCourse,
     });
+
+    // افزودن ترم‌های جدید به سبد خرید
+    const newCartTerms = [];
+
+    for (const ct of courseTerms) {
+      // بررسی وجود ترم در سبد خرید
+      const existingCartTerm = await prismadb.cartTerm.findFirst({
+        where: {
+          cartId: cart.id,
+          termId: ct.termId,
+        },
+      });
+
+      // بررسی وجود ترم در ترم‌های خریداری‌شده
+      const purchasedTerm = await prismadb.userCourse.findFirst({
+        where: {
+          userId,
+          courseId: ct.courseId,
+        },
+        include: {
+          course: {
+            include: {
+              courseTerms: {
+                where: {
+                  termId: ct.termId,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!existingCartTerm && !purchasedTerm) {
+        newCartTerms.push({
+          cartId: cart.id,
+          termId: ct.termId,
+          price: ct.term.price,
+          discount: ct.term.discount,
+        });
+      }
+    }
+
+    if (newCartTerms.length > 0) {
+      await prismadb.cartTerm.createMany({
+        data: newCartTerms,
+      });
+    }
 
     // محاسبه قیمت و تخفیف جدید سبد خرید
     const updatedCartTerms = await prismadb.cartTerm.findMany({
@@ -222,7 +345,6 @@ export async function POST(req) {
     );
   }
 }
-
 export async function DELETE(req) {
   try {
     const session = await getServerSession(authOptions);
@@ -234,7 +356,6 @@ export async function DELETE(req) {
     }
 
     const userId = session.user.userId;
-
     const body = await req.json();
     const { courseId } = body;
 
@@ -252,6 +373,7 @@ export async function DELETE(req) {
         status: 'PENDING',
       },
       include: {
+        cartCourses: true,
         cartTerms: {
           include: {
             term: {
@@ -271,33 +393,45 @@ export async function DELETE(req) {
       );
     }
 
-    // پیدا کردن cartTerm های مرتبط با courseId
+    // حذف دوره‌های مرتبط با `courseId` از `cartCourses`
+    const deleteCartCoursePromises = cart.cartCourses
+      .filter((cartCourse) => cartCourse.courseId === courseId)
+      .map((cartCourse) =>
+        prismadb.cartCourse.delete({
+          where: { id: cartCourse.id },
+        }),
+      );
+    await Promise.all(deleteCartCoursePromises);
+
+    // بررسی ترم‌ها و حذف فقط ترم‌هایی که مرتبط با دوره دیگری نیستند
     const cartTermsToDelete = cart.cartTerms.filter((cartTerm) => {
-      const courseTempId = cartTerm.term.courseTerms[0]?.courseId;
-      return courseTempId === courseId;
+      const isSharedTerm = cartTerm.term.courseTerms.some(
+        (courseTerm) =>
+          courseTerm.courseId !== courseId &&
+          cart.cartCourses.some(
+            (cartCourse) => cartCourse.courseId === courseTerm.courseId,
+          ),
+      );
+      return !isSharedTerm; // حذف فقط ترم‌هایی که مشترک نیستند
     });
 
-    if (cartTermsToDelete.length === 0) {
-      return NextResponse.json(
-        { message: 'Course not found in the cart.' },
-        { status: 404 },
-      );
-    }
-
-    // حذف cartTerm های مرتبط
-    const deletePromises = cartTermsToDelete.map((cartTerm) =>
+    const deleteCartTermPromises = cartTermsToDelete.map((cartTerm) =>
       prismadb.cartTerm.delete({
         where: { id: cartTerm.id },
       }),
     );
-    await Promise.all(deletePromises);
+    await Promise.all(deleteCartTermPromises);
 
-    // بررسی خالی بودن سبد خرید و حذف آن در صورت نیاز
+    // بررسی و حذف سبد خرید در صورت خالی بودن
+    const remainingCartCourses = await prismadb.cartCourse.findMany({
+      where: { cartId: cart.id },
+    });
+
     const remainingCartTerms = await prismadb.cartTerm.findMany({
       where: { cartId: cart.id },
     });
 
-    if (remainingCartTerms.length === 0) {
+    if (remainingCartCourses.length === 0 && remainingCartTerms.length === 0) {
       await prismadb.cart.delete({
         where: { id: cart.id },
       });
@@ -305,7 +439,7 @@ export async function DELETE(req) {
 
     return NextResponse.json({
       success: true,
-      message: 'Course removed from the cart successfully.',
+      message: 'Course and its terms removed from the cart successfully.',
     });
   } catch (error) {
     console.error('Error removing course from cart:', error);

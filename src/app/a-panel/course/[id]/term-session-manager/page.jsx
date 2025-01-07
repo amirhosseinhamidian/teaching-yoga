@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-vars */
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import HeadAction from '@/app/a-panel/components/templates/addTermSession/HeadAction';
+import HeadAction from '@/app/a-panel/components/templates/term-session-manager/HeadAction';
 import { useSearchParams } from 'next/navigation';
 import { useParams } from 'next/navigation';
 import Accordion from '@/components/Ui/Accordion/Accordion';
@@ -179,7 +179,7 @@ const AddTermSessionPage = () => {
   const handleDeleteTerm = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termTempId}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms/${termTempId}`,
         {
           method: 'DELETE',
         },
@@ -547,7 +547,7 @@ const AddTermSessionPage = () => {
       {showDeleteTermModal && (
         <Modal
           title='حذف ترم'
-          desc='در صورت حذف ترم دیگر به اطلاعات آن و جلسات آن دسترسی ندارید. با حذف ترم محتوای ویدیویی جلسات آن پاک نخواهد شد برای این کار باید از بخش مدیریت رسانه  اقدام کنید. آیا از حذف این ترم مطمئن هستید؟'
+          desc='آیا از حذف ترم مطمئن هستید؟'
           icon={LuTrash}
           iconSize={32}
           primaryButtonText='خیر'

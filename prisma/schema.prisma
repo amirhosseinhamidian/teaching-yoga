@@ -97,6 +97,7 @@ model Course {
   instructor       Instructor    @relation(fields: [instructorId], references: [id])
   introVideoUrl    String?
   courseTerms      CourseTerm[]  @relation("CourseToTerms") // ارتباط با ترم‌ها
+  cartCourses      CartCourse[] @relation("CourseToCartCourses")
   comments         Comment[]
   questions        Question[]
   users            UserCourse[]  @relation("UserCourses")
@@ -245,10 +246,19 @@ model Cart {
   user       User       @relation("UserCarts", fields: [userId], references: [id])
   payment    Payment?     @relation("CartToPayment") 
   cartTerms  CartTerm[] @relation("CartToCartTerms")
+  cartCourses  CartCourse[] @relation("CartToCourses")
   totalPrice Int?
   totalDiscount Int?
   createAt   DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+}
+
+model CartCourse {
+  id        Int       @id @unique @default(autoincrement())
+  cartId    Int
+  courseId  Int
+  cart      Cart      @relation("CartToCourses", fields: [cartId], references: [id])
+  course    Course    @relation("CourseToCartCourses", fields: [courseId], references: [id])
 }
 
 model CartTerm {
@@ -272,8 +282,8 @@ model Payment {
   amount      Int      // مبلغ کل پرداخت‌شده
   status      PaymentStatus
   method      PaymentMethod
-  transactionId String?
-  authority   String   @unique
+  transactionId BigInt?
+  authority   String?   @unique
   user        User     @relation("UserToPayments", fields: [userId], references: [id])
   cart        Cart     @relation("CartToPayment", fields: [cartId], references: [id])
   createAt    DateTime @default(now())
@@ -289,6 +299,7 @@ enum PaymentStatus {
 enum PaymentMethod {
   CREDIT_CARD
   ONLINE
+  FREE
 }
 
 enum CartStatus {

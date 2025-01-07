@@ -148,7 +148,7 @@ const CoursesTable = () => {
             icon={MdAddToQueue}
             onClick={() =>
               router.push(
-                `/a-panel/course/${row.id}/add-term-session?courseTitle=${encodeURIComponent(row.name)}`,
+                `/a-panel/course/${row.id}/term-session-manager?courseTitle=${encodeURIComponent(row.name)}`,
               )
             }
           />
