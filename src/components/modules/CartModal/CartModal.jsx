@@ -30,6 +30,7 @@ const CartModal = ({ onClose }) => {
       }
 
       const data = await res.json();
+      console.log(data);
       setCartData(data);
     } catch (error) {
       console.error('Error fetch course data:', error);

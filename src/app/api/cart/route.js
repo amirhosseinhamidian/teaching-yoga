@@ -405,6 +405,7 @@ export async function DELETE(req) {
 
     // بررسی ترم‌ها و حذف فقط ترم‌هایی که مرتبط با دوره دیگری نیستند
     const cartTermsToDelete = cart.cartTerms.filter((cartTerm) => {
+      console.log('cart term in api delete ====> ', cartTerm);
       const isSharedTerm = cartTerm.term.courseTerms.some(
         (courseTerm) =>
           courseTerm.courseId !== courseId &&
@@ -422,12 +423,32 @@ export async function DELETE(req) {
     );
     await Promise.all(deleteCartTermPromises);
 
-    // بررسی و حذف سبد خرید در صورت خالی بودن
-    const remainingCartCourses = await prismadb.cartCourse.findMany({
+    // محاسبه قیمت و تخفیف جدید برای سبد خرید
+    const remainingCartTerms = await prismadb.cartTerm.findMany({
       where: { cartId: cart.id },
     });
 
-    const remainingCartTerms = await prismadb.cartTerm.findMany({
+    const updatedTotalPrice = remainingCartTerms.reduce(
+      (total, term) => total + term.price,
+      0,
+    );
+
+    const updatedTotalDiscount = remainingCartTerms.reduce((total, term) => {
+      const termDiscountAmount = (term.price * (term.discount || 0)) / 100;
+      return total + termDiscountAmount;
+    }, 0);
+
+    // به‌روزرسانی فیلدهای totalPrice و totalDiscount
+    await prismadb.cart.update({
+      where: { id: cart.id },
+      data: {
+        totalPrice: updatedTotalPrice,
+        totalDiscount: updatedTotalDiscount,
+      },
+    });
+
+    // بررسی و حذف سبد خرید در صورت خالی بودن
+    const remainingCartCourses = await prismadb.cartCourse.findMany({
       where: { cartId: cart.id },
     });
 

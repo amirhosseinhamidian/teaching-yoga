@@ -111,13 +111,8 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     if (term) {
       url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${term.id}`; // بروزرسانی ترم موجود
     } else {
-      if (selectedTermId) {
-        // اتصال ترم موجود به دوره
-        url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`; // ارسال ترم انتخابی برای ارتباط
-      } else {
-        // افزودن ترم جدید
-        url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`;
-      }
+      // افزودن ترم جدید
+      url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`;
     }
 
     const method = term ? 'PUT' : 'POST'; // استفاده از POST برای ترم جدید یا اتصال ترم انتخابی، PUT برای بروزرسانی
@@ -133,9 +128,23 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('add term to course api====>', data);
         toast.showSuccessToast(
           term ? 'ترم با موفقیت بروزرسانی شد' : 'ترم با موفقیت ساخته شد',
         );
+        if (!term) {
+          await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/cart`,
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                courseId: courseId,
+                termId: data?.term?.id || data.termId,
+              }),
+              headers: { 'Content-Type': 'application/json' },
+            },
+          );
+        }
         onSuccess(data);
       } else {
         const errorText = await response.json();

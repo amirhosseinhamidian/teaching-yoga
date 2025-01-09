@@ -6,6 +6,7 @@ import SectionCourse from './SectionCourse';
 import SectionQuestion from './SectionQuestion';
 import PropTypes from 'prop-types';
 import { useRouter } from 'next/navigation';
+import SectionPaymentOrder from './SectionPaymentOrder';
 
 const ProfileMainBox = ({ status }) => {
   const { user } = useAuth();
@@ -57,6 +58,7 @@ const ProfileMainBox = ({ status }) => {
       <div className='w-full p-4 sm:p-6'>
         {activeIndex === 0 && <SectionCourse />}
         {activeIndex === 1 && <SectionQuestion />}
+        {activeIndex === 2 && <SectionPaymentOrder />}
         {activeIndex === 4 && <SectionEditProfile />}
       </div>
     </div>
