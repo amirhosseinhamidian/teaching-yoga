@@ -1,5 +1,4 @@
 /* eslint-disable no-undef */
-/* eslint-disable no-unused-vars */
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
 import HeadAction from '@/app/a-panel/components/templates/term-session-manager/HeadAction';
@@ -18,11 +17,9 @@ import { FiUpload } from 'react-icons/fi';
 import { IoPlay } from 'react-icons/io5';
 import { MdAddToQueue } from 'react-icons/md';
 import UploadSessionVideoModal from '@/app/a-panel/components/modules/UploadSessionVideoModal/UploadSessionVideoModal';
-import AddEditTermModal from '@/app/a-panel/components/modules/AddEditTermModal/AddEditTermModal';
 import EditSessionModal from '@/app/a-panel/components/modules/EditSessionModal/EditSessionModal';
 import VideoModal from '@/app/a-panel/components/modules/VideoModal/VideoModal';
 import Switch from '@/components/Ui/Switch/Switch';
-import { processVideo } from '@/services/videoProcessor';
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
 
 const AddTermSessionPage = () => {
@@ -36,7 +33,6 @@ const AddTermSessionPage = () => {
 
   const [terms, setTerms] = useState([]);
   const [termTempId, setTermTempId] = useState(null);
-  const [termTemp, setTermTemp] = useState({});
   const [sessionTemp, setSessionsTemp] = useState({});
   const [sessions, setSessions] = useState({});
   const [loadingSessions, setLoadingSessions] = useState({});
@@ -46,7 +42,6 @@ const AddTermSessionPage = () => {
   const [videoLoadingId, setVideoLoadingId] = useState(null);
 
   const [showDeleteSessionModal, setShowDeleteSessionModal] = useState(false);
-  const [showEditTermModal, setShowEditTermModal] = useState(false);
   const [showEditSessionModal, setShowEditSessionModal] = useState(false);
   const [showDeleteTermModal, setShowDeleteTermModal] = useState(false);
   const [showUploadVideoSessionModal, setShowUploadVideoSessionModal] =
@@ -140,12 +135,6 @@ const AddTermSessionPage = () => {
     setTermTempId(termId);
     setShowDeleteTermModal(true);
   };
-  const handleShowEditTermModal = (term) => {
-    setTermTemp(term);
-    setTermTempId(term.id);
-    setShowEditTermModal(true);
-  };
-
   const handleDeleteSession = async () => {
     try {
       const response = await fetch(
@@ -218,8 +207,6 @@ const AddTermSessionPage = () => {
       return;
     }
 
-    console.log('access Level in page function ====>', accessLevel);
-
     const formData = new FormData();
     outFiles.forEach((file, index) => {
       formData.append(`file_${index}`, new Blob([file.data]), file.name);
@@ -276,18 +263,6 @@ const AddTermSessionPage = () => {
       setTermTempId(null);
       setSessionTempId('');
     }
-  };
-
-  const handleUpdateTermSuccessfully = (updatedTerm) => {
-    setTerms((prevTerms) =>
-      prevTerms.map((term) =>
-        term.id === updatedTerm.id ? { ...term, ...updatedTerm } : term,
-      ),
-    );
-
-    setShowEditTermModal(false);
-    setTermTemp({});
-    setTermTempId(null);
   };
 
   const handleUpdateSessionSuccessfully = (updatedSession) => {
@@ -500,11 +475,6 @@ const AddTermSessionPage = () => {
                       onClick={() => handleShowDeleteTermModal(term.id)}
                     />
                     <ActionButtonIcon
-                      color='blue'
-                      icon={LuPencil}
-                      onClick={() => handleShowEditTermModal(term)}
-                    />
-                    <ActionButtonIcon
                       color='accent'
                       icon={MdAddToQueue}
                       onClick={() => handelShowAddSessionModal(term.id)}
@@ -560,21 +530,6 @@ const AddTermSessionPage = () => {
         <UploadSessionVideoModal
           onClose={() => setShowUploadVideoSessionModal(false)}
           onUpload={handleSessionVideoUpload}
-        />
-      )}
-      {showEditTermModal && (
-        // edit modal
-        <AddEditTermModal
-          courseId={courseId}
-          onClose={() => {
-            setShowEditTermModal(false);
-            setTermTemp({});
-            setTermTempId(null);
-          }}
-          term={termTemp}
-          onSuccess={(updatedTerm) =>
-            handleUpdateTermSuccessfully(updatedTerm.term)
-          }
         />
       )}
       {showEditSessionModal && (

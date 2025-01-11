@@ -6,12 +6,19 @@ import { GrBlog } from 'react-icons/gr';
 import { HiOutlineCloudUpload } from 'react-icons/hi';
 import { BsCart } from 'react-icons/bs';
 import { FaRegComments, FaRegCircleQuestion } from 'react-icons/fa6';
+import { MdOutlinePlayLesson } from 'react-icons/md';
+
 import Link from 'next/link';
 
 function NavRoutes() {
   const navRoutes = [
     { href: '/a-panel', label: 'داشبورد', icon: RxDashboard },
     { href: '/a-panel/course', label: 'مدیریت دوره ها', icon: TbSchool },
+    {
+      href: '/a-panel/term',
+      label: 'مدیریت ترم ها',
+      icon: MdOutlinePlayLesson,
+    },
     { href: '/a-panel/user', label: 'مدیریت کاربران', icon: PiUsersBold },
     { href: '/a-panel/blog', label: 'مدیریت بلاگ', icon: GrBlog },
     {
@@ -19,7 +26,7 @@ function NavRoutes() {
       label: 'مدیریت رسانه و آپلود',
       icon: HiOutlineCloudUpload,
     },
-    { href: '/a-panel/orders', label: 'سفارشات و فروش', icon: BsCart },
+    { href: '/a-panel/sale', label: 'سفارشات و فروش', icon: BsCart },
     {
       href: '/a-panel/comments',
       label: 'مدیریت کامنت ها',

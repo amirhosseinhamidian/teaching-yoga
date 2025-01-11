@@ -82,20 +82,24 @@ const SectionPaymentOrder = () => {
         const statusMap = {
           PENDING: {
             label: 'در انتظار تکمیل',
-            bg: 'bg-yellow-600',
-            text: 'text-yellow-600',
+            bg: 'bg-secondary',
+            text: 'text-secondary text-xs whitespace-nowrap',
           },
           SUCCESSFUL: {
             label: 'تکمیل‌شده',
             bg: 'bg-green',
-            text: 'text-green',
+            text: 'text-accent text-green dark:text-accent  text-xs whitespace-nowrap',
           },
-          FAILED: { label: 'ناموفق', bg: 'bg-red', text: 'text-red' },
+          FAILED: {
+            label: 'ناموفق',
+            bg: 'bg-red',
+            text: 'text-red text-xs whitespace-nowrap',
+          },
         };
         const statusStyle = statusMap[status] || {
           label: 'نامشخص',
           bg: 'bg-gray-100',
-          text: 'text-gray-600',
+          text: 'text-gray-600 text-xs whitespace-nowrap',
         };
         return (
           <span
@@ -118,23 +122,23 @@ const SectionPaymentOrder = () => {
           CREDIT_CARD: {
             label: 'کارت به کارت',
             bg: 'bg-blue',
-            text: 'text-blue',
+            text: 'text-blue text-xs whitespace-nowrap',
           },
           FREE: {
             label: 'بدون پرداخت',
             bg: 'bg-purple-600',
-            text: 'text-purple-600',
+            text: 'text-purple-600 text-xs whitespace-nowrap',
           },
           ONLINE: {
             label: 'آنلاین',
             bg: 'bg-orange-600',
-            text: 'text-orange-600',
+            text: 'text-orange-600 text-xs whitespace-nowrap',
           },
         };
         const methodStyle = methodMap[method] || {
           label: 'نامشخص',
           bg: 'bg-gray-600',
-          text: 'text-gray-600',
+          text: 'text-gray-600 text-xs whitespace-nowrap',
         };
         return (
           <span

@@ -46,7 +46,7 @@ const Table = ({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className='min-w-[100px] px-4 py-2 text-center font-faNa text-xs last:pb-6 sm:text-sm'
+                    className='min-w-[180px] px-4 py-2 text-center font-faNa text-xs last:pb-6 sm:text-sm md:min-w-[150px] xl:min-w-[100px]'
                   >
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
                   </td>

@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
-'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
@@ -9,16 +8,12 @@ import { getStringTime } from '@/utils/dateTimeHelper';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import DropDown from '@/components/Ui/DropDown/DropDwon';
 
-const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
+const AddEditTermModal = ({ onClose, onSuccess, term }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const [isLoading, setIsLoading] = useState(false);
-  const [termOptions, setTermOptions] = useState([]);
-  const [selectedTermId, setSelectedTermId] = useState(null);
 
-  // Initialize state based on whether editing an existing term or adding a new one
   const [name, setName] = useState(term?.name || '');
   const [duration, setDuration] = useState(term?.duration || '');
   const [price, setPrice] = useState(term?.price || '');
@@ -32,52 +27,27 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     discount: '',
   });
 
-  // Fetch terms data
-  useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`,
-        );
-        if (!response.ok) throw new Error('Failed to fetch terms');
-        const data = await response.json();
-        const formattedOptions = data.map((term) => ({
-          value: term.id,
-          label: term.name + ' - ' + term.sessionCount + ' جلسه',
-        }));
-        setTermOptions(formattedOptions);
-      } catch (err) {
-        toast.showErrorToast(err.message);
-        console.error(err);
-      }
-    };
-
-    fetchTerms();
-  }, []);
-
   const validateInputs = () => {
     let errors = {};
 
-    if (!selectedTermId) {
-      if (!name.trim()) {
-        errors.name = 'عنوان نمی‌تواند خالی باشد.';
-      }
+    if (!name.trim()) {
+      errors.name = 'عنوان نمی‌تواند خالی باشد.';
+    }
 
-      if (!price || isNaN(price) || price <= 0) {
-        errors.price = 'قیمت باید یک عدد معتبر و بیشتر از صفر باشد.';
-      }
+    if (!price || isNaN(price) || price <= 0) {
+      errors.price = 'قیمت باید یک عدد معتبر و بیشتر از صفر باشد.';
+    }
 
-      if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
-        errors.discount = 'تخفیف باید یک عدد بین ۰ تا ۱۰۰ باشد.';
-      }
+    if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {
+      errors.discount = 'تخفیف باید یک عدد بین ۰ تا ۱۰۰ باشد.';
+    }
 
-      if (subtitle.length > 100) {
-        errors.subtitle = 'توضیح مختصر باید کمتر از ۱۰۰ کاراکتر باشد.';
-      }
+    if (subtitle.length > 100) {
+      errors.subtitle = 'توضیح مختصر باید کمتر از ۱۰۰ کاراکتر باشد.';
+    }
 
-      if (!duration || isNaN(duration) || Number(duration) <= 0) {
-        errors.duration = 'مدت زمان باید یک عدد معتبر و بیشتر از صفر باشد.';
-      }
+    if (!duration || isNaN(duration) || Number(duration) <= 0) {
+      errors.duration = 'مدت زمان باید یک عدد معتبر و بیشتر از صفر باشد.';
     }
 
     setErrorMessages(errors);
@@ -99,21 +69,15 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     }
     setIsLoading(true);
     const payload = {
+      termId: term && term.id,
       name,
       subtitle,
       price: Number(price),
       discount: Number(discount),
       duration: Number(duration),
-      selectedTermId, // ترم انتخاب‌شده (در صورت وجود)
     };
 
-    let url;
-    if (term) {
-      url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${term.id}`; // بروزرسانی ترم موجود
-    } else {
-      // افزودن ترم جدید
-      url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`;
-    }
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms-management`;
 
     const method = term ? 'PUT' : 'POST'; // استفاده از POST برای ترم جدید یا اتصال ترم انتخابی، PUT برای بروزرسانی
 
@@ -128,24 +92,10 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('add term to course api====>', data);
         toast.showSuccessToast(
           term ? 'ترم با موفقیت بروزرسانی شد' : 'ترم با موفقیت ساخته شد',
         );
-        if (!term) {
-          await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/cart`,
-            {
-              method: 'POST',
-              body: JSON.stringify({
-                courseId: courseId,
-                termId: data?.term?.id || data.termId,
-              }),
-              headers: { 'Content-Type': 'application/json' },
-            },
-          );
-        }
-        onSuccess(data);
+        onSuccess(data.term);
       } else {
         const errorText = await response.json();
         console.error('Server error response:', errorText);
@@ -158,7 +108,6 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
       setIsLoading(false);
     }
   };
-
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
       <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
@@ -173,22 +122,6 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
             />
           </button>
         </div>
-        {!term && (
-          <div className='mt-10'>
-            <p className='mb-8'>
-              شما می توانید از ترم هایی که قبلا ساخته شده برای این دوره استفاده
-              کنید یا ترم جدیدی بسازید.
-            </p>
-            <DropDown
-              options={termOptions}
-              placeholder='انتخاب ترم مورد نظر'
-              value={selectedTermId}
-              onChange={setSelectedTermId}
-              label='انتخاب ترم'
-            />
-            <div className='mt-10 border border-b border-subtext-light dark:border-subtext-dark'></div>
-          </div>
-        )}
         <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>
           <Input
             label='عنوان ترم'
@@ -266,7 +199,6 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
 
 AddEditTermModal.propTypes = {
   term: PropTypes.object,
-  courseId: PropTypes.number.isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
 };

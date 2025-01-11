@@ -108,7 +108,7 @@ const UsersTable = ({
   ];
 
   const data = users.map((user, index) => ({
-    number: index + 1,
+    number: index + 1 + (page - 1) * 10,
     username: user.username,
     phone: user.phone,
     firstname: user.firstname,

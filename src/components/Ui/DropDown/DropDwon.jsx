@@ -36,7 +36,7 @@ const DropDown = ({
 
   return (
     <div
-      className={`flex flex-col ${fullWidth ? 'w-full' : ''}`}
+      className={`flex flex-col ${fullWidth ? 'w-full' : 'w-fit'}`}
       ref={dropdownRef}
     >
       {label && (
@@ -76,7 +76,7 @@ const DropDown = ({
         {/* Dropdown Options */}
         {isOpen && (
           <ul
-            className={`absolute right-0 z-10 mt-3 w-full rounded-xl bg-surface-light p-2 shadow-lg transition-all duration-300 ease-in-out dark:bg-surface-dark`}
+            className={`absolute right-0 z-10 mt-3 w-fit rounded-xl bg-surface-light p-2 shadow-lg transition-all duration-300 ease-in-out dark:bg-surface-dark`}
           >
             {options.map((option, index) => (
               <li
@@ -85,7 +85,7 @@ const DropDown = ({
                   onChange(option.value);
                   setIsOpen(false); // Close dropdown after selecting an option
                 }}
-                className={`cursor-pointer rounded-lg px-4 py-2 text-sm text-subtext-light hover:bg-foreground-light hover:text-text-light dark:text-subtext-dark dark:hover:bg-foreground-dark hover:dark:text-text-dark`}
+                className={`cursor-pointer whitespace-nowrap rounded-lg px-4 py-2 text-sm text-subtext-light hover:bg-foreground-light hover:text-text-light dark:text-subtext-dark dark:hover:bg-foreground-dark hover:dark:text-text-dark`}
               >
                 {option.label}
               </li>

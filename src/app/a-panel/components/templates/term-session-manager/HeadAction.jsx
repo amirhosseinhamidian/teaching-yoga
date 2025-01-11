@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
-import AddEditTermModal from '../../modules/AddEditTermModal/AddEditTermModal';
+import AddEditTermModal from '../../modules/AddEditTermForCourseModal/AddEditTermForCourseModal';
 
 const HeadAction = ({ courseId, courseTitle, addTermSuccessfully }) => {
   const [showAddTermModal, setShowAddTermModal] = useState(false);
