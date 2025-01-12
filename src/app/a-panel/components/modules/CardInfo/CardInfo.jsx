@@ -6,14 +6,14 @@ const CardInfo = ({
   icon: Icon,
   title,
   value,
-  isLoading,
+  isLoading = true,
   isCurrency = false,
   className,
 }) => {
   return (
     <>
       {isLoading ? (
-        <div className='flex h-32 items-center justify-center bg-surface-light sm:h-44 md:h-48 xl:h-56 dark:bg-surface-dark'>
+        <div className='flex h-32 items-center justify-center rounded-xl bg-surface-light sm:h-44 md:h-48 xl:h-56 dark:bg-surface-dark'>
           <ImSpinner2 size={42} className='animate-spin text-primary' />
         </div>
       ) : (

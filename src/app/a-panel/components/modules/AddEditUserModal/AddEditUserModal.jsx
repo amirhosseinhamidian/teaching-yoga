@@ -142,7 +142,7 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
+      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-surface-dark'>
         <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             {editUser ? 'ویرایش کاربر' : 'ثبت کاربر جدید'}

@@ -83,21 +83,20 @@ const TermTable = ({
     { key: 'number', label: 'شماره' },
     {
       key: 'name',
+      minWidth: '120px',
       label: 'عنوان ترم',
-      render: (_, row) => <p className='text-sm'>{row.name}</p>,
     },
     {
       key: 'duration',
       label: 'مدت ترم',
-      render: (_, row) => (
-        <span className='text-sm'>{formatTime(row.duration)}</span>
-      ),
+      render: (_, row) => <span>{formatTime(row.duration)}</span>,
     },
     {
       key: 'courses',
       label: 'دوره‌ها',
+      minWidth: '180px',
       render: (courses) => (
-        <div className='whitespace-pre-wrap text-sm'>
+        <div className='whitespace-pre-wrap'>
           {courses && courses.length > 0
             ? courses.length > 1
               ? courses

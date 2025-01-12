@@ -64,6 +64,7 @@ const SalesTable = ({
     {
       key: 'fullname',
       label: 'نام و نام خانوادگی',
+      minWidth: '100px',
       render: (_, row) => (
         <span>
           {row?.firstname} {row?.lastname}
@@ -72,9 +73,10 @@ const SalesTable = ({
     },
     {
       key: 'courses',
+      minWidth: '180px',
       label: 'دوره‌ها',
       render: (courses) => (
-        <div className='whitespace-pre-wrap text-sm'>
+        <div className='whitespace-pre-wrap'>
           {courses && courses.length > 0
             ? courses.length > 1
               ? courses
@@ -98,23 +100,23 @@ const SalesTable = ({
           PENDING: {
             label: 'در انتظار تکمیل',
             bg: 'bg-secondary',
-            text: 'text-secondary text-xs whitespace-nowrap',
+            text: 'text-secondary whitespace-nowrap',
           },
           SUCCESSFUL: {
             label: 'تکمیل‌شده',
             bg: 'bg-green',
-            text: 'text-green dark:text-accent text-xs whitespace-nowrap',
+            text: 'text-green dark:text-accent whitespace-nowrap',
           },
           FAILED: {
             label: 'ناموفق',
             bg: 'bg-red',
-            text: 'text-red text-xs whitespace-nowrap',
+            text: 'text-red whitespace-nowrap',
           },
         };
         const statusStyle = statusMap[status] || {
           label: 'نامشخص',
           bg: 'bg-gray-100',
-          text: 'text-gray-600 text-xs whitespace-nowrap',
+          text: 'text-gray-600 whitespace-nowrap',
         };
         return (
           <span
@@ -142,7 +144,7 @@ const SalesTable = ({
       render: (_, row) => (
         <div className='flex items-center justify-center gap-2'>
           <ActionButtonIcon
-            color='accent'
+            color='secondary'
             icon={TbShoppingCartCog}
             onClick={() => handleDetailClick(row)}
           />

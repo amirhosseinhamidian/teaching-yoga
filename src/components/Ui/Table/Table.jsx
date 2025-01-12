@@ -27,13 +27,18 @@ const Table = ({
           </div>
         </div>
       ) : (
-        <table className='min-w-full rounded-xl bg-surface-light dark:bg-surface-dark'>
+        <table className='min-w-full table-auto rounded-xl bg-surface-light dark:bg-surface-dark'>
           <thead>
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className='min-w-6 p-4 text-center text-xs font-medium text-secondary sm:text-sm'
+                  className='p-2 text-center text-2xs font-medium text-secondary sm:text-xs md:text-sm'
+                  style={{
+                    minWidth: col.minWidth || '30px', // حداقل عرض
+                    maxWidth: col.maxWidth || '300px', // حداکثر عرض
+                    width: col.width || 'auto', // عرض پیش‌فرض
+                  }}
                 >
                   {col.label}
                 </th>
@@ -46,7 +51,12 @@ const Table = ({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className='min-w-[180px] px-4 py-2 text-center font-faNa text-xs last:pb-6 sm:text-sm md:min-w-[150px] xl:min-w-[100px]'
+                    className='p-2 text-center font-faNa text-2xs sm:text-xs md:text-sm'
+                    style={{
+                      minWidth: col.minWidth || '30px', // حداقل عرض
+                      maxWidth: col.maxWidth || '300px', // حداکثر عرض
+                      width: col.width || 'auto', // عرض پیش‌فرض
+                    }}
                   >
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
                   </td>

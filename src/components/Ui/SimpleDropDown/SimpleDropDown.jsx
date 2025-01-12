@@ -7,13 +7,13 @@ const SimpleDropdown = ({ options = [], value, onChange, className }) => {
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className='block w-full bg-transparent px-3 py-2 focus:outline-none'
+        className='block w-full bg-transparent px-3 py-2 focus:outline-none md:cursor-pointer'
       >
         {options.map((option, index) => (
           <option
             key={index}
             value={option.value}
-            className='bg-background-light dark:bg-background-dark'
+            className='bg-background-light text-text-light md:cursor-pointer dark:bg-background-dark dark:text-text-dark'
           >
             {option.label}
           </option>

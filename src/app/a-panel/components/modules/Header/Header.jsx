@@ -12,7 +12,7 @@ function Header() {
 
   return (
     <header className='bg-surface-light dark:bg-surface-dark'>
-      <div className='container flex h-14 w-full items-center justify-between gap-2'>
+      <div className='flex h-14 w-full items-center justify-between gap-2 px-4 sm:px-6'>
         <MobileSidebar />
         <div className='flex items-center gap-2'>
           <IconButton

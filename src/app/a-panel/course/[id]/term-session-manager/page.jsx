@@ -367,14 +367,16 @@ const AddTermSessionPage = () => {
 
   const tableColumns = [
     { key: 'order', label: 'شماره' },
-    { key: 'name', label: 'نام جلسه' },
+    { key: 'name', label: 'نام جلسه', minWidth: '150px' },
     {
       key: 'videoUpload', // تغییر کلید به videoUpload
       label: 'ویدیو',
+      minWidth: '70px',
+      maxWidth: '80px',
       render: (value, row) =>
         row?.video?.videoKey ? (
           <div
-            className='mx-auto flex h-16 w-32 flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
             onClick={() => openVideoModal(row.video.videoKey, row.video.id)}
           >
             {videoLoadingId === row.video.id ? (

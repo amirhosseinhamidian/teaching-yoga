@@ -58,6 +58,7 @@ const SectionPaymentOrder = () => {
     {
       key: 'courses',
       label: 'دوره‌ها',
+      minWidth: '180px',
       render: (courses) => (
         <div className='whitespace-pre-wrap'>
           {courses && courses.length > 0
@@ -83,23 +84,23 @@ const SectionPaymentOrder = () => {
           PENDING: {
             label: 'در انتظار تکمیل',
             bg: 'bg-secondary',
-            text: 'text-secondary text-xs whitespace-nowrap',
+            text: 'text-secondary whitespace-nowrap',
           },
           SUCCESSFUL: {
             label: 'تکمیل‌شده',
             bg: 'bg-green',
-            text: 'text-accent text-green dark:text-accent  text-xs whitespace-nowrap',
+            text: 'text-accent text-green dark:text-accent  whitespace-nowrap',
           },
           FAILED: {
             label: 'ناموفق',
             bg: 'bg-red',
-            text: 'text-red text-xs whitespace-nowrap',
+            text: 'text-red whitespace-nowrap',
           },
         };
         const statusStyle = statusMap[status] || {
           label: 'نامشخص',
           bg: 'bg-gray-100',
-          text: 'text-gray-600 text-xs whitespace-nowrap',
+          text: 'text-gray-600 whitespace-nowrap',
         };
         return (
           <span
@@ -122,23 +123,23 @@ const SectionPaymentOrder = () => {
           CREDIT_CARD: {
             label: 'کارت به کارت',
             bg: 'bg-blue',
-            text: 'text-blue text-xs whitespace-nowrap',
+            text: 'text-blue whitespace-nowrap',
           },
           FREE: {
             label: 'بدون پرداخت',
             bg: 'bg-purple-600',
-            text: 'text-purple-600 text-xs whitespace-nowrap',
+            text: 'text-purple-600 whitespace-nowrap',
           },
           ONLINE: {
             label: 'آنلاین',
             bg: 'bg-orange-600',
-            text: 'text-orange-600 text-xs whitespace-nowrap',
+            text: 'text-orange-600 whitespace-nowrap',
           },
         };
         const methodStyle = methodMap[method] || {
           label: 'نامشخص',
           bg: 'bg-gray-600',
-          text: 'text-gray-600 text-xs whitespace-nowrap',
+          text: 'text-gray-600 whitespace-nowrap',
         };
         return (
           <span

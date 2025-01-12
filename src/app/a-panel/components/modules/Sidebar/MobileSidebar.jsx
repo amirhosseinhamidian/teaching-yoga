@@ -20,7 +20,7 @@ const MobileSidebar = () => {
       <IconButton
         icon={TbLayoutSidebarRightExpandFilled}
         onClick={toggleSidebar}
-        className='block md:hidden'
+        className='block xl:hidden'
       />
       {openSidebar &&
         createPortal(

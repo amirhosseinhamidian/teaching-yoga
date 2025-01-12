@@ -28,7 +28,7 @@ function NavRoutes() {
     },
     { href: '/a-panel/sale', label: 'سفارشات و فروش', icon: BsCart },
     {
-      href: '/a-panel/comments',
+      href: '/a-panel/comment',
       label: 'مدیریت کامنت ها',
       icon: FaRegComments,
     },

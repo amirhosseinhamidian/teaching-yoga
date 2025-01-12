@@ -64,7 +64,7 @@ export const createToastHandler = (isDarkMode) => {
 
     showLoadingToast: (message, options = {}) => {
       toast.loading(message, {
-        duration: Infinity,
+        duration: 2000,
         style: loading,
         ...options,
       });

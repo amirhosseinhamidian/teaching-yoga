@@ -109,22 +109,24 @@ const CoursesTable = () => {
 
   const columns = [
     { key: 'id', label: 'شناسه' },
-    { key: 'name', label: 'نام' },
+    { key: 'name', label: 'نام', minWidth: '120px' },
     {
       key: 'cover',
       label: 'تصویر دوره',
+      minWidth: '70px',
+      maxWidth: '90px',
       render: (_, row) => (
         <Image
           src={row.cover}
           alt={row.title}
           className='rounded'
-          width={64}
-          height={48}
+          width={96}
+          height={56}
         />
       ),
     },
     { key: 'price', label: 'قیمت' },
-    { key: 'discount', label: '% تخفیف' },
+    { key: 'discount', label: 'تخفیف %' },
     { key: 'termCount', label: 'تعداد ترم' },
     { key: 'sessionCount', label: 'تعداد جلسات' },
     { key: 'participants', label: 'تعداد شرکت‌کنندگان' },
@@ -158,6 +160,7 @@ const CoursesTable = () => {
     {
       key: 'active',
       label: 'فعال/غیر فعال',
+      minWidth: '70px',
       render: (_, row) => (
         <Switch
           className='mt-3 justify-center'

@@ -10,7 +10,7 @@ export const metadata = {
 export default function AdminLayout({ children }) {
   return (
     <div className='flex'>
-      <div className='hidden md:block'>
+      <div className='hidden xl:block'>
         <Sidebar />
       </div>
       <div className='w-full'>
