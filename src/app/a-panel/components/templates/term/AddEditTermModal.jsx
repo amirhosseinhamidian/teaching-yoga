@@ -5,7 +5,6 @@ import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
 import Input from '@/components/Ui/Input/Input';
 import { getStringTime } from '@/utils/dateTimeHelper';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -184,13 +183,10 @@ const AddEditTermModal = ({ onClose, onSuccess, term }) => {
         </div>
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           {term ? 'بروزرسانی' : 'ثبت'}
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

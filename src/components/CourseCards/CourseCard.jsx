@@ -9,7 +9,6 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '../Ui/Button/Button';
 import { GrYoga } from 'react-icons/gr';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 export default function CourseCard({ course, className }) {
   const router = useRouter();
@@ -67,14 +66,11 @@ export default function CourseCard({ course, className }) {
             </div>
             <Button
               shadow
-              className='flex w-full items-center justify-center gap-1 text-xs sm:text-sm md:text-base'
-              disable={isEnterCourseLoading}
+              className='w-full text-xs sm:text-sm md:text-base'
+              isLoading={isEnterCourseLoading}
               onClick={courseClickHandler}
             >
               ورود به دوره
-              {isEnterCourseLoading && (
-                <AiOutlineLoading3Quarters className='animate-spin' />
-              )}
             </Button>
           </div>
         ) : (

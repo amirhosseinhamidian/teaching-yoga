@@ -9,7 +9,12 @@ const LicenseCard = ({ licenseLogo, title, path }) => {
       <div
         className={`flex items-center justify-center rounded-lg bg-background-light p-4 transition-all duration-200 ease-in hover:scale-110 dark:bg-background-dark ${path ? 'cursor-pointer' : ''}`}
       >
-        <Image src={licenseLogo} alt={title} width={70} height={70} />
+        <Image
+          src={licenseLogo}
+          alt={title || 'license logo'}
+          width={70}
+          height={70}
+        />
       </div>
     </Link>
   );

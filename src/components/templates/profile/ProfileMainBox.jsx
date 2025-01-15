@@ -7,12 +7,37 @@ import SectionQuestion from './SectionQuestion';
 import PropTypes from 'prop-types';
 import { useRouter } from 'next/navigation';
 import SectionPaymentOrder from './SectionPaymentOrder';
+import SectionTicket from './SectionTicket';
 
 const ProfileMainBox = ({ status }) => {
   const { user } = useAuth();
   const router = useRouter();
+  const [questionsCount, setQuestionsCount] = useState(0);
 
-  const questionsCount = user.questions.length;
+  useEffect(() => {
+    const fetchUnreadQuestions = async () => {
+      try {
+        const res = await fetch('/api/questions/unread-count', {
+          headers: {
+            'Content-Type': 'application/json',
+            'user-id': user.id, // ارسال userId به API
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch unread questions count');
+        }
+
+        const data = await res.json();
+        setQuestionsCount(data.unreadCount); // تنظیم تعداد سوالات خوانده نشده
+      } catch (error) {
+        console.error('Error fetching unread questions:', error);
+      }
+    };
+
+    fetchUnreadQuestions();
+  }, []);
+
   const coursesCount = user.courses.length;
 
   const [activeIndex, setActiveIndex] = useState(0);
@@ -59,6 +84,7 @@ const ProfileMainBox = ({ status }) => {
         {activeIndex === 0 && <SectionCourse />}
         {activeIndex === 1 && <SectionQuestion />}
         {activeIndex === 2 && <SectionPaymentOrder />}
+        {activeIndex === 3 && <SectionTicket />}
         {activeIndex === 4 && <SectionEditProfile />}
       </div>
     </div>

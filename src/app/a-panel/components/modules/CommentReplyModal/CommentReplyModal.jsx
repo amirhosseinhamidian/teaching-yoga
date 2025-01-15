@@ -5,7 +5,6 @@ import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Image from 'next/image';
 import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
 import TextArea from '@/components/Ui/TextArea/TextArea';
@@ -123,14 +122,11 @@ const CommentReplyModal = ({ onClose, onSuccess, comment }) => {
         <div className='flex w-full items-center justify-center'>
           <Button
             shadow
-            disable={isLoading}
-            className='mt-6 flex w-full items-center justify-center gap-1 sm:w-2/3 lg:w-1/3'
+            isLoading={isLoading}
+            className='mt-6 sm:w-2/3 lg:w-1/3'
             onClick={submitReply}
           >
             ثبت
-            {isLoading && (
-              <AiOutlineLoading3Quarters className='animate-spin' />
-            )}
           </Button>
         </div>
       </div>

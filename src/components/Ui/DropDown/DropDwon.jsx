@@ -56,8 +56,8 @@ const DropDown = ({
         <div
           className={`flex cursor-pointer items-center justify-between gap-1 transition-all sm:gap-2 ${
             value
-              ? 'text-xs font-medium text-text-light sm:text-sm dark:text-subtext-dark'
-              : 'text-xs text-gray-400 sm:text-sm'
+              ? 'text-xs font-medium text-subtext-light sm:text-sm dark:text-subtext-dark'
+              : 'text-xs text-subtext-light sm:text-sm dark:text-subtext-dark'
           }`}
         >
           <span>

@@ -6,7 +6,6 @@ import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import { MdOutlineDiscount } from 'react-icons/md';
 import Link from 'next/link';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
 
 const DetailOrderCard = ({ data, className }) => {
@@ -149,15 +148,12 @@ const DetailOrderCard = ({ data, className }) => {
         </>
       ) : (
         <Button
-          className='mb-2 mt-10 flex w-full items-center justify-center gap-1 sm:mb-4'
+          className='mb-2 mt-10 w-full sm:mb-4'
           shadow
-          disable={addCourseLoading}
+          isLoading={addCourseLoading}
           onClick={() => addFreeCourse(data.courses, data.id)}
         >
           افزودن دوره
-          {addCourseLoading && (
-            <AiOutlineLoading3Quarters className='animate-spin' />
-          )}
         </Button>
       )}
     </div>

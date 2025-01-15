@@ -5,7 +5,6 @@ import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import { IoClose } from 'react-icons/io5';
 import { getStringTime } from '@/utils/dateTimeHelper';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
@@ -146,13 +145,10 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
         </div>
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           بروزرسانی
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

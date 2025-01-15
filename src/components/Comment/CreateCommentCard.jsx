@@ -7,7 +7,6 @@ import Button from '../Ui/Button/Button';
 import { useRouter, usePathname } from 'next/navigation';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ImSpinner2 } from 'react-icons/im';
 
 const CreateCommentCard = ({
   user,
@@ -90,13 +89,8 @@ const CreateCommentCard = ({
           />
           <div className='flex w-full items-center justify-end gap-2 sm:pl-6'>
             <OutlineButton onClick={() => onCloseClick()}>لغو</OutlineButton>
-            <Button
-              className='flex items-center justify-center'
-              onClick={sendCommentHandler}
-              disable={sendLoading}
-            >
+            <Button onClick={sendCommentHandler} isLoading={sendLoading}>
               ارسال
-              {sendLoading && <ImSpinner2 className='mr-2 animate-spin' />}
             </Button>
           </div>
         </div>

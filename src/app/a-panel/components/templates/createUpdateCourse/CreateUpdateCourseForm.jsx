@@ -25,7 +25,6 @@ import { getStringTime } from '@/utils/dateTimeHelper';
 import { FaCircleCheck } from 'react-icons/fa6';
 import { ImSpinner2 } from 'react-icons/im';
 import { IoIosCloseCircle } from 'react-icons/io';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 function CreateCourseUpdateForm({ courseToUpdate }) {
   const { isDark } = useTheme();
@@ -378,16 +377,8 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     <div>
       <div className='flex items-center justify-between'>
         <h1 className='text-base font-semibold xs:text-xl'>ثبت دوره جدید</h1>
-        <Button
-          onClick={handleCreateCourse}
-          shadow
-          disable={loading}
-          className='flex items-center justify-center'
-        >
+        <Button onClick={handleCreateCourse} shadow isLoading={loading}>
           {courseToUpdate ? 'به روزرسانی' : 'ثبت دوره'}
-          {loading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
       <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>

@@ -3,7 +3,6 @@
 import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoClose } from 'react-icons/io5';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Button from '@/components/Ui/Button/Button';
 import { processVideo } from '@/services/videoProcessor';
 
@@ -168,13 +167,10 @@ const FileUploadModal = ({
         </p>
         <Button
           onClick={handleUpload}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           {uploadButtonText}
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

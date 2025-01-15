@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Image from 'next/image';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -67,14 +66,11 @@ const PaymentSuccessfully = ({ data, transactionId }) => {
           </div>
           <Button
             shadow
-            className='flex items-center justify-center text-xs sm:text-base'
+            className='text-xs sm:text-base'
             onClick={() => handleCourseClick(course.shortAddress)}
-            disable={isClickLoading}
+            isLoading={isClickLoading}
           >
             مشاهده دوره
-            {isClickLoading && shortAddressClick === course.shortAddress && (
-              <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-            )}
           </Button>
         </div>
       ))}

@@ -7,7 +7,6 @@ import Link from 'next/link';
 import React, { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -113,11 +112,10 @@ const Page = () => {
         <Button
           shadow
           onClick={signupHandle}
-          className='mt-8 flex w-full items-center justify-center'
-          disable={isSubmitting}
+          className='mt-8 w-full'
+          isLoading={isSubmitting}
         >
           ثبت نام
-          {isSubmitting && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
         <p className='mt-6 text-center text-2xs text-subtext-light dark:text-subtext-dark'>
           ثبت نام شما به معنای پذیرش{' '}

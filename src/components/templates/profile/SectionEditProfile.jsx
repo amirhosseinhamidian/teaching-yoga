@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Input from '@/components/Ui/Input/Input';
 import Button from '@/components/Ui/Button/Button';
 import { useAuth } from '@/contexts/AuthContext';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -132,13 +131,10 @@ const SectionEditProfile = () => {
 
       <Button
         onClick={handleFormSubmit}
-        className='mt-8 flex items-center justify-center text-xs sm:w-1/3 sm:text-base'
-        disable={isLoading}
+        className='mt-8 text-xs sm:w-1/3 sm:text-base'
+        isLoading={isLoading}
       >
         ویرایش
-        {isLoading && (
-          <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-        )}
       </Button>
     </div>
   );

@@ -8,7 +8,6 @@ import SimpleDropdown from '@/components/Ui/SimpleDropDown/SimpleDropDown';
 import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { ImSpinner2 } from 'react-icons/im';
 
 function OrderDetailsModal({ onClose, sale, onChangeSuccess }) {
   const { isDark } = useTheme();
@@ -132,12 +131,11 @@ function OrderDetailsModal({ onClose, sale, onChangeSuccess }) {
           <div className='flex items-center justify-center'>
             <Button
               shadow
-              className='mt-6 flex w-full items-center justify-center gap-2 sm:w-1/3'
-              disable={updateLoading}
+              className='mt-6 w-full sm:w-1/3'
+              isLoading={updateLoading}
               onClick={handleUpdatePayment}
             >
               ثبت تغییرات
-              {updateLoading && <ImSpinner2 className='animate-spin' />}
             </Button>
           </div>
         </div>

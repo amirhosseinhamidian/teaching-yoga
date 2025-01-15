@@ -61,6 +61,8 @@ model User {
   terms         UserTerm[]      @relation("UserTerms")
   carts         Cart[]          @relation("UserCarts")
   payments       Payment[]       @relation("UserToPayments")
+  tickets       Ticket[] 
+  ticketReplies  TicketReply[] 
 }
 
 enum CourseLevel {
@@ -101,6 +103,7 @@ model Course {
   comments         Comment[]
   questions        Question[]
   users            UserCourse[]  @relation("UserCourses")
+  tickets          Ticket[]
   createAt         DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }
@@ -240,17 +243,17 @@ model UserTerm {
 }
 
 model Cart {
-  id         Int        @id @unique @default(autoincrement())
-  userId     String
-  status     CartStatus      @default(PENDING)
-  user       User       @relation("UserCarts", fields: [userId], references: [id])
-  payment    Payment?     @relation("CartToPayment") 
-  cartTerms  CartTerm[] @relation("CartToCartTerms")
-  cartCourses  CartCourse[] @relation("CartToCourses")
-  totalPrice Int?
-  totalDiscount Int?
-  createAt   DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  id              Int        @id @unique @default(autoincrement())
+  userId          String
+  status          CartStatus      @default(PENDING)
+  user            User       @relation("UserCarts", fields: [userId], references: [id])
+  payment         Payment?     @relation("CartToPayment") 
+  cartTerms       CartTerm[] @relation("CartToCartTerms")
+  cartCourses     CartCourse[] @relation("CartToCourses")
+  totalPrice      Int?
+  totalDiscount   Int?
+  createAt        DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
 }
 
 model CartCourse {
@@ -276,18 +279,18 @@ model CartTerm {
 }
 
 model Payment {
-  id          Int      @id @unique @default(autoincrement())
-  userId      String
-  cartId      Int     @unique 
-  amount      Int      // مبلغ کل پرداخت‌شده
-  status      PaymentStatus
-  method      PaymentMethod
-  transactionId BigInt?
-  authority   String?   @unique
-  user        User     @relation("UserToPayments", fields: [userId], references: [id])
-  cart        Cart     @relation("CartToPayment", fields: [cartId], references: [id])
-  createAt    DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id              Int      @id @unique @default(autoincrement())
+  userId          String
+  cartId          Int     @unique 
+  amount          Int      // مبلغ کل پرداخت‌شده
+  status          PaymentStatus
+  method          PaymentMethod
+  transactionId   BigInt?
+  authority       String?   @unique
+  user            User     @relation("UserToPayments", fields: [userId], references: [id])
+  cart            Cart     @relation("CartToPayment", fields: [cartId], references: [id])
+  createAt        DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 enum PaymentStatus {
@@ -330,8 +333,8 @@ model Comment {
   course     Course?  @relation(fields: [courseId], references: [id]) 
   article    Article? @relation(fields: [articleId], references: [id]) 
 
-  createAt DateTime     @default(now())
-  updatedAt DateTime    @updatedAt
+  createAt   DateTime     @default(now())
+  updatedAt  DateTime    @updatedAt
 }
 
 model Article {
@@ -341,8 +344,8 @@ model Article {
   subtitle    String
   comments    Comment[] 
   cover       String
-  createAt DateTime     @default(now())
-  updatedAt DateTime    @updatedAt
+  createAt    DateTime     @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model VerificationCode {
@@ -363,12 +366,47 @@ model FAQ {
 
 
 model Newsletter {
-  id        Int   @id @default(autoincrement())  // شناسه‌ی یکتا
-  email     String   @unique              // ایمیل کاربر
-  userId    String?                       // در صورتی که کاربر لاگین باشد
-  createdAt DateTime @default(now())      // زمان ایجاد رکورد
+  id        Int   @id @default(autoincrement())
+  email     String   @unique             
+  userId    String?                    
+  createdAt DateTime @default(now())
 
-  @@index([email]) // ایندکس برای بهبود عملکرد جستجو
+  @@index([email]) 
+}
+
+model Ticket {
+  id            Int   @id @default(autoincrement())
+  title         String  
+  description   String   
+  status        TicketStatus @default(PENDING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  userId        String  
+  user          User     @relation(fields: [userId], references: [id]) 
+  ticketReplies TicketReply[] 
+  courseId      Int?      
+  course        Course?      @relation(fields: [courseId], references: [id])
+}
+
+model TicketReply {
+  id        Int   @id @default(autoincrement())
+  content   String   
+  createdAt DateTime @default(now())
+  userId    String  
+  user      User     @relation(fields: [userId], references: [id]) 
+  ticketId  Int   // شناسه تیکت
+  ticket    Ticket   @relation(fields: [ticketId], references: [id])
+  parentId  Int?  
+  parent    TicketReply?   @relation("ParentReply", fields: [parentId], references: [id]) 
+  children  TicketReply[]  @relation("ParentReply") 
+}
+
+enum TicketStatus {
+  PENDING  // در انتظار بررسی
+  IN_PROGRESS // در حال بررسی
+  ANSWERED
+  OPEN
+  CLOSED   // بسته شده
 }
 
 enum CategoryFAQ {

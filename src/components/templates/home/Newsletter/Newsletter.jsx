@@ -4,7 +4,6 @@ import Input from '@/components/Ui/Input/Input';
 import React, { useState } from 'react';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 const Newsletter = () => {
   const { isDark } = useTheme();
@@ -68,15 +67,12 @@ const Newsletter = () => {
             type='email'
           />
           <Button
-            className='sm-px-2 flex items-center justify-center gap-1 px-8 text-sm sm:text-base'
-            disable={isLoading}
+            className='sm-px-2 px-8 text-sm sm:text-base'
+            isLoading={isLoading}
             shadow
             onClick={handleSubmitNewsletterEmail}
           >
             ثبت
-            {isLoading && (
-              <AiOutlineLoading3Quarters className='animate-spin' />
-            )}
           </Button>
         </div>
       </div>

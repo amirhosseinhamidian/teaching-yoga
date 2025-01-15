@@ -6,7 +6,6 @@ import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Input from '@/components/Ui/Input/Input';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { ADMIN, USER } from '@/constants/userRole';
@@ -208,13 +207,10 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
         </div>
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           {editUser ? 'ویرایش کاربر' : 'ثبت کاربر'}
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

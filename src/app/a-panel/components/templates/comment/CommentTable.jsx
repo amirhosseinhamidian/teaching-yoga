@@ -37,7 +37,7 @@ const CommentTable = ({
     setShowCommentDeleteModal(true);
   };
 
-  const handleDeleteCourse = async () => {
+  const handleDeleteComment = async () => {
     try {
       toast.showLoadingToast('در حال حذف نظر');
       const response = await fetch(
@@ -262,7 +262,7 @@ const CommentTable = ({
             setCommentTempId(null);
             setShowCommentDeleteModal(false);
           }}
-          secondaryButtonClick={handleDeleteCourse}
+          secondaryButtonClick={handleDeleteComment}
         />
       )}
       {showReplyModal && (

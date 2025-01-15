@@ -27,7 +27,6 @@ const CommentTableSection = ({ type }) => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('comments ======> ', data);
         setComments(data.comments);
         setTotalPages(data.pagination.totalPages);
       } else {

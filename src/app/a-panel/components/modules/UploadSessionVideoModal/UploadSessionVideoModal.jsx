@@ -6,7 +6,6 @@ import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 import { processVideo } from '@/services/videoProcessor';
@@ -237,13 +236,10 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
 
         <Button
           onClick={handleUpload}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           ثبت جلسه
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

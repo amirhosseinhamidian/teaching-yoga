@@ -1,6 +1,5 @@
 /* eslint-disable no-undef */
 'use client';
-import DropDown from '@/components/Ui/DropDown/DropDwon';
 import React, { useEffect, useState } from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react'; // Swiper
 import 'swiper/css';
@@ -92,21 +91,39 @@ const SectionQuestion = () => {
     }
   };
 
+  useEffect(() => {
+    // بررسی آیتم اول هنگام لود یا تغییر تب
+    const checkFirstItem = async () => {
+      const currentQuestion = questions[activeTab]?.[0];
+      if (
+        currentQuestion &&
+        !currentQuestion.isReadByUser &&
+        currentQuestion.isAnswered
+      ) {
+        await markQuestionAsRead(currentQuestion.id);
+
+        // به‌روزرسانی وضعیت در آرایه محلی
+        setQuestions((prevQuestions) => ({
+          ...prevQuestions,
+          [activeTab]: prevQuestions[activeTab].map((q) =>
+            q.id === currentQuestion.id ? { ...q, isReadByUser: true } : q,
+          ),
+        }));
+      }
+    };
+
+    checkFirstItem();
+  }, [questions, activeTab]);
+
   return (
     <div>
       {/* تب‌ها */}
-      <div className='grid grid-cols-3 rounded-xl bg-foreground-light dark:bg-foreground-dark'>
+      <div className='grid grid-cols-2 rounded-xl bg-foreground-light dark:bg-foreground-dark'>
         <button
           onClick={() => setActiveTab('allQuestions')}
           className={`px-1 py-2 text-xs font-semibold xs:text-sm sm:px-4 md:text-base ${activeTab === 'allQuestions' ? 'rounded-xl bg-secondary text-text-light' : 'text-subtext-light dark:text-subtext-dark'}`}
         >
           همه سوالات
-        </button>
-        <button
-          onClick={() => setActiveTab('unreadQuestions')}
-          className={`px-1 py-2 text-xs font-semibold xs:text-sm sm:px-4 md:text-base ${activeTab === 'unreadQuestions' ? 'rounded-xl bg-secondary text-text-light' : 'text-subtext-light dark:text-subtext-dark'}`}
-        >
-          خوانده نشده
         </button>
         <button
           onClick={() => setActiveTab('unansweredQuestions')}

@@ -5,7 +5,6 @@ import PropTypes from 'prop-types';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/Ui/Input/Input';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -135,12 +134,11 @@ const UserInformationCard = ({ className }) => {
       </div>
       <Button
         shadow
-        disable={isLoading}
+        isLoading={isLoading}
         onClick={handleSubmitUserInfo}
-        className='mt-6 flex w-fit items-center justify-center gap-2 px-6 text-xs sm:text-sm'
+        className='mt-6 w-fit px-6 text-xs sm:text-sm'
       >
         ثبت
-        {isLoading && <AiOutlineLoading3Quarters className='animate-spin' />}
       </Button>
     </div>
   );

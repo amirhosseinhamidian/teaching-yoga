@@ -6,7 +6,6 @@ import CoursePaymentItem from './CoursePaymentItem';
 import Checkbox from '@/components/Ui/Checkbox/Checkbox';
 import Link from 'next/link';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useAuth } from '@/contexts/AuthContext';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -123,14 +122,11 @@ const UserOrderCard = ({ data, className }) => {
       <div className='flex w-full justify-center'>
         <Button
           shadow
-          disable={paymentLoading}
+          isLoading={paymentLoading}
           onClick={paymentClickHandler}
-          className='mt-6 flex w-full items-center justify-center gap-2 sm:w-2/3 lg:w-1/2'
+          className='mt-6 w-full sm:w-2/3 lg:w-1/2'
         >
           پرداخت
-          {paymentLoading && (
-            <AiOutlineLoading3Quarters className='animate-spin' />
-          )}
         </Button>
       </div>
     </div>

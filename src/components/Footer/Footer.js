@@ -99,7 +99,11 @@ export default function Footer() {
           </div>
         </div>
         <div className='mt-4 flex items-center gap-4'>
-          <LicenseCard licenseLogo='/images/javaz.png' />
+          <LicenseCard
+            licenseLogo='https://trustseal.enamad.ir/logo.aspx?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
+            title='اینماد'
+            path='https://trustseal.enamad.ir/?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
+          />
           <LicenseCard licenseLogo='/images/javaz.png' />
           <LicenseCard licenseLogo='/images/javaz.png' />
         </div>

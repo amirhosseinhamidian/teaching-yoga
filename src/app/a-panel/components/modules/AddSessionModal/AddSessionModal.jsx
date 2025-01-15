@@ -7,7 +7,6 @@ import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getStringTime } from '@/utils/dateTimeHelper';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Input from '@/components/Ui/Input/Input';
 
 const AddSessionModal = ({ onClose, termId, onSuccess }) => {
@@ -120,13 +119,10 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
         </div>
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           ثبت جلسه
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

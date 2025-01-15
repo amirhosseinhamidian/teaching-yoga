@@ -12,6 +12,7 @@ const Table = ({
   loading = false,
   empty = false,
   emptyText = '',
+  onClickRow,
 }) => {
   return (
     <div className={`relative overflow-x-auto ${className}`}>
@@ -35,9 +36,9 @@ const Table = ({
                   key={col.key}
                   className='p-2 text-center text-2xs font-medium text-secondary sm:text-xs md:text-sm'
                   style={{
-                    minWidth: col.minWidth || '30px', // حداقل عرض
-                    maxWidth: col.maxWidth || '300px', // حداکثر عرض
-                    width: col.width || 'auto', // عرض پیش‌فرض
+                    minWidth: col.minWidth || '30px',
+                    maxWidth: col.maxWidth || '300px',
+                    width: col.width || 'auto',
                   }}
                 >
                   {col.label}
@@ -47,15 +48,23 @@ const Table = ({
           </thead>
           <tbody>
             {data.map((row, rowIndex) => (
-              <tr key={rowIndex}>
+              <tr
+                key={rowIndex}
+                className={` ${
+                  onClickRow
+                    ? 'cursor-pointer transition-all duration-200 ease-in hover:text-secondary'
+                    : ''
+                }`}
+                onClick={() => onClickRow && onClickRow(row)}
+              >
                 {columns.map((col) => (
                   <td
                     key={col.key}
                     className='p-2 text-center font-faNa text-2xs sm:text-xs md:text-sm'
                     style={{
-                      minWidth: col.minWidth || '30px', // حداقل عرض
-                      maxWidth: col.maxWidth || '300px', // حداکثر عرض
-                      width: col.width || 'auto', // عرض پیش‌فرض
+                      minWidth: col.minWidth || '30px',
+                      maxWidth: col.maxWidth || '300px',
+                      width: col.width || 'auto',
                     }}
                   >
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
@@ -83,6 +92,7 @@ Table.propTypes = {
   loading: PropTypes.bool, // پراپ برای لودینگ
   empty: PropTypes.bool, // پراپ برای نمایش نمای خالی
   emptyText: PropTypes.string,
+  onClickRow: PropTypes.func, // پراپ برای کلیک روی ردیف‌ها
 };
 
 export default Table;

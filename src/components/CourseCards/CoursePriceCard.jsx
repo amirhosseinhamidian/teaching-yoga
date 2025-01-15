@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '../Ui/Button/Button';
 import Price from '../Price/Price';
-import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -83,12 +82,11 @@ const CoursePriceCard = ({
       <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
         <Button
           shadow
-          className='flex w-3/4 items-center justify-center gap-1 self-center text-xs xs:text-base sm:py-3 lg:w-2/4'
+          className='w-3/4 self-center text-xs xs:text-base sm:py-3 lg:w-2/4'
           onClick={handleAddCourseToCart}
-          disable={isLoading}
+          isLoading={isLoading}
         >
           افزودن به سبد خرید
-          {isLoading && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
         <Price
           className='ml-4'

@@ -6,7 +6,7 @@ import { GrBlog } from 'react-icons/gr';
 import { HiOutlineCloudUpload } from 'react-icons/hi';
 import { BsCart } from 'react-icons/bs';
 import { FaRegComments, FaRegCircleQuestion } from 'react-icons/fa6';
-import { MdOutlinePlayLesson } from 'react-icons/md';
+import { MdOutlinePlayLesson, MdMailOutline } from 'react-icons/md';
 
 import Link from 'next/link';
 
@@ -19,13 +19,13 @@ function NavRoutes() {
       label: 'مدیریت ترم ها',
       icon: MdOutlinePlayLesson,
     },
-    { href: '/a-panel/user', label: 'مدیریت کاربران', icon: PiUsersBold },
-    { href: '/a-panel/blog', label: 'مدیریت بلاگ', icon: GrBlog },
     {
       href: '/a-panel/media',
       label: 'مدیریت رسانه و آپلود',
       icon: HiOutlineCloudUpload,
     },
+    { href: '/a-panel/user', label: 'مدیریت کاربران', icon: PiUsersBold },
+    { href: '/a-panel/blog', label: 'مدیریت بلاگ', icon: GrBlog },
     { href: '/a-panel/sale', label: 'سفارشات و فروش', icon: BsCart },
     {
       href: '/a-panel/comment',
@@ -34,7 +34,12 @@ function NavRoutes() {
     },
     {
       href: '/a-panel/tickets',
-      label: 'تیکت ها و سوالات',
+      label: ' مدیریت تیکت ها',
+      icon: MdMailOutline,
+    },
+    {
+      href: '/a-panel/tickets',
+      label: ' مدیریت سوال ها',
       icon: FaRegCircleQuestion,
     },
     {

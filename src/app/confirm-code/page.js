@@ -8,7 +8,6 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa6';
-import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { updateUser } from '../actions/updateUser';
@@ -193,11 +192,10 @@ const ConfirmCodePage = () => {
         <Button
           shadow
           onClick={loginHandle}
-          className='mt-8 flex w-full items-center justify-center'
-          disable={isSubmitting}
+          className='mt-8 w-full'
+          isLoading={isSubmitting}
         >
           تایید
-          {isSubmitting && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
       </div>
     </div>

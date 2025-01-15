@@ -5,7 +5,6 @@ import PropTypes from 'prop-types';
 import Image from 'next/image';
 import ProgressBar from '@/components/Ui/ProgressBar/ProgressBar ';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useRouter } from 'next/navigation';
 
 const ProfileCourseItem = ({ course, className }) => {
@@ -29,29 +28,28 @@ const ProfileCourseItem = ({ course, className }) => {
   };
   return (
     <div
-      className={`flex flex-col items-center rounded-xl bg-background-light dark:bg-background-dark ${className}`}
+      className={`flex flex-col items-center justify-between rounded-xl bg-background-light dark:bg-background-dark ${className}`}
     >
-      <Image
-        src={course.courseCover}
-        alt={course.courseTitle}
-        width={512}
-        height={364}
-        className='h-32 w-full overflow-hidden rounded-t-lg object-cover xs:h-44 sm:h-28 xl:h-48'
-      />
-      <h5 className='mt-4'>{course.courseTitle}</h5>
-      <div className='w-full'>
-        <ProgressBar progress={course.progress} className='my-4' />
+      <div>
+        <Image
+          src={course.courseCover}
+          alt={course.courseTitle}
+          width={512}
+          height={364}
+          className='h-32 w-full overflow-hidden rounded-t-lg object-cover xs:h-44 sm:h-28 xl:h-48'
+        />
+        <h5 className='mx-3 mt-4 text-center'>{course.courseTitle}</h5>
       </div>
-      <Button
-        className='mb-4 flex items-center gap-1'
-        onClick={handleNextSessionClick}
-        disable={isLoading}
-      >
-        جلسه بعدی
-        {isLoading && (
-          <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-        )}
-      </Button>
+      <div className='flex w-full flex-col items-center'>
+        <ProgressBar progress={course.progress} className='my-4' />
+        <Button
+          className='mb-4'
+          onClick={handleNextSessionClick}
+          isLoading={isLoading}
+        >
+          جلسه بعدی
+        </Button>
+      </div>
     </div>
   );
 };
