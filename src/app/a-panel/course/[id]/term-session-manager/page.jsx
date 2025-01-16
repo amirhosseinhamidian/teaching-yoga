@@ -21,6 +21,7 @@ import EditSessionModal from '@/app/a-panel/components/modules/EditSessionModal/
 import VideoModal from '@/app/a-panel/components/modules/VideoModal/VideoModal';
 import Switch from '@/components/Ui/Switch/Switch';
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
+import SimpleDropdown from '@/components/Ui/SimpleDropDown/SimpleDropDown';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -137,6 +138,9 @@ const AddTermSessionPage = () => {
   };
   const handleDeleteSession = async () => {
     try {
+      toast.showLoadingToast('در حال حذف جلسه، ممکن است چند لحظه طول بکشد...', {
+        duration: 6000,
+      });
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termTempId}/sessions/${sessionTempId}`,
         {
@@ -151,9 +155,13 @@ const AddTermSessionPage = () => {
 
         setSessions((prevSessions) => {
           const updatedSessions = { ...prevSessions };
-          updatedSessions[termTempId] = updatedSessions[termTempId].filter(
-            (session) => session.id !== sessionTempId,
-          );
+          updatedSessions[termTempId] = updatedSessions[termTempId]
+            .filter((session) => session.id !== sessionTempId)
+            .map((session, index) => ({
+              ...session,
+              order: index + 1, // بروزرسانی فیلد order هر جلسه
+            }));
+
           return updatedSessions;
         });
         setSessionTempId('');
@@ -211,7 +219,6 @@ const AddTermSessionPage = () => {
     outFiles.forEach((file, index) => {
       formData.append(`file_${index}`, new Blob([file.data]), file.name);
     });
-    formData.append('courseName', courseTitle);
     formData.append('termId', termTempId);
     formData.append('sessionId', sessionTempId);
 
@@ -317,6 +324,10 @@ const AddTermSessionPage = () => {
   };
 
   const toggleActiveStatus = async (row, currentStatus) => {
+    if (!row.video.videoKey) {
+      toast.showErrorToast('امکان فعال سازی جلسه بدون ویدیو وجود ندارد!');
+      return;
+    }
     row.isActive = currentStatus;
     try {
       setSessions((prev) => ({
@@ -353,6 +364,38 @@ const AddTermSessionPage = () => {
     }
   };
 
+  const handleOrderChange = async (sessionId, termId, newOrder, oldOrder) => {
+    try {
+      toast.showLoadingToast('در حال بروزرسانی ترتیب جلسه...');
+      const payload = { newOrder: newOrder, oldOrder: oldOrder };
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions/${sessionId}/change-order`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+      if (!response.ok) {
+        throw new Error('Failed to update session order');
+      }
+      const data = await response.json();
+      setSessions((prevSessions) => {
+        const updatedSessions = { ...prevSessions };
+
+        // به‌روزرسانی لیست جلسات ترم خاص با داده‌های جدید
+        updatedSessions[termId] = data.updatedSessions;
+
+        return updatedSessions;
+      });
+      toast.showSuccessToast('ترتیب جلسه با موفقیت بروز شد.');
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     (async () => {
       ffmpeg.current = createFFmpeg({
@@ -366,14 +409,35 @@ const AddTermSessionPage = () => {
   }, []);
 
   const tableColumns = [
-    { key: 'order', label: 'شماره' },
+    {
+      key: 'order',
+      minWidth: '100px',
+      label: 'ترتیب جلسات',
+      render: (_, row) => {
+        const termSessions = sessions[row.termId];
+        const options = termSessions.map((session) => ({
+          label: `جلسه ${session.order}`,
+          value: session.order,
+        }));
+
+        return (
+          <SimpleDropdown
+            options={options}
+            value={row.order}
+            onChange={(newOrder) =>
+              handleOrderChange(row.id, row.termId, newOrder, row.order)
+            }
+          />
+        );
+      },
+    },
     { key: 'name', label: 'نام جلسه', minWidth: '150px' },
     {
       key: 'videoUpload', // تغییر کلید به videoUpload
       label: 'ویدیو',
-      minWidth: '70px',
-      maxWidth: '80px',
-      render: (value, row) =>
+      minWidth: '90px',
+      maxWidth: '100px',
+      render: (_, row) =>
         row?.video?.videoKey ? (
           <div
             className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
@@ -387,7 +451,7 @@ const AddTermSessionPage = () => {
           </div>
         ) : (
           <div
-            className='mx-auto flex h-16 w-32 flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
             onClick={() => uploadVideoSession(row.termId, row.id)}
           >
             <FiUpload size={32} className='text-white' />
@@ -507,7 +571,7 @@ const AddTermSessionPage = () => {
       {showDeleteSessionModal && (
         <Modal
           title='حذف جلسه'
-          desc='در صورت حذف جلسه دیگر به اطلاعات آن دسترسی ندارید. با حذف جلسه محتوای ویدیویی آن پاک نخواهد شد برای این کار باید از بخش مدیریت رسانه  اقدام کنید. آیا از حذف این جلسه مطمئن هستید؟'
+          desc='در صورت حذف جلسه دیگر به اطلاعات آن دسترسی ندارید. همینطور ویدیو جلسه نیز پاک خواهد شد. آیا از حذف این جلسه مطمئن هستید؟'
           icon={LuTrash}
           iconSize={32}
           primaryButtonText='خیر'
@@ -530,7 +594,11 @@ const AddTermSessionPage = () => {
       )}
       {showUploadVideoSessionModal && (
         <UploadSessionVideoModal
-          onClose={() => setShowUploadVideoSessionModal(false)}
+          onClose={() => {
+            setTermTempId(null);
+            setSessionTempId(null);
+            setShowUploadVideoSessionModal(false);
+          }}
           onUpload={handleSessionVideoUpload}
         />
       )}

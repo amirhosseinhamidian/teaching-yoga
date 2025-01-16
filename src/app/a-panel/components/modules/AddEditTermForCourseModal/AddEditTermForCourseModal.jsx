@@ -42,7 +42,14 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
         const data = await response.json();
         const formattedOptions = data.map((term) => ({
           value: term.id,
-          label: term.name + ' - ' + term.sessionCount + ' جلسه',
+          label:
+            term.name +
+            ' - ' +
+            term.sessionCount +
+            ' جلسه' +
+            ' - ' +
+            term.price.toLocaleString('fa-IR') +
+            ' تومان',
         }));
         setTermOptions(formattedOptions);
       } catch (err) {
@@ -182,6 +189,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
               placeholder='انتخاب ترم مورد نظر'
               value={selectedTermId}
               onChange={setSelectedTermId}
+              fullWidth
               label='انتخاب ترم'
             />
             <div className='mt-10 border border-b border-subtext-light dark:border-subtext-dark'></div>

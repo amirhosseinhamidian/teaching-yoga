@@ -10,7 +10,12 @@ import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 import { processVideo } from '@/services/videoProcessor';
 
-const UploadSessionVideoModal = ({ onClose, onUpload }) => {
+const UploadSessionVideoModal = ({
+  onClose,
+  onUpload,
+  videoAccessLevel,
+  isUpdate = false,
+}) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
@@ -20,7 +25,7 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
   const fileInputRef = useRef(null);
   const [isComplete, setIsComplete] = useState(false);
   const [videoDirection, setVideoDirection] = useState('HORIZONTAL');
-  const [accessLevel, setAccessLevel] = useState('');
+  const [accessLevel, setAccessLevel] = useState(videoAccessLevel || '');
   const [currentStage, setCurrentStage] = useState('processing');
   const [errorMessages, setErrorMessages] = useState({
     accessLevel: '',
@@ -100,13 +105,13 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
       setProgress(0); // ریست پروگرس بار
       startPolling(); // شروع پولینگ برای آپلود
 
-      await onUpload(outFiles, videoDirection === 'VERTICAL');
+      await onUpload(outFiles, videoDirection === 'VERTICAL', accessLevel);
     } catch (error) {
       console.error('Upload error:', error);
       toast.showErrorToast('خطایی در آپلود فایل رخ داده است.');
     } finally {
       setIsLoading(false);
-      setProgress(0);
+      setProgress(100);
     }
   };
 
@@ -150,7 +155,7 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
+      <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
         <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             آپلود ویدیو جلسه
@@ -171,7 +176,8 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             onChange={setAccessLevel}
             errorMessage={errorMessages.accessLevel}
             label='سطح دسترسی'
-            className='bg-surface-ligh text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+            fullWidth
+            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
           <DropDown
             options={videoDirectionOptions}
@@ -179,14 +185,16 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             value={videoDirection}
             onChange={setVideoDirection}
             label='جهت ویدیو'
+            fullWidth
             className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
         </div>
 
         {/* Description */}
         <p className='px-2 pb-1 pt-6 text-xs text-subtext-light xs:text-sm dark:text-subtext-dark'>
-          برای آپلود ویدیو جلسه فایل خود را در اینجا بکشید و رها کنید یا با کلیک
-          انتخاب کنید.
+          {isUpdate
+            ? 'برای آپدیت ویدیو جلسه ، فایل ویدیو خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید. ویدیو قبلی به صورت خودکار پاک خواهد شد.'
+            : 'برای آپلود ویدیو جلسه فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید.'}
         </p>
 
         {/* Upload Area */}
@@ -230,7 +238,9 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             </div>
           </div>
         )}
-        <p className={`mt-2 text-blue ${isLoading ? 'block' : 'hidden'}`}>
+        <p
+          className={`mt-2 text-xs text-secondary sm:text-sm ${isLoading ? 'block' : 'hidden'}`}
+        >
           لطفا تا پایان فرایند آپلود از این باکس خارج نشوید!
         </p>
 
@@ -239,7 +249,7 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
           className='mt-8 text-xs sm:text-base'
           isLoading={isLoading}
         >
-          ثبت جلسه
+          {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
         </Button>
       </div>
     </div>
@@ -249,6 +259,8 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
 UploadSessionVideoModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onUpload: PropTypes.func.isRequired,
+  videoAccessLevel: PropTypes.string,
+  isUpdate: PropTypes.bool,
 };
 
 export default UploadSessionVideoModal;

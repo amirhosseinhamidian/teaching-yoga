@@ -1,5 +1,6 @@
+/* eslint-disable no-undef */
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
@@ -10,16 +11,25 @@ import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 
-const EditSessionModal = ({ onClose, session, onSuccess }) => {
+const EditSessionModal = ({
+  onClose,
+  session,
+  onSuccess,
+  isChangeTerm = false,
+}) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [name, setName] = useState(session?.name || '');
-  const [duration, setDuration] = useState(session?.duration || '');
-  const [accessLevel, setAccessLevel] = useState(
-    session?.video?.accessLevel || '',
+  const [name, setName] = useState(session?.name || session?.sessionName || '');
+  const [duration, setDuration] = useState(
+    session?.duration || session?.sessionDuration || '',
   );
+  const [accessLevel, setAccessLevel] = useState(
+    session?.video?.accessLevel || session.videoAccessLevel || '',
+  );
+  const [termSelectedId, setTermSelectedId] = useState(session?.termId || null);
+  const [termOptions, setTermOptions] = useState([]);
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     accessLevel: '',
@@ -31,6 +41,37 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
     { label: 'ثبت نام', value: REGISTERED },
     { label: 'خریداری', value: PURCHASED },
   ];
+
+  useEffect(() => {
+    if (isChangeTerm) {
+      const fetchTerms = async () => {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`,
+          );
+          if (!response.ok) throw new Error('Failed to fetch terms');
+          const data = await response.json();
+          const formattedOptions = data.map((term) => ({
+            value: term.id,
+            label:
+              term.name +
+              ' - ' +
+              term.sessionCount +
+              ' جلسه' +
+              ' - ' +
+              term.price.toLocaleString('fa-IR') +
+              ' تومان',
+          }));
+          setTermOptions(formattedOptions);
+        } catch (err) {
+          toast.showErrorToast(err.message);
+          console.error(err);
+        }
+      };
+
+      fetchTerms();
+    }
+  }, []);
 
   const validateInputs = () => {
     let errors = {};
@@ -61,23 +102,32 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
 
     setIsLoading(true);
 
-    const payload = {
-      name,
-      accessLevel,
-      duration: Number(duration),
-    };
+    const payload = isChangeTerm
+      ? {
+          name,
+          accessLevel,
+          duration: Number(duration),
+          termId: Number(termSelectedId),
+          sessionId: session.sessionId,
+        }
+      : {
+          name,
+          accessLevel,
+          duration: Number(duration),
+        };
+
+    const url = isChangeTerm
+      ? '/api/admin/sessions'
+      : `/api/admin/terms/${session.termId}/sessions/${session.id}`;
 
     try {
-      const response = await fetch(
-        `/api/admin/terms/${session.termId}/sessions/${session.id}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
+      const response = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
         },
-      );
+        body: JSON.stringify(payload),
+      });
 
       if (response.ok) {
         const data = await response.json();
@@ -95,6 +145,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
       setIsLoading(false);
     }
   };
+
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
       <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
@@ -108,6 +159,30 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
               className='text-subtext-light md:cursor-pointer dark:text-subtext-dark'
             />
           </button>
+        </div>
+        <div className='grid grid-cols-1 gap-6 sm:mt-10 sm:grid-cols-2'>
+          {isChangeTerm && (
+            <DropDown
+              options={termOptions}
+              placeholder='انتخاب ترم مورد نظر'
+              value={termSelectedId}
+              onChange={setTermSelectedId}
+              fullWidth
+              label='انتخاب ترم'
+              errorMessage={errorMessages.term}
+              optionClassName='max-h-96 hide-scrollbar overflow-y-auto'
+            />
+          )}
+          <DropDown
+            options={accessVideoOptions}
+            placeholder='سطح دسترسی را مشخص کنید'
+            value={accessLevel}
+            onChange={setAccessLevel}
+            errorMessage={errorMessages.accessLevel}
+            fullWidth
+            label='سطح دسترسی'
+            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+          />
         </div>
         <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>
           <Input
@@ -132,16 +207,6 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
               {duration && getStringTime(duration)}
             </p>
           </div>
-          <div className='col-span-1 sm:col-span-2'>
-            <DropDown
-              options={accessVideoOptions}
-              placeholder='سطح دوره را مشخص کنید'
-              value={accessLevel}
-              onChange={setAccessLevel}
-              errorMessage={errorMessages.accessLevel}
-              className='mt-4 bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-            />
-          </div>
         </div>
         <Button
           onClick={handleFormSubmit}
@@ -159,6 +224,7 @@ EditSessionModal.propTypes = {
   session: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
+  isChangeTerm: PropTypes.bool,
 };
 
 export default EditSessionModal;

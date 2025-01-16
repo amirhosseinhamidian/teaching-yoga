@@ -8,6 +8,7 @@ const DropDown = ({
   onChange,
   placeholder = 'Select an option',
   className = '',
+  optionClassName,
   errorMessage = '',
   errorClassName = 'mr-3',
   label = '',
@@ -76,7 +77,7 @@ const DropDown = ({
         {/* Dropdown Options */}
         {isOpen && (
           <ul
-            className={`absolute right-0 z-10 mt-3 w-fit rounded-xl bg-surface-light p-2 shadow-lg transition-all duration-300 ease-in-out dark:bg-surface-dark`}
+            className={`absolute right-0 z-10 mt-3 rounded-xl bg-surface-light p-2 shadow-lg transition-all duration-300 ease-in-out dark:bg-surface-dark ${fullWidth ? 'w-full' : 'w-fit'} ${optionClassName}`}
           >
             {options.map((option, index) => (
               <li
@@ -85,7 +86,7 @@ const DropDown = ({
                   onChange(option.value);
                   setIsOpen(false); // Close dropdown after selecting an option
                 }}
-                className={`cursor-pointer whitespace-nowrap rounded-lg px-4 py-2 text-sm text-subtext-light hover:bg-foreground-light hover:text-text-light dark:text-subtext-dark dark:hover:bg-foreground-dark hover:dark:text-text-dark`}
+                className={`cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap rounded-lg px-4 py-2 text-sm text-subtext-light hover:bg-foreground-light hover:text-text-light dark:text-subtext-dark dark:hover:bg-foreground-dark hover:dark:text-text-dark`}
               >
                 {option.label}
               </li>
@@ -114,6 +115,7 @@ DropDown.propTypes = {
   onChange: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
   className: PropTypes.string,
+  optionClassName: PropTypes.string,
   errorMessage: PropTypes.string,
   errorClassName: PropTypes.string,
   label: PropTypes.string,

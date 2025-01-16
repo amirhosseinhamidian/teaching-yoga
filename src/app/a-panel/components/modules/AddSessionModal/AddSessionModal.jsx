@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
@@ -8,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { getStringTime } from '@/utils/dateTimeHelper';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
 
 const AddSessionModal = ({ onClose, termId, onSuccess }) => {
   const { isDark } = useTheme();
@@ -16,13 +17,22 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
 
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
+  const [termSelectedId, setTermSelectedId] = useState(null);
+  const [termOptions, setTermOptions] = useState([]);
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     duration: '',
+    term: '',
   });
 
   const validateInputs = () => {
     let errors = {};
+
+    if (!termId) {
+      if (!termSelectedId) {
+        errors.term = 'انتخاب ترم اجباری است.';
+      }
+    }
 
     if (!name.trim()) {
       errors.name = 'عنوان نمی‌تواند خالی باشد.';
@@ -38,6 +48,37 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
     return Object.keys(errors).length === 0;
   };
 
+  useEffect(() => {
+    if (!termId) {
+      const fetchTerms = async () => {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`,
+          );
+          if (!response.ok) throw new Error('Failed to fetch terms');
+          const data = await response.json();
+          const formattedOptions = data.map((term) => ({
+            value: term.id,
+            label:
+              term.name +
+              ' - ' +
+              term.sessionCount +
+              ' جلسه' +
+              ' - ' +
+              term.price.toLocaleString('fa-IR') +
+              ' تومان',
+          }));
+          setTermOptions(formattedOptions);
+        } catch (err) {
+          toast.showErrorToast(err.message);
+          console.error(err);
+        }
+      };
+
+      fetchTerms();
+    }
+  }, []);
+
   const handleFormSubmit = async () => {
     if (!validateInputs()) {
       toast.showErrorToast('مقادیر را به درستی وارد کنید');
@@ -51,7 +92,7 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId || termSelectedId}/sessions`,
         {
           method: 'POST',
           headers: {
@@ -93,6 +134,20 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
             />
           </button>
         </div>
+        {!termId && (
+          <div className='mt-6'>
+            <DropDown
+              options={termOptions}
+              placeholder='انتخاب ترم مورد نظر'
+              value={termSelectedId}
+              onChange={setTermSelectedId}
+              fullWidth
+              label='انتخاب ترم'
+              errorMessage={errorMessages.term}
+              optionClassName='max-h-96 hide-scrollbar overflow-y-auto'
+            />
+          </div>
+        )}
         <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>
           <Input
             label='عنوان جلسه'
@@ -117,9 +172,10 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
             </p>
           </div>
         </div>
+
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 text-xs sm:text-base'
+          className='mt-4 text-xs sm:text-base'
           isLoading={isLoading}
         >
           ثبت جلسه
@@ -130,7 +186,7 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
 };
 
 AddSessionModal.propTypes = {
-  termId: PropTypes.number.isRequired,
+  termId: PropTypes.number,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
 };

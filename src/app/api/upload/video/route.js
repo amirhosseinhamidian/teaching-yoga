@@ -63,11 +63,10 @@ export async function POST(req) {
       files.push(value);
     }
   }
-  const courseName = data.get('courseName');
   const termId = data.get('termId');
   const sessionId = data.get('sessionId');
 
-  if (!files || !courseName || !termId || !sessionId) {
+  if (!files || !termId || !sessionId) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
       { status: 400 },
@@ -75,7 +74,7 @@ export async function POST(req) {
   }
 
   try {
-    const folderKey = `videos/${courseName}/${termId}/${sessionId}`;
+    const folderKey = `videos/${termId}/${sessionId}`;
     const videoKey = await uploadFilesToS3(files, folderKey);
 
     setProgress(100);

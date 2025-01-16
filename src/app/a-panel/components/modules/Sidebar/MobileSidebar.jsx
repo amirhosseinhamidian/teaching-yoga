@@ -31,7 +31,7 @@ const MobileSidebar = () => {
               onClick={() => toggleSidebar()}
             ></div>
             <aside
-              className={`fixed right-0 top-0 flex h-full w-56 transform flex-col gap-y-4 bg-surface-light transition-transform duration-300 ease-in-out sm:w-64 dark:bg-surface-dark ${openSidebar ? 'translate-x-0' : 'translate-x-full'}`}
+              className={`hide-scrollbar fixed right-0 top-0 flex h-full w-56 transform flex-col overflow-y-auto bg-surface-light transition-transform duration-300 ease-in-out sm:w-64 dark:bg-surface-dark ${openSidebar ? 'translate-x-0' : 'translate-x-full'}`}
             >
               <div className='flex items-center justify-between'>
                 <div className='flex items-center gap-1 p-4 md:p-6'>

@@ -3,10 +3,13 @@ import { RxDashboard } from 'react-icons/rx';
 import { TbSchool, TbRosetteDiscount, TbSettings, TbSeo } from 'react-icons/tb';
 import { PiUsersBold } from 'react-icons/pi';
 import { GrBlog } from 'react-icons/gr';
-import { HiOutlineCloudUpload } from 'react-icons/hi';
 import { BsCart } from 'react-icons/bs';
 import { FaRegComments, FaRegCircleQuestion } from 'react-icons/fa6';
-import { MdOutlinePlayLesson, MdMailOutline } from 'react-icons/md';
+import {
+  MdOutlinePlayLesson,
+  MdMailOutline,
+  MdVideoSettings,
+} from 'react-icons/md';
 
 import Link from 'next/link';
 
@@ -20,9 +23,9 @@ function NavRoutes() {
       icon: MdOutlinePlayLesson,
     },
     {
-      href: '/a-panel/media',
-      label: 'مدیریت رسانه و آپلود',
-      icon: HiOutlineCloudUpload,
+      href: '/a-panel/session',
+      label: 'مدیریت جلسه ها',
+      icon: MdVideoSettings,
     },
     { href: '/a-panel/user', label: 'مدیریت کاربران', icon: PiUsersBold },
     { href: '/a-panel/blog', label: 'مدیریت بلاگ', icon: GrBlog },
