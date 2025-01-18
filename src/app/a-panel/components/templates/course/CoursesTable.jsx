@@ -119,7 +119,7 @@ const CoursesTable = () => {
         <Image
           src={row.cover}
           alt={row.title}
-          className='rounded'
+          className='rounded object-cover'
           width={96}
           height={56}
         />

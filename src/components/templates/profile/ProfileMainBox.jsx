@@ -71,8 +71,8 @@ const ProfileMainBox = ({ status }) => {
           >
             {item.name}
             {item.statusNumber > 0 && (
-              <div className='mr-1 flex h-4 w-4 items-start justify-center rounded-full bg-red sm:mr-2 sm:h-6 sm:w-6'>
-                <span className='font-faNa text-white'>
+              <div className='mr-1 flex h-5 w-5 items-start justify-center rounded-full bg-red sm:mr-2 sm:h-6 sm:w-6'>
+                <span className='font-faNa text-xs text-white sm:pt-0.5 sm:text-sm'>
                   {item.statusNumber}
                 </span>
               </div>

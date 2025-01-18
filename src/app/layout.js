@@ -8,6 +8,7 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import prismadb from '@/libs/prismadb';
 import { Toaster } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
+import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
 
 export const metadata = {
   title: 'Create Next App',
@@ -89,6 +90,7 @@ export default async function RootLayout({ children }) {
           <body
             className={`flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark`}
           >
+            <VisitLogger />
             <ClientSideAOS />
             {children}
             <Toaster />

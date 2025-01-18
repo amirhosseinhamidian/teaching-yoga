@@ -56,7 +56,7 @@ const CourseItemsCard = ({ data, className, onDeleteItem }) => {
               onDeleteItem={(courseId) => handleDeleteItem(courseId)}
             />
             {index < data.courses.length - 1 && (
-              <hr className='mx-8 my-2 border-t border-gray-300 dark:border-gray-700' />
+              <hr className='mx-8 my-2 border-t border-gray-300 dark:border-gray-600' />
             )}
           </div>
         ))}

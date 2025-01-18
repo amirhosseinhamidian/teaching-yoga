@@ -50,6 +50,9 @@ module.exports = {
         faNa: ['PersianNumbers', 'sans-serif'],
         fancy: ['FancyFont', 'cursive'],
       },
+      animation: {
+        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.8, 1) infinite',
+      },
       // eslint-disable-next-line no-unused-vars
       fill: (theme) => ({
         primary: '#FFAF29',

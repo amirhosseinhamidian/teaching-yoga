@@ -24,7 +24,7 @@ const CardInfo = ({
             size={128}
             className='max-h-6 min-h-6 min-w-6 max-w-6 text-subtext-light sm:max-h-10 sm:max-w-10 md:max-h-12 md:max-w-12 lg:max-h-16 lg:max-w-16 dark:text-subtext-dark'
           />
-          <h4 className='text-xs font-medium text-subtext-light sm:text-base lg:text-lg dark:text-subtext-dark'>
+          <h4 className='text-center text-xs font-medium text-subtext-light sm:text-base lg:text-lg dark:text-subtext-dark'>
             {title}
           </h4>
           <div className='flex items-baseline gap-2'>

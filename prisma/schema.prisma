@@ -401,6 +401,15 @@ model TicketReply {
   children  TicketReply[]  @relation("ParentReply") 
 }
 
+model VisitLog {
+  id          Int       @id @default(autoincrement())
+  ipAddress   String    // آدرس IP بازدیدکننده
+  userAgent   String    // مرورگر یا دستگاه بازدیدکننده
+  pageUrl     String    // صفحه‌ای که بازدید شده
+  referrer    String?   // آدرس صفحه‌ای که از آن ارجاع شده است (در صورت وجود)
+  visitedAt   DateTime  @default(now()) // تاریخ و زمان بازدید
+}
+
 enum TicketStatus {
   PENDING  // در انتظار بررسی
   IN_PROGRESS // در حال بررسی
