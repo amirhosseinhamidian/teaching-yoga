@@ -44,7 +44,7 @@ const UsersTable = ({
       key: 'username',
       label: 'نام کاربری',
       render: (_, row) => (
-        <div className='flex items-center justify-center gap-1'>
+        <div className='flex items-center justify-center gap-1 px-2'>
           <Image
             src={row?.avatar || '/images/default-profile.png'}
             alt={row.username}
@@ -59,6 +59,7 @@ const UsersTable = ({
     {
       key: 'fullname',
       label: 'نام و نام خانوادگی',
+      minWidth: '100px',
       render: (_, row) => (
         <span>
           {row?.firstname} {row?.lastname}
@@ -108,7 +109,7 @@ const UsersTable = ({
   ];
 
   const data = users.map((user, index) => ({
-    number: index + 1,
+    number: index + 1 + (page - 1) * 10,
     username: user.username,
     phone: user.phone,
     firstname: user.firstname,

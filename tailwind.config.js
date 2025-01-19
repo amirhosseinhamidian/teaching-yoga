@@ -19,7 +19,7 @@ module.exports = {
         blue: '#25A4F8',
         green: '#327A56',
         background: {
-          light: '#f0f0f0',
+          light: '#f3f4f6',
           dark: '#2D2E32',
         },
         foreground: {
@@ -41,12 +41,17 @@ module.exports = {
         priceText: '#9A9A9A',
       },
       boxShadow: {
-        search: '0px 4px 6px rgba(100, 244, 171, 0.3))',
+        search: '0px 4px 6px rgba(100, 244, 171, 0.3)',
+        'accent-custom-bottom': '0px 6px 7px rgba(100, 244, 171, 0.3)',
+        'accent-custom': '3px 0px 15px 6px rgba(100, 244, 171, 0.3)',
       },
       fontFamily: {
         main: ['MainFont', 'sans-serif'],
         faNa: ['PersianNumbers', 'sans-serif'],
         fancy: ['FancyFont', 'cursive'],
+      },
+      animation: {
+        'ping-slow': 'ping 3s cubic-bezier(0, 0, 0.8, 1) infinite',
       },
       // eslint-disable-next-line no-unused-vars
       fill: (theme) => ({

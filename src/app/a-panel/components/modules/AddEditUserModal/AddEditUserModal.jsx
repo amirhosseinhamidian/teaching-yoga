@@ -6,7 +6,6 @@ import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Input from '@/components/Ui/Input/Input';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { ADMIN, USER } from '@/constants/userRole';
@@ -142,7 +141,7 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
+      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-surface-dark'>
         <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             {editUser ? 'ویرایش کاربر' : 'ثبت کاربر جدید'}
@@ -208,13 +207,10 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
         </div>
         <Button
           onClick={handleFormSubmit}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           {editUser ? 'ویرایش کاربر' : 'ثبت کاربر'}
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

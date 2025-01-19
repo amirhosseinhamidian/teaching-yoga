@@ -12,6 +12,7 @@ const Table = ({
   loading = false,
   empty = false,
   emptyText = '',
+  onClickRow,
 }) => {
   return (
     <div className={`relative overflow-x-auto ${className}`}>
@@ -27,13 +28,18 @@ const Table = ({
           </div>
         </div>
       ) : (
-        <table className='min-w-full rounded-xl bg-surface-light dark:bg-surface-dark'>
+        <table className='min-w-full table-auto rounded-xl bg-surface-light dark:bg-surface-dark'>
           <thead>
             <tr>
               {columns.map((col) => (
                 <th
                   key={col.key}
-                  className='min-w-6 p-4 text-center text-xs font-medium text-secondary sm:text-sm'
+                  className='p-2 text-center text-2xs font-medium text-secondary sm:text-xs md:text-sm'
+                  style={{
+                    minWidth: col.minWidth || '30px',
+                    maxWidth: col.maxWidth || '300px',
+                    width: col.width || 'auto',
+                  }}
                 >
                   {col.label}
                 </th>
@@ -42,11 +48,24 @@ const Table = ({
           </thead>
           <tbody>
             {data.map((row, rowIndex) => (
-              <tr key={rowIndex}>
+              <tr
+                key={rowIndex}
+                className={` ${
+                  onClickRow
+                    ? 'cursor-pointer transition-all duration-200 ease-in hover:text-secondary'
+                    : ''
+                }`}
+                onClick={() => onClickRow && onClickRow(row)}
+              >
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className='min-w-[100px] px-4 py-2 text-center font-faNa text-xs last:pb-6 sm:text-sm'
+                    className='p-2 text-center font-faNa text-2xs sm:text-xs md:text-sm'
+                    style={{
+                      minWidth: col.minWidth || '30px',
+                      maxWidth: col.maxWidth || '300px',
+                      width: col.width || 'auto',
+                    }}
                   >
                     {col.render ? col.render(row[col.key], row) : row[col.key]}
                   </td>
@@ -73,6 +92,7 @@ Table.propTypes = {
   loading: PropTypes.bool, // پراپ برای لودینگ
   empty: PropTypes.bool, // پراپ برای نمایش نمای خالی
   emptyText: PropTypes.string,
+  onClickRow: PropTypes.func, // پراپ برای کلیک روی ردیف‌ها
 };
 
 export default Table;

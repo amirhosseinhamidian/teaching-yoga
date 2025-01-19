@@ -13,6 +13,17 @@ const CourseItem = ({ data, onDeleteItem }) => {
     setShowDeleteItemModal(false);
   };
 
+  const getCoursePrice = (coursePrice) => {
+    return coursePrice === 0 ? (
+      <h3 className='mt-1 font-faNa text-xs sm:text-sm'>رایگان</h3>
+    ) : (
+      <h3 className='mt-1 font-faNa text-xs sm:text-sm'>
+        قیمت نهایی: {coursePrice.toLocaleString('fa-IR')}{' '}
+        <span className='text-[8px] sm:text-2xs'>تومان</span>
+      </h3>
+    );
+  };
+
   return (
     <>
       <div className='flex items-start justify-between gap-2 p-4'>
@@ -32,10 +43,7 @@ const CourseItem = ({ data, onDeleteItem }) => {
                 <span className='text-[8px] sm:text-2xs'>تومان</span>
               </h4>
             )}
-            <h3 className='mt-1 font-faNa text-xs sm:text-sm'>
-              قیمت نهایی: {data.finalPrice.toLocaleString('fa-IR')}{' '}
-              <span className='text-[8px] sm:text-2xs'>تومان</span>
-            </h3>
+            {getCoursePrice(data.finalPrice)}
           </div>
         </div>
         <LuTrash

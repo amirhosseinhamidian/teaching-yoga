@@ -46,10 +46,7 @@ export async function GET(request) {
     });
 
     if (!userCourses || userCourses.length === 0) {
-      return NextResponse.json(
-        { error: 'هیچ دوره‌ای برای کاربر یافت نشد' },
-        { status: 404 },
-      );
+      return NextResponse.json([], { status: 200 });
     }
 
     // پردازش پیشرفت هر دوره

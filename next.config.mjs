@@ -2,7 +2,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['samane-yoga.storage.c2.liara.space'],
+    domains: ['samane-yoga.storage.c2.liara.space', 'trustseal.enamad.ir'],
   },
   webpack(config) {
     // اضافه کردن پشتیبانی از فایل‌های mjs

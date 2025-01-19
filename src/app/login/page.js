@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { CheckPhoneAction } from '../actions/CheckPhoneAction';
 import { useRouter } from 'next/navigation';
 import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
-import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
@@ -94,11 +93,10 @@ const Login = () => {
         <Button
           shadow
           onClick={loginHandler}
-          className='mt-8 flex w-full items-center justify-center'
-          disable={isSubmitting}
+          className='mt-8 w-full'
+          isLoading={isSubmitting}
         >
           ورود
-          {isSubmitting && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
         <p className='mt-6 text-center text-sm'>
           حساب کاربری ندارید؟{' '}

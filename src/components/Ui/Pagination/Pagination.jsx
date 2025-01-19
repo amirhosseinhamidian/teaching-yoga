@@ -3,34 +3,33 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const Pagination = ({ currentPage, totalPages, onPageChange }) => {
-  // Maximum number of pages to display for larger screens (set to 5 if totalPages exceeds 5)
-  const maxPages = totalPages > 5 ? 5 : totalPages; // If totalPages is greater than 5, limit to 5
-
-  // Function to generate page numbers based on the current page and total pages
   const generatePageNumbers = () => {
     const pageNumbers = [];
-    const range = 3; // Number of pages to display on mobile screens
+    const range = 1; // تعداد صفحات اطراف صفحه فعلی
 
-    if (totalPages <= maxPages) {
-      // If the total number of pages is less than or equal to maxPages, show all pages
+    if (totalPages <= 3) {
+      // اگر تعداد صفحات ۳ یا کمتر باشد، تمام صفحات نمایش داده می‌شوند
       for (let i = 1; i <= totalPages; i++) {
         pageNumbers.push(i);
       }
     } else {
-      // If the total number of pages is greater than maxPages, handle page ranges
-      if (currentPage <= range) {
-        // If the current page is near the start, show the first few pages
-        for (let i = 1; i <= range; i++) {
-          pageNumbers.push(i);
-        }
-      } else if (currentPage >= totalPages - range + 1) {
-        // If the current page is near the end, show the last few pages
-        for (let i = totalPages - range + 1; i <= totalPages; i++) {
-          pageNumbers.push(i);
-        }
-      } else {
-        // If the current page is in the middle, show previous, current, and next pages
-        pageNumbers.push(currentPage - 1, currentPage, currentPage + 1);
+      // اضافه کردن صفحه اول و سه نقطه اگر نیاز باشد
+      if (currentPage > range + 2) {
+        pageNumbers.push(1, '...');
+      }
+
+      // اضافه کردن صفحات اطراف صفحه فعلی
+      for (
+        let i = Math.max(1, currentPage - range);
+        i <= Math.min(totalPages, currentPage + range);
+        i++
+      ) {
+        pageNumbers.push(i);
+      }
+
+      // اضافه کردن سه نقطه و صفحه آخر اگر نیاز باشد
+      if (currentPage < totalPages - range - 1) {
+        pageNumbers.push('...', totalPages);
       }
     }
 
@@ -40,30 +39,39 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pageNumbers = generatePageNumbers();
 
   return (
-    <div className='mx-auto flex w-fit items-center justify-center rounded-2xl bg-surface-light dark:bg-surface-dark'>
+    <div className='mx-auto flex w-fit items-center justify-center rounded-2xl bg-surface-light text-2xs sm:text-xs md:text-base dark:bg-surface-dark'>
+      {/* دکمه بعدی */}
       <button
         onClick={() => onPageChange(currentPage + 1)}
-        disabled={currentPage === totalPages} // Disable the next button if it's the last page
-        className='rounded-lg px-4 py-2 text-sm disabled:opacity-45 sm:text-base'
+        disabled={currentPage === totalPages}
+        className='rounded-lg px-4 py-2 disabled:opacity-45'
       >
         بعدی
       </button>
-      {/* Display the page numbers */}
+
+      {/* نمایش شماره صفحات */}
       <div className='flex flex-row-reverse space-x-2'>
-        {pageNumbers.map((page) => (
+        {pageNumbers.map((page, index) => (
           <button
-            key={page}
-            onClick={() => onPageChange(page)}
-            className={`rounded-lg px-3 py-1 font-faNa text-sm sm:text-base ${currentPage === page ? 'bg-secondary' : ''}`}
+            key={index}
+            onClick={() => typeof page === 'number' && onPageChange(page)}
+            disabled={page === '...'}
+            className={`rounded-lg py-1 font-faNa ${
+              currentPage === page
+                ? 'bg-secondary px-2 sm:px-3'
+                : 'px-1 sm:px-2'
+            } ${page === '...' ? 'cursor-default px-0 opacity-50' : ''}`}
           >
             {page}
           </button>
         ))}
       </div>
+
+      {/* دکمه قبلی */}
       <button
         onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1} // Disable the previous button if it's the first page
-        className='rounded-lg px-4 py-2 text-sm disabled:opacity-45 sm:text-base'
+        disabled={currentPage === 1}
+        className='rounded-lg px-2 py-2 disabled:opacity-45 sm:px-4'
       >
         قبلی
       </button>
@@ -72,9 +80,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
 };
 
 Pagination.propTypes = {
-  currentPage: PropTypes.number.isRequired, // Current active page number
-  totalPages: PropTypes.number.isRequired, // Total number of pages
-  onPageChange: PropTypes.func.isRequired, // Function to handle page changes
+  currentPage: PropTypes.number.isRequired,
+  totalPages: PropTypes.number.isRequired,
+  onPageChange: PropTypes.func.isRequired,
 };
 
 export default Pagination;

@@ -39,7 +39,7 @@ const Accordion = ({
         onClick={toggleAccordion}
       >
         <div className='flex flex-col items-start gap-2'>
-          <span className='text-start font-faNa text-sm font-semibold sm:text-base'>
+          <span className='text-start font-faNa text-sm font-medium sm:text-base'>
             {title}
           </span>
           <span className='text-start font-faNa text-xs font-light text-subtext-light sm:text-sm dark:text-subtext-dark'>

@@ -92,3 +92,8 @@ export function getShamsiDate(dateString) {
   const date = new Date(dateString);
   return gregorianToJalali(date).join('/');
 }
+
+export function getTimeFromDate(dateString) {
+  const date = new Date(dateString);
+  return `${date.getHours()}:${date.getMinutes()}`;
+}

@@ -39,7 +39,9 @@ const PaymentPage = async () => {
     <>
       <Header isLogin={session} />
       <div className='container'>
-        <PageCheckoutTitle icon={GoCreditCard}>پرداخت</PageCheckoutTitle>
+        <PageCheckoutTitle isSuccess={true} icon={GoCreditCard}>
+          پرداخت
+        </PageCheckoutTitle>
         <div className='mb-10 mt-4 grid grid-cols-1 gap-10 md:mb-16 md:mt-8 md:grid-cols-2 lg:gap-28'>
           <UserInformationCard className='order-last self-start md:order-first' />
           <UserOrderCard

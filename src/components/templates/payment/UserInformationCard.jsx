@@ -5,14 +5,13 @@ import PropTypes from 'prop-types';
 import { useAuth } from '@/contexts/AuthContext';
 import Input from '@/components/Ui/Input/Input';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
 const UserInformationCard = ({ className }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
   const [firstname, setFirstname] = useState(user?.firstname || '');
   const [lastname, setLastname] = useState(user?.lastname || '');
   const [email, setEmail] = useState(user?.email || '');
@@ -63,6 +62,7 @@ const UserInformationCard = ({ className }) => {
       };
       try {
         setIsLoading(true);
+
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/${user.id}`,
           {
@@ -73,26 +73,22 @@ const UserInformationCard = ({ className }) => {
             body: JSON.stringify(payload),
           },
         );
+
         if (response.ok) {
-          toast.showSuccessToast('اطلاعات با موفقیت ویرایش شد');
+          const data = await response.json();
+          toast.showSuccessToast('اطلاعات با موفقیت ثبت شد');
+          setUser((prevUser) => ({
+            ...prevUser, // حفظ مقادیر قبلی
+            firstname: data.firstname,
+            lastname: data.lastname,
+            email: data.email,
+          }));
         } else {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/${user.id}`,
-            {
-              method: 'PUT',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(payload),
-            },
-          );
-          if (response.ok) {
-            toast.showSuccessToast('اطلاعات با موفقیت ثبت شد');
-          } else {
-            toast.showErrorToast('خطایی رخ داده است');
-          }
+          const errorData = await response.json();
+          toast.showErrorToast(errorData.message || 'خطایی رخ داده است');
         }
       } catch (error) {
+        console.error('Unexpected error:', error);
         toast.showErrorToast('خطای غیرمنتظره');
       } finally {
         setIsLoading(false);
@@ -138,12 +134,11 @@ const UserInformationCard = ({ className }) => {
       </div>
       <Button
         shadow
-        disable={isLoading}
+        isLoading={isLoading}
         onClick={handleSubmitUserInfo}
-        className='mt-6 flex w-fit items-center justify-center gap-2 px-6 text-xs sm:text-sm'
+        className='mt-6 w-fit px-6 text-xs sm:text-sm'
       >
         ثبت
-        {isLoading && <AiOutlineLoading3Quarters className='animate-spin' />}
       </Button>
     </div>
   );

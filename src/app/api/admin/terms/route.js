@@ -1,12 +1,13 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-export async function GET(request) {
+export async function GET() {
   try {
     const terms = await prismadb.term.findMany({
       select: {
         id: true,
         name: true,
+        price: true,
         _count: {
           select: {
             sessions: true, // تعداد جلسات مرتبط با ترم
@@ -18,6 +19,7 @@ export async function GET(request) {
     const formattedTerms = terms.map((term) => ({
       id: term.id,
       name: term.name,
+      price: term.price,
       sessionCount: term._count.sessions, // تعداد جلسات
     }));
 

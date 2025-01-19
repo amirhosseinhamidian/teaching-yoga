@@ -3,39 +3,39 @@ import { NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 import { PUBLIC, PURCHASED, REGISTERED } from './constants/videoAccessLevel';
 
-export async function middleware(request) {
-  const token = await getToken({
-    req: request,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-
+// بررسی دسترسی ادمین
+async function handleAdminRoutes(request, token) {
   const adminRoutes = ['/a-panel', '/a-panel/:path*'];
-
-  // بررسی دسترسی به مسیرهای ادمین
   const isAdminRoute = adminRoutes.some((route) =>
     new RegExp(route.replace(/\/:path\*/g, '(\\/.*)?')).test(
       request.nextUrl.pathname,
     ),
   );
 
-  if (isAdminRoute) {
-    if (!token || token.userRole !== 'ADMIN') {
-      return NextResponse.redirect(new URL('/access-denied', request.url));
-    }
-  }
-
-  // مسیرهای دسترسی غیر مجاز برای کاربری که وارد حساب کاربری نشده است
-  const accessDeniedRoutes = ['/payment'];
-  const isAccessDeniedRoutes = accessDeniedRoutes.some((route) =>
-    new RegExp(route).test(request.nextUrl.pathname),
-  );
-  if (isAccessDeniedRoutes && !token) {
+  if (isAdminRoute && (!token || token.userRole !== 'ADMIN')) {
     return NextResponse.redirect(new URL('/access-denied', request.url));
   }
 
-  // مسیرهای محافظت‌شده (Protected Routes)
-  const protectedRoutes = ['/profile', '/courses/:path*/lesson/:path*'];
+  return null;
+}
 
+// بررسی دسترسی کاربران غیر لاگین شده
+async function handleAccessDeniedRoutes(request, token) {
+  const accessDeniedRoutes = ['/payment'];
+  const isAccessDeniedRoute = accessDeniedRoutes.some((route) =>
+    new RegExp(route).test(request.nextUrl.pathname),
+  );
+
+  if (isAccessDeniedRoute && !token) {
+    return NextResponse.redirect(new URL('/access-denied', request.url));
+  }
+
+  return null;
+}
+
+// بررسی مسیرهای محافظت‌شده
+async function handleProtectedRoutes(request, token) {
+  const protectedRoutes = ['/profile', '/courses/:path*/lesson/:path*'];
   const isProtectedRoute = protectedRoutes.some((route) =>
     new RegExp(route).test(request.nextUrl.pathname),
   );
@@ -44,6 +44,11 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
+  return null;
+}
+
+// بررسی دسترسی به ویدئوهای درس
+async function handleLessonVideoAccess(request, token) {
   if (
     request.nextUrl.pathname.startsWith('/courses/') &&
     request.nextUrl.pathname.includes('/lesson/')
@@ -66,14 +71,11 @@ export async function middleware(request) {
       const sessionVideo = await videoResponse.json();
 
       if (sessionVideo.accessLevel === PUBLIC) {
-        return NextResponse.next();
+        return null; // دسترسی عمومی
       }
 
-      if (sessionVideo.accessLevel === REGISTERED) {
-        if (!token) {
-          return NextResponse.redirect(new URL('/login', request.url));
-        }
-        return NextResponse.next();
+      if (sessionVideo.accessLevel === REGISTERED && !token) {
+        return NextResponse.redirect(new URL('/login', request.url));
       }
 
       if (sessionVideo.accessLevel === PURCHASED) {
@@ -92,9 +94,32 @@ export async function middleware(request) {
         }
       }
     } catch (error) {
-      console.error('Error checking purchase:', error);
+      console.error('Error checking video access:', error);
       return NextResponse.redirect(new URL('/error', request.url));
     }
+  }
+
+  return null;
+}
+
+// Middleware اصلی
+export async function middleware(request) {
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  // پردازش منطق‌ها
+  const handlers = [
+    handleAdminRoutes,
+    handleAccessDeniedRoutes,
+    handleProtectedRoutes,
+    handleLessonVideoAccess,
+  ];
+
+  for (const handler of handlers) {
+    const result = await handler(request, token);
+    if (result) return result;
   }
 
   return NextResponse.next();

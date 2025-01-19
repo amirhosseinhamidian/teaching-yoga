@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 import { S3 } from 'aws-sdk';
 import { setProgress } from '../progress/route';
 
-// تنظیمات S3
+// S3 configuration
 const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
@@ -63,11 +63,10 @@ export async function POST(req) {
       files.push(value);
     }
   }
-  const courseName = data.get('courseName');
   const termId = data.get('termId');
   const sessionId = data.get('sessionId');
 
-  if (!files || !courseName || !termId || !sessionId) {
+  if (!files || !termId || !sessionId) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
       { status: 400 },
@@ -75,17 +74,17 @@ export async function POST(req) {
   }
 
   try {
-    const folderKey = `videos/${courseName}/${termId}/${sessionId}`;
+    const folderKey = `videos/${termId}/${sessionId}`;
     const videoKey = await uploadFilesToS3(files, folderKey);
 
     setProgress(100);
 
     return NextResponse.json({
       videoKey,
-      message: 'Upload successful',
+      message: 'آپلود موفقیت‌آمیز بود',
     });
   } catch (error) {
     console.error('Error uploading video:', error);
-    return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
+    return NextResponse.json({ error: 'خطا در پردازش آپلود' }, { status: 500 });
   }
 }

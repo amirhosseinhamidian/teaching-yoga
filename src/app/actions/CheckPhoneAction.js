@@ -1,6 +1,6 @@
 'use server';
 
-import prismadb from '../../../libs/prismadb';
+import prismadb from '@/libs/prismadb';
 
 async function CheckPhoneAction(phone) {
   try {

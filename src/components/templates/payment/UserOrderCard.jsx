@@ -6,7 +6,6 @@ import CoursePaymentItem from './CoursePaymentItem';
 import Checkbox from '@/components/Ui/Checkbox/Checkbox';
 import Link from 'next/link';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { useAuth } from '@/contexts/AuthContext';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -20,8 +19,63 @@ const UserOrderCard = ({ data, className }) => {
 
   const paymentClickHandler = async () => {
     if (!user.firstname || !user.lastname) {
-      toast.showErrorToast('لطفا نام و نام خانوادگی خود را وارد کنید.');
+      toast.showErrorToast('لطفا نام و نام خانوادگی خود را ثبت کنید.');
       return;
+    }
+    if (!roleCheck) {
+      toast.showErrorToast(
+        'برای پرداخت لازم است قوانین و مقررات را تایید کنید.',
+      );
+      return;
+    }
+    try {
+      setPaymentLoading(true);
+      const payload = {
+        amount: data.totalPrice,
+        desc: getPaymentDescription(data.courses),
+        cartId: data.id,
+      };
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/checkout`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+
+        // هدایت کاربر به صفحه پرداخت
+        if (data.paymentResponse?.paymentUrl) {
+          window.location.href = data.paymentResponse.paymentUrl;
+        }
+      } else {
+        const errorData = await response.json();
+        toast.showErrorToast(errorData.error || 'خطای درخواست پرداخت.');
+        console.error('Payment error: ', errorData);
+      }
+    } catch (error) {
+      toast.showErrorToast('خطای ناشناخته در پرداخت');
+      console.error('checkout error: ', error);
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const getPaymentDescription = (courses) => {
+    const titles = courses.map((course) => {
+      return course.courseTitle;
+    });
+    if (titles.length > 1) {
+      const courseList =
+        titles.slice(0, -1).join('، ') + ' و ' + titles[titles.length - 1];
+      return `پرداخت برای خرید دوره‌های ${courseList}`;
+    } else if (titles.length === 1) {
+      return `پرداخت برای خرید دوره ${titles[0]}`;
     }
   };
 
@@ -68,14 +122,11 @@ const UserOrderCard = ({ data, className }) => {
       <div className='flex w-full justify-center'>
         <Button
           shadow
-          disable={paymentLoading}
+          isLoading={paymentLoading}
           onClick={paymentClickHandler}
-          className='mt-6 flex w-full items-center justify-center gap-2 sm:w-2/3 lg:w-1/2'
+          className='mt-6 w-full sm:w-2/3 lg:w-1/2'
         >
           پرداخت
-          {paymentLoading && (
-            <AiOutlineLoading3Quarters className='animate-spin' />
-          )}
         </Button>
       </div>
     </div>

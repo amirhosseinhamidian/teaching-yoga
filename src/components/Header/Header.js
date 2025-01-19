@@ -47,12 +47,10 @@ export default function Header({ isLogin }) {
   };
 
   const getNumberOfCart = () => {
-    if (!user) return 0;
-    return user.carts.map((cart) => {
-      if (cart.status === 'PENDING') {
-        return cart.uniqueCourses.length;
-      }
-    });
+    if (!user || !user.carts) return 0;
+
+    const pendingCart = user.carts.find((cart) => cart.status === 'PENDING');
+    return pendingCart ? pendingCart.uniqueCourses.length : 0;
   };
 
   return (

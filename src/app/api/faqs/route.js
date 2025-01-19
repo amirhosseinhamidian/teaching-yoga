@@ -1,13 +1,23 @@
+import { VALID_CATEGORIES } from '@/constants/faqCategories';
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
 export async function POST(request) {
   try {
-    const { question, answer } = await request.json();
+    const { question, answer, category } = await request.json();
 
-    if (!question || !answer) {
+    if (!question || !answer || !category) {
       return NextResponse.json(
-        { error: 'Question and answer are required' },
+        { error: 'Question, answer, and category are required' },
+        { status: 400 },
+      );
+    }
+
+    if (!VALID_CATEGORIES.includes(category)) {
+      return NextResponse.json(
+        {
+          error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
+        },
         { status: 400 },
       );
     }
@@ -16,6 +26,7 @@ export async function POST(request) {
       data: {
         question,
         answer,
+        category,
       },
     });
 
@@ -25,9 +36,26 @@ export async function POST(request) {
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const category = searchParams.get('category');
+    const whereClause = category
+      ? VALID_CATEGORIES.includes(category)
+        ? { category }
+        : null
+      : undefined;
+
+    if (category && !whereClause) {
+      return NextResponse.json(
+        {
+          error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
+        },
+        { status: 400 },
+      );
+    }
     const faqs = await prismadb.fAQ.findMany({
+      where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },
@@ -40,23 +68,33 @@ export async function GET() {
 }
 
 export async function PUT(request) {
-  const { id, question, answer } = await request.json();
-
-  if (!id || !question || !answer) {
-    return NextResponse.json(
-      { error: 'ID, question, and answer are required' },
-      { status: 400 },
-    );
-  }
-
   try {
+    const { id, question, answer, category } = await request.json();
+
+    if (!id || !question || !answer || !category) {
+      return NextResponse.json(
+        { error: 'ID, question, answer, and category are required' },
+        { status: 400 },
+      );
+    }
+
+    if (!VALID_CATEGORIES.includes(category)) {
+      return NextResponse.json(
+        {
+          error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
+        },
+        { status: 400 },
+      );
+    }
+
     const updatedFAQ = await prismadb.fAQ.update({
       where: {
-        id: id,
+        id: parseInt(id),
       },
       data: {
         question,
         answer,
+        category,
       },
     });
 
@@ -67,17 +105,19 @@ export async function PUT(request) {
 }
 
 export async function DELETE(request) {
-  const { searchParams } = new URL(request.url);
-  const id = parseInt(searchParams.get('id'));
-
-  if (!id) {
-    return NextResponse.json({ error: 'FAQ ID is required' }, { status: 400 });
-  }
-
   try {
+    const { id } = await request.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'FAQ ID is required' },
+        { status: 400 },
+      );
+    }
+
     const deletedFAQ = await prismadb.fAQ.delete({
       where: {
-        id: id,
+        id: parseInt(id),
       },
     });
 

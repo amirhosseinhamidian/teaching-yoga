@@ -6,7 +6,9 @@ import PropTypes from 'prop-types';
 export default function Price({ finalPrice, discount, price, className }) {
   return (
     <div className={`flex flex-col items-end ${className}`}>
-      <span className='font-faNa text-lg font-bold text-text-light md:text-2xl dark:text-text-dark'>
+      <span
+        className={`font-faNa text-lg font-bold text-text-light md:text-2xl dark:text-text-dark ${discount === 0 && 'mb-[26px] lg:mb-[34px]'}`}
+      >
         {finalPrice.toLocaleString('fa-IR')}
         <span className='mr-1 text-2xs'>تومان</span>
       </span>

@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '../Ui/Button/Button';
-import { ImSpinner2 } from 'react-icons/im';
 import { useRouter } from 'next/navigation';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -40,13 +39,8 @@ const CourseWatchCard = ({ shortAddress, className }) => {
         <h5 className='text-sm text-subtext-light xs:text-base dark:text-subtext-dark'>
           شما شرکت کننده این دوره هستید
         </h5>
-        <Button
-          onClick={handleGoToCourse}
-          disable={loading}
-          className='flex items-center'
-        >
+        <Button onClick={handleGoToCourse} isLoading={loading}>
           ورود به دوره
-          {loading && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
       </div>
     </div>

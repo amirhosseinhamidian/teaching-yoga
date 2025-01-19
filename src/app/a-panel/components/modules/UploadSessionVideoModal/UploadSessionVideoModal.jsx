@@ -1,29 +1,32 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 import { processVideo } from '@/services/videoProcessor';
 
-const UploadSessionVideoModal = ({ onClose, onUpload }) => {
+const UploadSessionVideoModal = ({
+  onClose,
+  onUpload,
+  videoAccessLevel,
+  isUpdate = false,
+}) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(null); // state برای پیشرفت
+  const [progress, setProgress] = useState(0); // state برای پیشرفت
   const fileInputRef = useRef(null);
   const [isComplete, setIsComplete] = useState(false);
   const [videoDirection, setVideoDirection] = useState('HORIZONTAL');
-  const [accessLevel, setAccessLevel] = useState('');
-  const [stepUpload, setStepUpload] = useState(false);
-  const [lastValidProgress, setLastValidProgress] = useState(0);
+  const [accessLevel, setAccessLevel] = useState(videoAccessLevel || '');
+  const [currentStage, setCurrentStage] = useState('processing');
   const [errorMessages, setErrorMessages] = useState({
     accessLevel: '',
   });
@@ -84,6 +87,7 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
       return;
     }
 
+    setCurrentStage('processing');
     setIsLoading(true);
     try {
       const outFiles = await processVideo(
@@ -91,23 +95,23 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
         videoDirection === 'VERTICAL',
         (progress) => {
           setProgress(progress);
-          if (progress === 100 && !stepUpload) {
-            setStepUpload(true);
-          }
         },
       );
 
       if (!outFiles || outFiles.length === 0) {
         throw new Error('No output files generated.');
       }
+      setCurrentStage('uploading'); // تغییر به مرحله آپلود
+      setProgress(0); // ریست پروگرس بار
+      startPolling(); // شروع پولینگ برای آپلود
 
-      await onUpload(outFiles, videoDirection === 'VERTICAL');
+      await onUpload(outFiles, videoDirection === 'VERTICAL', accessLevel);
     } catch (error) {
       console.error('Upload error:', error);
       toast.showErrorToast('خطایی در آپلود فایل رخ داده است.');
     } finally {
       setIsLoading(false);
-      setProgress(0);
+      setProgress(100);
     }
   };
 
@@ -137,29 +141,21 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
     }
   };
 
-  // استفاده از Polling برای درخواست پیشرفت هر 5 ثانیه
-  useEffect(() => {
+  const startPolling = () => {
     const interval = setInterval(() => {
       if (!isComplete) {
         fetchProgress();
+      } else {
+        clearInterval(interval); // توقف پولینگ
       }
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [isComplete]);
+  };
 
-  useEffect(() => {
-    if (stepUpload) {
-      setLastValidProgress(progress);
-    } else {
-      if (progress > 0) {
-        setLastValidProgress(progress);
-      }
-    }
-  }, [progress]);
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
+      <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
         <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             آپلود ویدیو جلسه
@@ -180,7 +176,8 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             onChange={setAccessLevel}
             errorMessage={errorMessages.accessLevel}
             label='سطح دسترسی'
-            className='bg-surface-ligh text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+            fullWidth
+            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
           <DropDown
             options={videoDirectionOptions}
@@ -188,14 +185,16 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             value={videoDirection}
             onChange={setVideoDirection}
             label='جهت ویدیو'
+            fullWidth
             className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
         </div>
 
         {/* Description */}
         <p className='px-2 pb-1 pt-6 text-xs text-subtext-light xs:text-sm dark:text-subtext-dark'>
-          برای آپلود ویدیو جلسه فایل خود را در اینجا بکشید و رها کنید یا با کلیک
-          انتخاب کنید.
+          {isUpdate
+            ? 'برای آپدیت ویدیو جلسه ، فایل ویدیو خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید. ویدیو قبلی به صورت خودکار پاک خواهد شد.'
+            : 'برای آپلود ویدیو جلسه فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید.'}
         </p>
 
         {/* Upload Area */}
@@ -224,44 +223,33 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
             )}
           </label>
         </div>
-        {/* Progress Bar */}
-        <div className={`${isLoading ? 'block' : 'hidden'}`}>
-          <div
-            className={`mt-4 h-3 w-full rounded-full bg-foreground-light dark:bg-foreground-dark`}
-          >
-            <div
-              className='h-3 rounded-full bg-primary'
-              style={{ width: `${lastValidProgress}%` }}
-            ></div>
+        {isLoading && (
+          <div>
+            <div className='mt-4 h-3 w-full rounded-full bg-foreground-light dark:bg-foreground-dark'>
+              <div
+                className='h-3 rounded-full bg-primary'
+                style={{ width: `${progress}%` }}
+              ></div>
+            </div>
+            <div className='mt-2 text-center font-faNa text-sm'>
+              {currentStage === 'processing'
+                ? `پردازش ویدیو: ${progress}%`
+                : `آپلود ویدیو: ${progress}%`}
+            </div>
           </div>
-          <div className={`mt-2 text-center font-faNa text-sm`}>
-            {lastValidProgress}% {/* نمایش درصد پیشرفت */}
-          </div>
-        </div>
-        {stepUpload ? (
-          <p className={`mt-2 text-blue ${isLoading ? 'block' : 'hidden'}`}>
-            در حال آپلود ویدیو ...
-          </p>
-        ) : (
-          <p
-            className={`mt-2 font-faNa text-blue ${isLoading ? 'block' : 'hidden'}`}
-          >
-            در حال پردازش اولیه ...
-          </p>
         )}
-        <p className={`mt-2 text-blue ${isLoading ? 'block' : 'hidden'}`}>
+        <p
+          className={`mt-2 text-xs text-secondary sm:text-sm ${isLoading ? 'block' : 'hidden'}`}
+        >
           لطفا تا پایان فرایند آپلود از این باکس خارج نشوید!
         </p>
 
         <Button
           onClick={handleUpload}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
-          ثبت جلسه
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
+          {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
         </Button>
       </div>
     </div>
@@ -271,6 +259,8 @@ const UploadSessionVideoModal = ({ onClose, onUpload }) => {
 UploadSessionVideoModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onUpload: PropTypes.func.isRequired,
+  videoAccessLevel: PropTypes.string,
+  isUpdate: PropTypes.bool,
 };
 
 export default UploadSessionVideoModal;

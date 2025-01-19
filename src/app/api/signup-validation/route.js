@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
-import prismadb from '../../../../libs/prismadb';
 import { validatePhoneNumber } from '@/utils/validatePhoneNumber'; // Import your phone validation helper
+import prismadb from '@/libs/prismadb';
 
 export async function POST(req) {
   const { username, userPhone } = await req.json();

@@ -7,12 +7,20 @@ import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
+import { headers } from 'next/headers';
 
 async function CoursesPage() {
   const session = await getServerSession(authOptions);
 
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
+    {
+      method: 'GET',
+      headers: headers(),
+      next: {
+        revalidate: 7200, // 2 hours
+      },
+    },
   );
 
   const result = await res.json();
@@ -23,7 +31,7 @@ async function CoursesPage() {
   const courses = result.data;
 
   if (courses === 0) {
-    // TODO: empty page ui
+    return <p>loading</p>;
   }
 
   return (
@@ -36,13 +44,16 @@ async function CoursesPage() {
             return course.isHighPriority ? (
               <div
                 key={course.id}
-                className='col-span-1 sm:col-span-2 md:col-span-3'
+                className='col-span-1 sm:col-span-2 lg:col-span-3'
               >
                 <CourseHighCard course={course} />
               </div>
             ) : (
-              <div key={course.id} className='col-span-1'>
-                <CourseCard course={course} />
+              <div key={course.id}>
+                <CourseCard
+                  course={course}
+                  className='h-full bg-surface-light dark:bg-surface-dark'
+                />
               </div>
             );
           })}

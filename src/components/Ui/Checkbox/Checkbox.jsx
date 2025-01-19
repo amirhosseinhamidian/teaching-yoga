@@ -55,7 +55,7 @@ const Checkbox = ({
         ></span>
         {isChecked && (
           <span
-            className={`absolute left-0.5 top-0.5 flex items-center justify-center rounded-full bg-transparent transition-transform duration-300 ${checkmarkClasses[size]}`}
+            className={`absolute left-0.5 top-0.5 flex cursor-pointer items-center justify-center rounded-full bg-transparent transition-transform duration-300 ${checkmarkClasses[size]}`}
           >
             <svg
               xmlns='http://www.w3.org/2000/svg'

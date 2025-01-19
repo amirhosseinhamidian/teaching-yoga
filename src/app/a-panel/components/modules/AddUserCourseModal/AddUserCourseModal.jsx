@@ -7,7 +7,6 @@ import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import Button from '@/components/Ui/Button/Button';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import Image from 'next/image';
 
 function AddUserCourseModal({ onClose, onSuccess, userId }) {
@@ -145,13 +144,10 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
 
         <Button
           onClick={submitUserCourse}
-          className='mt-8 flex items-center justify-center text-xs sm:text-base'
-          disable={isLoading}
+          className='mt-8 text-xs sm:text-base'
+          isLoading={isLoading}
         >
           ثبت دوره
-          {isLoading && (
-            <AiOutlineLoading3Quarters className='mr-2 animate-spin' />
-          )}
         </Button>
       </div>
     </div>

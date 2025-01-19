@@ -39,6 +39,13 @@ export async function POST(request, { params }) {
         termId: parseInt(termId),
         order: nextOrder,
       },
+      include: {
+        term: {
+          select: {
+            name: true, // فقط انتخاب نام ترم
+          },
+        },
+      },
     });
 
     return NextResponse.json(newSession, { status: 201 });

@@ -9,10 +9,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  const storedTheme = getFromLocalStorage('isDark');
-  const [isDark, setIsDark] = useState(
-    storedTheme !== null ? storedTheme : false,
-  );
+  const [isDark, setIsDark] = useState(getFromLocalStorage('isDark', false));
 
   const toggleTheme = () => {
     const newTheme = !isDark;

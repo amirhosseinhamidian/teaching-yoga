@@ -43,7 +43,7 @@ const fetchCourseData = async (shortAddress) => {
         method: 'GET',
         headers: headers(),
         next: {
-          revalidate: 7200, // 2به hours
+          revalidate: 7200, // 2 hours
         },
       },
     );
@@ -87,7 +87,6 @@ async function page({ params }) {
   const { shortAddress } = params;
 
   const { course, videoLink } = await fetchCourseData(shortAddress);
-  console.log('video link => ', videoLink);
   const isUserPurchased = await checkUserBuyCourse(
     shortAddress,
     session?.user.userId,
@@ -143,7 +142,7 @@ async function page({ params }) {
       <Header isLogin={session} />
       <div className='container'>
         <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
-          <div className='flex flex-col items-center justify-between lg:col-span-1'>
+          <div className='flex flex-col justify-between lg:col-span-1'>
             <div>
               <PageTitle>{course.title}</PageTitle>
               <p className='mb-6 font-thin'>{course.shortDescription}</p>

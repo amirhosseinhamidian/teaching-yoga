@@ -16,10 +16,10 @@ const SearchBox = ({
         autoFocus={focus}
         value={value}
         onChange={onChange}
-        className='mr-2 shrink border-none bg-transparent text-xs outline-none sm:w-60 sm:text-sm'
+        className='mr-2 shrink border-none bg-transparent text-xs outline-none xs:w-52 sm:w-60 sm:text-sm'
       />
-      <button className='shadow-search rounded-xl bg-accent p-2 shadow active:opacity-75'>
-        <IoIosSearch className='text-white' size={24} />
+      <button className='rounded-xl bg-accent p-2 shadow-search active:opacity-75'>
+        <IoIosSearch className='h-4 w-4 text-white sm:h-6 sm:w-6' size={24} />
       </button>
     </div>
   );

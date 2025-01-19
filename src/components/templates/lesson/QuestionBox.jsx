@@ -4,7 +4,6 @@ import PropTypes from 'prop-types';
 import Image from 'next/image';
 import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
-import { ImSpinner2 } from 'react-icons/im';
 import { useAuth } from '@/contexts/AuthContext';
 import { IoWarningOutline } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
@@ -41,11 +40,11 @@ const QuestionBox = ({ className, courseId, sessionId }) => {
   };
   return (
     <div
-      className={`rounded-xl bg-surface-light p-6 sm:p-0 sm:pr-6 sm:pt-6 dark:bg-surface-dark ${className}`}
+      className={`rounded-xl bg-surface-light px-4 py-6 dark:bg-surface-dark ${className}`}
     >
       <h3 className='mb-4 font-semibold md:text-lg'>سوال دارم</h3>
       <div className='flex flex-col gap-4 pb-5'>
-        <div className='ml-5 flex rounded-xl border border-blue bg-blue bg-opacity-10 p-2 text-blue'>
+        <div className='flex rounded-xl border border-blue bg-blue bg-opacity-10 p-2 text-blue'>
           <IoWarningOutline className='ml-1 text-2xl' />
           <p className='text-thin text-xs'>
             اگر سوالی در ارتباط با این جلسه دارید اینجا بنویسید. سوالات در مورد
@@ -69,16 +68,11 @@ const QuestionBox = ({ className, courseId, sessionId }) => {
           placeholder='سوالت رو بنویس'
           value={content}
           onChange={setContent}
-          className='sm:mx-6'
+          className=''
         />
-        <div className='flex w-full items-center justify-end gap-2 sm:pl-6'>
-          <Button
-            className='flex items-center justify-center'
-            onClick={sendCommentHandler}
-            disable={sendLoading}
-          >
+        <div className='flex w-full items-center justify-end gap-2'>
+          <Button onClick={sendCommentHandler} isLoading={sendLoading}>
             ارسال
-            {sendLoading && <ImSpinner2 className='mr-2 animate-spin' />}
           </Button>
         </div>
       </div>

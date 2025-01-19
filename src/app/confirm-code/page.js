@@ -8,9 +8,9 @@ import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa6';
-import { ImSpinner2 } from 'react-icons/im';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { updateUser } from '../actions/updateUser';
 
 const ConfirmCodePage = () => {
   const { userPhone, username, token, setToken, setUser } = useAuth();
@@ -19,7 +19,7 @@ const ConfirmCodePage = () => {
   const [isFinished, setIsFinished] = useState(false);
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTryAgin, setShowTryAgin] = useState(false);
+  const [showTryAgain, setShowTryAgain] = useState(false);
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
@@ -33,7 +33,7 @@ const ConfirmCodePage = () => {
     await countdown(120, (updatedTime) => {
       setTime(updatedTime); // Restart countdown and update time with each tick
       if (updatedTime === '00:01') {
-        setShowTryAgin(true);
+        setShowTryAgain(true);
       }
     }).then((result) => {
       setTime(result.time);
@@ -42,7 +42,7 @@ const ConfirmCodePage = () => {
   };
 
   useEffect(() => {
-    if (token === -1 && !showTryAgin) {
+    if (token === -1 && !showTryAgain) {
       router.replace('/login');
     }
   }, [token, router]);
@@ -106,10 +106,8 @@ const ConfirmCodePage = () => {
       });
 
       if (result?.ok) {
-        const userRes = await fetch('/api/get-me');
-        const user = await userRes.json();
+        await updateUser(setUser);
         toast.showSuccessToast('با موفقیت وارد شدید');
-        setUser(user);
         const previousPage = sessionStorage.getItem('previousPage');
         sessionStorage.removeItem('previousPage');
         router.replace(previousPage);
@@ -126,7 +124,7 @@ const ConfirmCodePage = () => {
   const tryAgainHandle = async () => {
     try {
       handleStartTimer();
-      setShowTryAgin(false);
+      setShowTryAgain(false);
       const response = await fetch('/api/send-otp', {
         method: 'POST',
         headers: {
@@ -194,11 +192,10 @@ const ConfirmCodePage = () => {
         <Button
           shadow
           onClick={loginHandle}
-          className='mt-8 flex w-full items-center justify-center'
-          disable={isSubmitting}
+          className='mt-8 w-full'
+          isLoading={isSubmitting}
         >
           تایید
-          {isSubmitting && <ImSpinner2 className='mr-2 animate-spin' />}
         </Button>
       </div>
     </div>

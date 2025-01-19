@@ -12,17 +12,17 @@ const routes = [
     label: 'دوره‌ها',
     path: '/courses',
   },
-  {
-    label: 'کلاس آنلاین',
-    path: '/',
-  },
-  {
-    label: 'مقالات',
-    path: '/',
-  },
+  // {
+  //   label: 'کلاس آنلاین',
+  //   path: '/',
+  // },
+  // {
+  //   label: 'مقالات',
+  //   path: '/',
+  // },
   {
     label: 'ارتباط با ما',
-    path: '/',
+    path: '/contact-us',
   },
 ];
 
