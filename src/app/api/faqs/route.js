@@ -54,15 +54,12 @@ export async function GET(request) {
         { status: 400 },
       );
     }
-    console.log('whereClause in api =====> ', whereClause);
     const faqs = await prismadb.fAQ.findMany({
       where: whereClause,
       orderBy: {
         createdAt: 'desc',
       },
     });
-
-    console.log('faqs in api =====> ', faqs);
 
     return NextResponse.json(faqs);
   } catch (error) {
@@ -92,7 +89,7 @@ export async function PUT(request) {
 
     const updatedFAQ = await prismadb.fAQ.update({
       where: {
-        id: id,
+        id: parseInt(id),
       },
       data: {
         question,
@@ -109,8 +106,7 @@ export async function PUT(request) {
 
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = parseInt(searchParams.get('id'));
+    const { id } = await request.json();
 
     if (!id) {
       return NextResponse.json(
@@ -121,7 +117,7 @@ export async function DELETE(request) {
 
     const deletedFAQ = await prismadb.fAQ.delete({
       where: {
-        id: id,
+        id: parseInt(id),
       },
     });
 

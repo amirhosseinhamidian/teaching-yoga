@@ -85,7 +85,7 @@ function NavRoutes() {
       statusNumber: 0,
     },
     {
-      href: '/a-panel/settings',
+      href: '/a-panel/site-setting',
       label: 'تنظیمات سایت',
       icon: TbSettings,
       statusNumber: 0,
@@ -112,7 +112,7 @@ function NavRoutes() {
               }`}
             />
             <h4
-              className={`text-sm font-medium sm:text-base ${isActive ? 'font-bold' : ''}`}
+              className={`text-sm font-medium sm:text-base ${isActive ? 'font-bold' : ''}`.trim()}
             >
               {route.label}
             </h4>

@@ -410,6 +410,21 @@ model VisitLog {
   visitedAt   DateTime  @default(now()) // تاریخ و زمان بازدید
 }
 
+model SiteInfo {
+  id                  Int      @id @default(autoincrement())
+  shortDescription    String   // توضیحات مختصر سایت برای فوتر
+  fullDescription     String   // توضیحات جامع سایت
+  companyAddress      String?  // آدرس شرکت
+  companyEmail        String   // ایمیل شرکت
+  socialLinks         Json?    // لینک شبکه‌های اجتماعی (مانند فیس‌بوک، اینستاگرام و ...)
+  coursesLinks        Json?    // لینک‌های مربوط به دوره‌ها
+  articlesLinks       Json?    // لینک‌های مربوط به مقالات
+  usefulLinks         Json?    // لینک‌های مفید
+  companyPhone        String?
+  createdAt           DateTime @default(now()) // تاریخ ایجاد
+  updatedAt           DateTime @updatedAt      // تاریخ به‌روزرسانی
+}
+
 enum TicketStatus {
   PENDING  // در انتظار بررسی
   IN_PROGRESS // در حال بررسی

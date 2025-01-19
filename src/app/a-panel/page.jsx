@@ -28,10 +28,10 @@ export default function AdminPage() {
         const data = await response.json();
         setInfos(data);
       } else {
-        toast.showErrorToast(data.error || 'خطایی رخ داده است');
+        throw new Error('Error to fetch infos!');
       }
     } catch (error) {
-      toast.showErrorToast(' خطای غیرمنتظره در باکس اطلاعات');
+      console.error(error);
     } finally {
       setInfosLoading(false);
     }
