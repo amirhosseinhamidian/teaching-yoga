@@ -1,15 +1,18 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
-export async function GET(request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
   try {
-    const userId = request.headers.get('user-id'); // یا از context یا session
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'User ID is required' },
-        { status: 400 },
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session?.user || !session.user?.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = session.user.userId;
 
     // شمارش سوالات خوانده نشده برای کاربر
     const unreadCount = await prismadb.question.count({

@@ -30,16 +30,12 @@ const PaymentCompleteMain = ({ token, status }) => {
   const [paymentDetails, setPaymentDetails] = useState(null);
   const { setUser } = useAuth();
 
-  console.log('token in page ===> ', token);
-  console.log('status in page ===> ', status);
-
   const fetchDetails = async () => {
     try {
       if (!token || isNaN(Number(token))) {
         throw new Error('Invalid token: Token must be a valid number.');
       }
       const data = await fetchPaymentDetails(token);
-      console.log('payment details data ====> ', data);
       setPaymentDetails(data);
     } catch (err) {
       console.error(err);

@@ -53,7 +53,6 @@ const CartMain = () => {
 
   const handleDeleteItem = async () => {
     const updatedCartData = await fetchCartData();
-    console.log(updatedCartData);
     if (updatedCartData) {
       setCartData(updatedCartData);
     } else {

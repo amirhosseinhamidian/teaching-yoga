@@ -1,22 +1,18 @@
 /* eslint-disable no-undef */
 'use client';
-import { useAuth } from '@/contexts/AuthContext';
 import React, { useEffect, useState } from 'react';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import ProfileCourseItem from './ProfileCourseItem';
 import Link from 'next/link';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 
-async function fetchUserCourse(userId) {
+async function fetchUserCourse() {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/user`,
       {
         cache: 'no-store', // Ensures SSR by disabling caching
         method: 'GET',
-        headers: {
-          userId: userId,
-        },
       },
     );
 
@@ -34,14 +30,13 @@ async function fetchUserCourse(userId) {
 }
 
 const SectionCourse = () => {
-  const { user } = useAuth();
   const [courses, setCourses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const getCourseProgress = async () => {
     setIsLoading(true);
     try {
-      const data = await fetchUserCourse(user.id);
+      const data = await fetchUserCourse();
       setCourses(data);
     } catch (err) {
       console.error(err);
@@ -52,7 +47,7 @@ const SectionCourse = () => {
 
   useEffect(() => {
     getCourseProgress();
-  }, [user]);
+  }, []);
 
   return (
     <>

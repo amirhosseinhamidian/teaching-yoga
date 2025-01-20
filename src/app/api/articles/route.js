@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req) {
   try {
-    const url = new URL(req.url);
-    const onlyLastThree = url.searchParams.get('lastThree') === 'true';
+    const { searchParams } = req.nextUrl;
+    const onlyLastThree = searchParams.get('lastThree') === 'true';
     const articles = await prismadb.article.findMany({
       select: {
         id: true,

@@ -28,7 +28,6 @@ export const metadata = {
     ],
     description: 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
     url: process.env.NEXT_PUBLIC_API_BASE_URL,
-    metadataBase: new URL(process.env.NEXT_PUBLIC_API_BASE_URL),
     type: 'website',
     local: 'fa_IR',
   },

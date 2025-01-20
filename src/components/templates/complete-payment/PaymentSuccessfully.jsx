@@ -17,9 +17,6 @@ const PaymentSuccessfully = ({ data, transactionId }) => {
 
   const courses = data.map((cartCourse) => cartCourse.course);
 
-  console.log('courses in success ===> ', courses);
-  console.log(('transaction id in success  ====> ', transactionId));
-
   const handleCourseClick = async (shortAddress) => {
     setShortAddressClick(shortAddress);
     setIsClickLoading(true);

@@ -6,7 +6,7 @@ import React from 'react';
 
 const Hero = () => {
   return (
-    <div className='shadow-accent-custom-bottom bg-surface-light dark:bg-surface-dark'>
+    <div className='bg-surface-light shadow-accent-custom-bottom dark:bg-surface-dark'>
       <div className='container grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 sm:gap-2 xl:grid-cols-3'>
         {/* Left Section */}
         <div className='col-span-1 sm:mb-8 md:pr-10'>

@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
-    const requestHeaders = new Headers(request.headers);
-    const userId = requestHeaders.get('userid');
+    const { searchParams } = request.nextUrl;
+    const userId = searchParams.get('userid');
 
     if (!userId) {
       return NextResponse.json(

@@ -63,7 +63,6 @@ const TermTable = ({
       console.error('Error deleting term:', error.message);
     } finally {
       setShowDeleteModal(false); // بستن مودال حذف
-      console.log('Delete process finished.');
     }
   };
 
@@ -73,7 +72,6 @@ const TermTable = ({
   };
 
   const handleUpdateSuccess = (updatedTerm) => {
-    console.log(updatedTerm);
     onUpdateTerm(updatedTerm);
     setShowUpdateModal(false);
     setTermTemp({});

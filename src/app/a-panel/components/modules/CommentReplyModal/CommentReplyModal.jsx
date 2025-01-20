@@ -54,7 +54,6 @@ const CommentReplyModal = ({ onClose, onSuccess, comment }) => {
       }
 
       const result = await response.json();
-      console.log('Reply submitted successfully ====>', result);
       onSuccess(result);
       toast.showSuccessToast('پاسخ با موفقیت ثبت شد.');
     } catch (error) {

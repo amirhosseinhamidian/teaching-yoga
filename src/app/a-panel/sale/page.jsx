@@ -71,7 +71,7 @@ function SalePage() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales?page=${page}}&perPage=10`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales?page=${page}&perPage=10`,
       );
 
       if (response.ok) {

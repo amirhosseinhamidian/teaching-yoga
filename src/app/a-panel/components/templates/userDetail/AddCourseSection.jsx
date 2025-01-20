@@ -5,22 +5,23 @@ import PropTypes from 'prop-types';
 import UserCourseRow from './UserCourseRow';
 
 async function fetchCourseProgress(userId) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses-progress`,
-    {
-      cache: 'no-store', // Ensures SSR by disabling caching
-      method: 'GET',
-      headers: {
-        userId: userId,
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses-progress?userId=${userId}`,
+      {
+        cache: 'no-store', // Ensures SSR by disabling caching
+        method: 'GET',
       },
-    },
-  );
+    );
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch course data');
+    if (!res.ok) {
+      throw new Error('Failed to fetch course data');
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error(error);
   }
-
-  return res.json();
 }
 
 const AddCourseSection = ({ className, userId }) => {
@@ -39,14 +40,17 @@ const AddCourseSection = ({ className, userId }) => {
     }
   };
 
-  const addCourseHandler = () => {
-    getCourseProgress();
+  const addCourseHandler = async () => {
+    await getCourseProgress();
   };
 
   useEffect(() => {
-    if (userId) {
-      getCourseProgress();
-    }
+    const fetchData = async () => {
+      if (userId) {
+        await getCourseProgress();
+      }
+    };
+    fetchData();
   }, [userId]);
 
   return (

@@ -1,9 +1,11 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-export async function GET(req) {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request) {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = request.nextUrl;
     const address = searchParams.get('shortAddress');
 
     if (!address || address.length < 4) {

@@ -1,17 +1,18 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '../../auth/[...nextauth]/route';
 
-export async function GET(request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET() {
   try {
-    const requestHeaders = new Headers(request.headers);
-    const userId = requestHeaders.get('userid');
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'شناسه کاربر الزامی است' },
-        { status: 400 },
-      );
+    const session = await getServerSession(authOptions);
+    if (!session || !session?.user || !session.user?.userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const userId = session.user.userId;
 
     // بازیابی تمام دوره‌هایی که کاربر در آن‌ها شرکت کرده
     const userCourses = await prismadb.userCourse.findMany({

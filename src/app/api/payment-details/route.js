@@ -2,9 +2,11 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-export const GET = async (req) => {
+export const dynamic = 'force-dynamic';
+
+export const GET = async (request) => {
   try {
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = request.nextUrl;
     const token = searchParams.get('token');
 
     if (!token) {
@@ -21,8 +23,6 @@ export const GET = async (req) => {
         { status: 400 },
       );
     }
-
-    console.log('Payment details ID ===> ', tokenNumber);
 
     const paymentRecord = await prismadb.payment.findUnique({
       where: { id: tokenNumber },
@@ -45,8 +45,6 @@ export const GET = async (req) => {
         },
       },
     });
-
-    console.log('Payment record ===> ', paymentRecord);
 
     if (!paymentRecord) {
       return NextResponse.json(

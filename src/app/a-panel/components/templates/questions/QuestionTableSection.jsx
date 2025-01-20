@@ -25,7 +25,6 @@ const QuestionTableSection = () => {
 
       if (response.ok) {
         const data = await response.json();
-        console.log(data.data);
         setQuestions(data.data.questions);
         setTotalPages(data.data.pagination.totalPages);
       } else {

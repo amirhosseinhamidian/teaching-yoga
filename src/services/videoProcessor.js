@@ -102,7 +102,5 @@ export const processVideo = async (file, isVertical, onProgress) => {
     data: ffmpeg.FS('readFile', masterName),
   });
 
-  console.log('Generated Files:', outputFiles);
-
   return outputFiles;
 };

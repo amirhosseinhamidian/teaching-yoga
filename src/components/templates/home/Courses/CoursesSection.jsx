@@ -7,7 +7,7 @@ import React from 'react';
 const fetchCourseData = async () => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses?lastThree=true`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/last-three`,
       {
         method: 'GET',
         headers: headers(),

@@ -17,12 +17,7 @@ const ProfileMainBox = ({ status }) => {
   useEffect(() => {
     const fetchUnreadQuestions = async () => {
       try {
-        const res = await fetch('/api/questions/unread-count', {
-          headers: {
-            'Content-Type': 'application/json',
-            'user-id': user.id, // ارسال userId به API
-          },
-        });
+        const res = await fetch('/api/questions/unread-count');
 
         if (!res.ok) {
           throw new Error('Failed to fetch unread questions count');

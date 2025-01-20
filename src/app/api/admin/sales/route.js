@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     // استخراج پارامترهای query برای pagination
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10); // صفحه فعلی
     const perPage = parseInt(searchParams.get('perPage') || '10', 10); // تعداد موارد در هر صفحه
 

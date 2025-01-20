@@ -1,10 +1,12 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
     // استخراج Query Parameters
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const termId = parseInt(searchParams.get('termId') || '-1', 10); // فیلتر بر اساس ترم
     const courseId = parseInt(searchParams.get('courseId') || '-1', 10); // فیلتر بر اساس دوره
     const search = searchParams.get('search'); // جستجو در نام جلسات

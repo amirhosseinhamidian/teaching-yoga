@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth';
 import prismadb from '@/libs/prismadb';
 import { authOptions } from '../../auth/[...nextauth]/route';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     // احراز هویت کاربر

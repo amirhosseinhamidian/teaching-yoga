@@ -25,7 +25,7 @@ const SessionTableSection = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions?&page=${page}&perPage=10&courseId=${filterCourse}&termId=${filterTerm}&search=${search || ''}`,
+        `/api/admin/sessions?&page=${page}&perPage=10&courseId=${filterCourse}&termId=${filterTerm}${search ? `&search=${search}` : ''}`,
       );
 
       if (response.ok) {

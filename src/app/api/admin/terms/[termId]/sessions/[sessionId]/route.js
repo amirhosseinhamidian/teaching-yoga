@@ -32,7 +32,6 @@ export async function DELETE(req, { params }) {
     // حذف ویدیو از فضای ذخیره‌سازی لیارا
     if (session.video?.videoKey) {
       const videoKey = session.video.videoKey.replace('/master.m3u8', ''); // مسیر پوشه ویدیویی
-      console.log(`Deleting files in folder: ${videoKey}`);
 
       // لیست کردن فایل‌ها در پوشه
       const listObjectsResponse = await s3
@@ -51,10 +50,9 @@ export async function DELETE(req, { params }) {
 
         // حذف تمام فایل‌ها در پوشه
         await s3.deleteObjects(deleteObjectsParams).promise();
-        console.log('All files in the video folder deleted successfully.');
       }
     } else {
-      console.log('No video found for session');
+      console.error('No video found for session');
     }
 
     // حذف رکوردهای مرتبط در جداول پایگاه داده
@@ -63,7 +61,6 @@ export async function DELETE(req, { params }) {
         await prismadb.sessionVideo.delete({
           where: { id: session.video.id },
         });
-        console.log(`Session video deleted successfully.`);
       } catch (error) {
         console.error('Error deleting session video:', error);
       }

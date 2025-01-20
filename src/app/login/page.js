@@ -59,7 +59,7 @@ const Login = () => {
           }
         }
       } catch (error) {
-        console.log(error);
+        console.error(error);
         toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
       }
     } else {

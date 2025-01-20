@@ -33,7 +33,6 @@ function QuestionPage() {
     const getTicket = async () => {
       const data = await fetchQuestion(questionId);
       setQuestion(data);
-      console.log(data);
       setIsLoading(false);
     };
 

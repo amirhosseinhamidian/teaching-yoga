@@ -35,7 +35,6 @@ function TicketReplyPage() {
     const getTicket = async () => {
       const data = await fetchTicket(ticketId);
       setTicket(data);
-      console.log(data);
       setIsLoading(false);
     };
 

@@ -34,7 +34,6 @@ const SectionPaymentOrder = () => {
     setIsLoading(true);
     try {
       const data = await fetchUserPayment();
-      console.log(data);
       if (data) {
         setPayments(data);
       }

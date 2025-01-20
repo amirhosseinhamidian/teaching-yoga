@@ -405,7 +405,6 @@ export async function DELETE(req) {
 
     // بررسی ترم‌ها و حذف فقط ترم‌هایی که مرتبط با دوره دیگری نیستند
     const cartTermsToDelete = cart.cartTerms.filter((cartTerm) => {
-      console.log('cart term in api delete ====> ', cartTerm);
       const isSharedTerm = cartTerm.term.courseTerms.some(
         (courseTerm) =>
           courseTerm.courseId !== courseId &&

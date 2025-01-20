@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const type = searchParams.get('type'); // تعیین نوع نظرات: 'course' یا 'article'
 
     // شرط‌های فیلتر

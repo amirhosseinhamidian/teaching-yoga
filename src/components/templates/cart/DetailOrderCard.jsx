@@ -80,7 +80,6 @@ const DetailOrderCard = ({ data, className }) => {
 
       // دریافت پاسخ از API
       const data = await response.json();
-      console.log('Courses added successfully:', data);
 
       // استخراج paymentId از پاسخ
       const paymentId = data.paymentId;

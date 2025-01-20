@@ -19,7 +19,6 @@ const CommentSummarySection = ({ className, type }) => {
       );
       if (response.ok) {
         const data = await response.json();
-        console.log(data);
         setCommentInfo(data);
       } else {
         toast.showErrorToast('خطایی رخ داده است');

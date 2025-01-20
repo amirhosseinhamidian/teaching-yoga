@@ -34,7 +34,6 @@ const TicketPageContent = ({ ticketId }) => {
         throw new Error('Failed to Fetch Ticket Data!');
       }
       const data = await response.json();
-      console.log(data);
       setTicket(data);
     } catch (error) {
       console.error('Error Fetch ticket: ', error);
@@ -108,7 +107,6 @@ const TicketPageContent = ({ ticketId }) => {
         throw new Error('Filed to update ticket status');
       }
       const data = await response.json();
-      console.log(data);
       setReplyText('');
       setTicket((prevTicket) => ({
         ...prevTicket,
