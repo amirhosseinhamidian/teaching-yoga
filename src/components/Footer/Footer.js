@@ -76,7 +76,7 @@ export default async function Footer() {
             )}
           </div>
           {/* Second section: Links category 1 */}
-          {footerData?.coursesLinks && (
+          {footerData.coursesLinks.length !== 0 && (
             <div className='mb-4 flex flex-col gap-3 md:mb-0'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 دوره‌ها
@@ -93,7 +93,7 @@ export default async function Footer() {
             </div>
           )}
 
-          {footerData?.articlesLinks && (
+          {footerData.articlesLinks.length !== 0 && (
             <div className='mb-4 flex flex-col gap-3 md:mb-0'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 مقالات
@@ -110,7 +110,7 @@ export default async function Footer() {
             </div>
           )}
 
-          {footerData?.usefulLinks && (
+          {footerData.usefulLinks.length !== 0 && (
             <div className='flex flex-col gap-3'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 لینک‌های مفید

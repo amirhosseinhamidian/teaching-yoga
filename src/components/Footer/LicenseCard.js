@@ -14,6 +14,7 @@ const LicenseCard = ({ licenseLogo, title, path }) => {
           alt={title || 'license logo'}
           width={70}
           height={70}
+          className='bg-transparent'
         />
       </div>
     </Link>

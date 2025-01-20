@@ -14,7 +14,22 @@ import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
 export const metadata = {
   title: 'سمانه یوگا',
   description: 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
-  keywords: ['یوگا', 'آموزش یوگا', 'دوره‌های یوگا', 'سمانه یوگا'],
+  keywords: [
+    'یوگا',
+    'آموزش یوگا',
+    'دوره‌های یوگا',
+    'سمانه یوگا',
+    'یوگا برای مبتدیان',
+    'آموزش یوگا آنلاین',
+    'بهترین دوره‌های یوگا',
+    'کلاس یوگا در خانه',
+    'یوگا چیست؟',
+    'فواید یوگا برای سلامتی',
+    'مدیتیشن و یوگا',
+  ],
+  icons: {
+    icon: '/favicon.ico',
+  },
   openGraph: {
     siteName: 'سمانه یوگا',
     title: 'سمانه یوگا',

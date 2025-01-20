@@ -425,6 +425,17 @@ model SiteInfo {
   updatedAt           DateTime @updatedAt      // تاریخ به‌روزرسانی
 }
 
+model SeoSetting {
+  id          Int      @id @default(autoincrement())
+  page        String   
+  key         String
+  value       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([page, key]) // ترکیب کلید یکتا برای جلوگیری از تکرار
+}
+
 enum TicketStatus {
   PENDING  // در انتظار بررسی
   IN_PROGRESS // در حال بررسی

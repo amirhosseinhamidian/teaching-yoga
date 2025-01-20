@@ -47,7 +47,7 @@ const Newsletter = () => {
   };
   return (
     <div
-      className='container mb-16 mt-4 sm:px-8 md:mb-24 md:mt-8 md:px-16 xl:px-56'
+      className='container mb-16 mt-10 sm:px-8 md:mb-24 md:mt-20 md:px-16 xl:px-56'
       data-aos='fade-up'
     >
       <div className='rounded-ee-[64px] rounded-ss-[64px] bg-surface-light p-6 text-center shadow dark:bg-surface-dark'>
