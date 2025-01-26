@@ -7,6 +7,13 @@ import Image from 'next/image';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import Link from 'next/link';
 
+export async function generateMetadata() {
+  return {
+    title: 'صفحه ای یافت نشد!',
+    robots: 'noindex, nofollow',
+  };
+}
+
 async function NotFound() {
   const session = await getServerSession(authOptions);
 

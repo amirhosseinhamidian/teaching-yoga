@@ -5,6 +5,13 @@ import CreateTicket from '@/components/templates/ticket/CreateTicket';
 import { getServerSession } from 'next-auth';
 import React from 'react';
 
+export async function generateMetadata() {
+  return {
+    title: 'ایجاد تیکت جدید',
+    robots: 'noindex, nofollow',
+  };
+}
+
 async function TicketCreatePage() {
   const session = await getServerSession(authOptions);
 

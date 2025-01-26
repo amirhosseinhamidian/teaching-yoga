@@ -10,6 +10,35 @@ import UserInformationCard from '@/components/templates/payment/UserInformationC
 import UserOrderCard from '@/components/templates/payment/UserOrderCard';
 import { headers } from 'next/headers';
 
+export async function generateMetadata() {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/payment`,
+    {
+      method: 'GET',
+      headers: headers(),
+    },
+  );
+
+  const result = await res.json();
+
+  // اطلاعات پیش‌فرض
+  const defaultSeoData = {
+    title: 'پرداخت | سمانه یوگا',
+    robots: 'noindex, nofollow',
+  };
+
+  if (!result.success || !result.data) {
+    return defaultSeoData;
+  }
+
+  const seoData = result.data;
+
+  return {
+    title: seoData?.siteTitle || defaultSeoData.title,
+    robots: seoData?.robotsTag || defaultSeoData.robots,
+  };
+}
+
 async function fetchCartData() {
   try {
     const res = await fetch(

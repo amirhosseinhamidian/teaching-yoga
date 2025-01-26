@@ -4,7 +4,7 @@ import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import TextArea from '@/components/Ui/TextArea/TextArea';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FaInstagram } from 'react-icons/fa6';
 import { RiTelegram2Fill } from 'react-icons/ri';
 import { RiYoutubeLine } from 'react-icons/ri';
@@ -14,6 +14,10 @@ import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { FiPlus } from 'react-icons/fi';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
 import FooterAddedItem from './FooterAddedItem';
+import Image from 'next/image';
+import { FiEdit2 } from 'react-icons/fi';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
+import { MdOutlineAddAPhoto } from 'react-icons/md';
 
 function SettingContent() {
   const { isDark } = useTheme();
@@ -37,6 +41,8 @@ function SettingContent() {
   const [usefulLinkTitle, setUsefulLinkTitle] = useState('');
   const [usefulLink, setUsefulLink] = useState('');
   const [usefulLinksSelected, setUsefulLinksSelected] = useState([]);
+  const [heroImageUrl, setHeroImageUrl] = useState('');
+  const [imageUploadLoading, setImageUploadLoading] = useState(false);
   const [errorMessages, setErrorMessages] = useState({
     descriptionFooter: '',
     descriptionAboutUs: '',
@@ -45,6 +51,7 @@ function SettingContent() {
     telegramLink: '',
     youtubeLink: '',
   });
+  const fileInputRef = useRef(null);
 
   const fetchInfosData = async () => {
     try {
@@ -65,6 +72,7 @@ function SettingContent() {
       setCoursesFooterSelected(data?.coursesLinks || []);
       setArticlesFooterSelected(data?.articlesLinks || []);
       setUsefulLinksSelected(data?.usefulLinks || []);
+      setHeroImageUrl(data?.heroImage || '');
     } catch (error) {
       console.error(error);
     }
@@ -170,6 +178,52 @@ function SettingContent() {
     );
   };
 
+  const getImageSrcWithCacheBypass = () => {
+    if (!heroImageUrl) return '';
+    return `${heroImageUrl}?timestamp=${new Date().getTime()}`;
+  };
+
+  const handleImageClick = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+  const handleImageChange = async (event) => {
+    setImageUploadLoading(true);
+    const file = event.target.files[0];
+    if (file) {
+      // شروع فرآیند آپلود
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folderPath', 'images/home');
+      formData.append('fileName', 'hero');
+
+      try {
+        // آپلود فایل (جایگزین کنید با API خودتان)
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/image`,
+          {
+            method: 'POST',
+            body: formData,
+          },
+        );
+
+        if (response.ok) {
+          const imageUrl = await response.json();
+          setHeroImageUrl(imageUrl.fileUrl);
+          toast.showSuccessToast('تصویر با موفقیت آپلود شد');
+        } else {
+          toast.showErrorToast.error('خطا در آپلود تصویر');
+        }
+      } catch (error) {
+        toast.showErrorToast('خطا در آپلود:', error);
+        console.error('avatar upload error: ', error);
+      } finally {
+        setImageUploadLoading(false);
+      }
+    }
+  };
+
   const validateInputs = () => {
     let errors = {};
 
@@ -187,6 +241,10 @@ function SettingContent() {
 
     if (descriptionAboutUs.trim().length < 50) {
       errors.descriptionAboutUs = 'توضیحات نمی‌تواند کمتر از ۵۰ کارکتر باشد.';
+    }
+
+    if (!heroImageUrl.trim()) {
+      errors.heroImageUrl = 'تصویری برای قسمت هیرو انتخاب کنید.';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -256,6 +314,7 @@ function SettingContent() {
         coursesLinks: courseFooterSelected,
         articlesLinks: articlesFooterSelected,
         usefulLinks: usefulLinksSelected,
+        heroImage: heroImageUrl,
       };
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`,
@@ -291,6 +350,72 @@ function SettingContent() {
         >
           ثبت تغییرات
         </Button>
+      </div>
+      <div className='mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2'>
+        <div className='flex gap-2 self-start'>
+          <div>
+            <input
+              type='file'
+              ref={fileInputRef}
+              className='hidden'
+              accept='image/*'
+              onChange={handleImageChange}
+            />
+            <label className='mb-2 mr-4 block text-sm font-medium text-text-light dark:text-text-dark'>
+              تصویر هیرو
+            </label>
+            {heroImageUrl ? (
+              <div onClick={handleImageClick} className='relative'>
+                <Image
+                  src={getImageSrcWithCacheBypass()}
+                  alt='تصویر هیرو سکشن'
+                  width={800}
+                  height={600}
+                  className={`h-28 w-44 rounded-xl object-cover xs:h-40 xs:w-72 md:cursor-pointer lg:h-56 lg:w-96 ${errorMessages.heroImageUrl ? 'border border-red' : ''}`}
+                />
+                <div
+                  className={`absolute left-2 top-2 flex rounded-xl bg-black bg-opacity-50 p-2 md:cursor-pointer ${imageUploadLoading ? 'hidden' : ''}`}
+                >
+                  <FiEdit2 className='text-white' />
+                </div>
+                {imageUploadLoading && (
+                  <div className='absolute bottom-0 left-0 right-0 top-0 flex h-full w-full items-center justify-center rounded-xl bg-black bg-opacity-25'>
+                    <AiOutlineLoading3Quarters
+                      size={34}
+                      className='animate-spin text-secondary'
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div
+                className={`flex h-28 w-44 items-center justify-center rounded-xl bg-surface-light xs:h-40 xs:w-72 lg:h-56 lg:w-96 dark:bg-surface-dark ${errorMessages.heroImageUrl ? 'border border-red' : ''}`}
+              >
+                {imageUploadLoading ? (
+                  <AiOutlineLoading3Quarters
+                    size={34}
+                    className='animate-spin text-secondary'
+                  />
+                ) : (
+                  <div
+                    className='flex h-full w-full items-center justify-center gap-2 px-4 md:cursor-pointer'
+                    onClick={handleImageClick}
+                  >
+                    <MdOutlineAddAPhoto size={34} />
+                    <p className='text-xs md:text-sm'>
+                      برای افزودن تصویر کلیک کنید
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {errorMessages.heroImageUrl && (
+              <p className={`mt-1 text-xs text-red`}>
+                *{errorMessages.heroImageUrl}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
       <div className='mt-8'>
         <TextArea

@@ -1,22 +1,10 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db  {
+datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  USER
-  ADMIN
-  MANAGER
 }
 
 model Account {
@@ -39,30 +27,362 @@ model Account {
 }
 
 model User {
-  id String             @id @unique @default(uuid())
-  firstname String?
-  lastname String?
-  username String       @unique
-  phone String    @unique
-  email String?   @unique
-  role Role             @default(USER)
-  avatar String?
-  sessionProgress SessionProgress[]   @relation("SessionProgress")
+  id              String            @id @unique @default(uuid())
+  firstname       String?
+  lastname        String?
+  username        String            @unique
+  role            Role              @default(USER)
+  createAt        DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  phone           String            @unique
+  avatar          String?
+  email           String?           @unique
+  accounts        Account[]
+  carts           Cart[]            @relation("UserCarts")
+  comments        Comment[]
+  instructor      Instructor?
+  payments        Payment[]         @relation("UserToPayments")
+  questions       Question[]
+  sessionProgress SessionProgress[] @relation("SessionProgress")
+  tickets         Ticket[]
+  ticketReplies   TicketReply[]
+  courses         UserCourse[]      @relation("UserCourses")
+  terms           UserTerm[]        @relation("UserTerms")
+}
 
-  courses        UserCourse[]     @relation("UserCourses")
+model Course {
+  id               Int          @id @unique @default(autoincrement())
+  title            String
+  subtitle         String
+  description      String
+  cover            String
+  isHighPriority   Boolean      @default(false)
+  shortAddress     String       @unique
+  sessionCount     Int          @default(0)
+  level            CourseLevel
+  participants     Int          @default(0)
+  rating           Float?       @default(5.0)
+  status           CourseStatus
+  instructorId     Int
+  introVideoUrl    String?
+  createAt         DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  shortDescription String?
+  activeStatus     Boolean      @default(false)
+  duration         Int          @default(0)
+  price            Int?
+  cartCourses      CartCourse[] @relation("CourseToCartCourses")
+  comments         Comment[]
+  instructor       Instructor   @relation(fields: [instructorId], references: [id])
+  courseTerms      CourseTerm[] @relation("CourseToTerms")
+  questions        Question[]
+  tickets          Ticket[]
+  users            UserCourse[] @relation("UserCourses")
+}
 
-  createAt DateTime     @default(now())
+model UserCourse {
+  id          Int            @id @default(autoincrement())
+  userId      String
+  courseId    Int
+  purchasedAt DateTime       @default(now())
+  status      PurchaseStatus @default(ACTIVE)
+  course      Course         @relation("UserCourses", fields: [courseId], references: [id])
+  user        User           @relation("UserCourses", fields: [userId], references: [id])
+
+  @@unique([userId, courseId])
+}
+
+model Term {
+  id          Int          @id @unique @default(autoincrement())
+  name        String
+  createAt    DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  duration    Int          @default(0)
+  subtitle    String?
+  discount    Int?         @default(0)
+  price       Int          @default(0)
+  cartTerms   CartTerm[]   @relation("CartToTerms")
+  courseTerms CourseTerm[] @relation("TermToCourses")
+  sessions    Session[]    @relation("TermToSessions")
+  userTerms   UserTerm[]   @relation("UserTerms")
+}
+
+model CourseTerm {
+  id         Int      @id @unique @default(autoincrement())
+  courseId   Int
+  termId     Int
+  isOptional Boolean  @default(false)
+  createAt   DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  course     Course   @relation("CourseToTerms", fields: [courseId], references: [id])
+  term       Term     @relation("TermToCourses", fields: [termId], references: [id])
+
+  @@unique([courseId, termId])
+}
+
+model Session {
+  id              String            @id @unique @default(uuid())
+  name            String
+  termId          Int
+  isFree          Boolean           @default(false)
+  createAt        DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  duration        Int
+  videoId         Int?              @unique
+  order           Int               @default(0)
+  isActive        Boolean           @default(false)
+  questions       Question[]
+  term            Term              @relation("TermToSessions", fields: [termId], references: [id])
+  video           SessionVideo?     @relation("SessionToVideo", fields: [videoId], references: [id])
+  sessionProgress SessionProgress[] @relation("SessionProgress")
+}
+
+model SessionVideo {
+  id          Int              @id @unique @default(autoincrement())
+  videoKey    String
+  accessLevel VideoAccessLevel @default(REGISTERED)
+  status      VideoStatus      @default(AVAILABLE)
+  createAt    DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  session     Session?         @relation("SessionToVideo")
+}
+
+model SessionProgress {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  sessionId   String
+  isCompleted Boolean  @default(false)
+  createAt    DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  session     Session  @relation("SessionProgress", fields: [sessionId], references: [id])
+  user        User     @relation("SessionProgress", fields: [userId], references: [id])
+
+  @@unique([userId, sessionId])
+}
+
+model Question {
+  id           String    @id @default(uuid())
+  userId       String
+  courseId     Int
+  sessionId    String
+  questionText String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  answerText   String?
+  answeredAt   DateTime?
+  isAnswered   Boolean   @default(false)
+  isReadByUser Boolean   @default(false)
+  course       Course    @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  session      Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Instructor {
+  id        Int      @id @unique @default(autoincrement())
+  userId    String   @unique
+  describe  String?
+  bio       String?
+  skills    String?
+  createAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  courses   Course[]
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model UserTerm {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  termId      Int
+  purchasedAt DateTime @default(now())
+  term        Term     @relation("UserTerms", fields: [termId], references: [id])
+  user        User     @relation("UserTerms", fields: [userId], references: [id])
+
+  @@unique([userId, termId])
+}
+
+model Cart {
+  id            Int          @id @unique @default(autoincrement())
+  userId        String
+  status        CartStatus   @default(PENDING)
+  totalPrice    Int?
+  totalDiscount Int?
+  createAt      DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  user          User         @relation("UserCarts", fields: [userId], references: [id])
+  cartCourses   CartCourse[] @relation("CartToCourses")
+  cartTerms     CartTerm[]   @relation("CartToCartTerms")
+  payment       Payment?     @relation("CartToPayment")
+}
+
+model CartCourse {
+  id       Int    @id @unique @default(autoincrement())
+  cartId   Int
+  courseId Int
+  cart     Cart   @relation("CartToCourses", fields: [cartId], references: [id])
+  course   Course @relation("CourseToCartCourses", fields: [courseId], references: [id])
+}
+
+model CartTerm {
+  id        Int      @id @unique @default(autoincrement())
+  cartId    Int
+  termId    Int
+  price     Int
+  discount  Int?
+  createAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart      Cart     @relation("CartToCartTerms", fields: [cartId], references: [id])
+  term      Term     @relation("CartToTerms", fields: [termId], references: [id])
+
+  @@unique([cartId, termId])
+}
+
+model Payment {
+  id            Int           @id @unique @default(autoincrement())
+  userId        String
+  cartId        Int           @unique
+  amount        Int
+  status        PaymentStatus
+  method        PaymentMethod
+  authority     String?       @unique
+  createAt      DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  transactionId BigInt?
+  cart          Cart          @relation("CartToPayment", fields: [cartId], references: [id])
+  user          User          @relation("UserToPayments", fields: [userId], references: [id])
+}
+
+model Comment {
+  id        Int           @id @default(autoincrement())
+  content   String
+  userId    String
+  courseId  Int?
+  articleId Int?
+  parentId  Int?
+  createAt  DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  status    CommentStatus @default(PENDING)
+  article   Article?      @relation(fields: [articleId], references: [id])
+  course    Course?       @relation(fields: [courseId], references: [id])
+  parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]     @relation("CommentReplies")
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+model Article {
+  id        Int       @id @default(autoincrement())
+  title     String
+  content   String
+  createAt  DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  cover     String
+  subtitle  String
+  comments  Comment[]
+}
+
+model VerificationCode {
+  id        Int      @id @default(autoincrement())
+  phone     String   @unique
+  expiresAt DateTime
+  code      Int
+}
+
+model FAQ {
+  id        Int         @id @default(autoincrement())
+  question  String
+  answer    String
+  createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
+  category  CategoryFAQ @default(GENERAL)
+}
 
-  accounts      Account[]
-  instructor    Instructor?
-  comments      Comment[]
-  questions     Question[]
-  terms         UserTerm[]      @relation("UserTerms")
-  carts         Cart[]          @relation("UserCarts")
-  payments       Payment[]       @relation("UserToPayments")
-  tickets       Ticket[] 
-  ticketReplies  TicketReply[] 
+model Newsletter {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  userId    String?
+  createdAt DateTime @default(now())
+
+  @@index([email])
+}
+
+model Ticket {
+  title         String
+  description   String
+  status        TicketStatus  @default(PENDING)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  userId        String
+  courseId      Int?
+  id            Int           @id @default(autoincrement())
+  course        Course?       @relation(fields: [courseId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  ticketReplies TicketReply[]
+}
+
+model TicketReply {
+  content   String
+  createdAt DateTime      @default(now())
+  userId    String
+  id        Int           @id @default(autoincrement())
+  ticketId  Int
+  parentId  Int?
+  parent    TicketReply?  @relation("ParentReply", fields: [parentId], references: [id])
+  children  TicketReply[] @relation("ParentReply")
+  ticket    Ticket        @relation(fields: [ticketId], references: [id])
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+model VisitLog {
+  id        Int      @id @default(autoincrement())
+  ipAddress String
+  userAgent String
+  pageUrl   String
+  referrer  String?
+  visitedAt DateTime @default(now())
+}
+
+model SiteInfo {
+  id               Int      @id @default(autoincrement())
+  shortDescription String
+  fullDescription  String
+  companyAddress   String?
+  companyEmail     String
+  socialLinks      Json?
+  heroImage        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  articlesLinks    Json?
+  coursesLinks     Json?
+  usefulLinks      Json?
+  companyPhone     String?
+}
+
+model SeoSetting {
+  id        Int      @id @default(autoincrement())
+  page      String
+  key       String
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([page, key])
+}
+
+model SitemapSetting {
+  id          Int      @id @default(autoincrement()) // شناسه یکتا
+  section     String   // نام بخش (مانند "homepage", "blog", "courses")
+  shortAddress String?
+  changefreq  String   // فرکانس تغییر (مانند "daily", "weekly", "monthly")
+  priority    Float    // اولویت صفحه (مقدار بین 0.1 تا 1.0)
+  createdAt   DateTime @default(now())              // تاریخ ایجاد
+  updatedAt   DateTime @updatedAt                  // تاریخ آخرین بروزرسانی
+
+  @@unique([section]) // جلوگیری از ثبت مقادیر تکراری برای هر بخش و نوع
+}
+
+enum Role {
+  USER
+  ADMIN
+  MANAGER
 }
 
 enum CourseLevel {
@@ -78,219 +398,10 @@ enum CourseStatus {
   IN_PROGRESS
 }
 
-model Course {
-  id               Int           @id @unique @default(autoincrement())
-  title            String
-  subtitle         String
-  shortDescription String?
-  description      String
-  cover            String
-  price            Int?        // قیمت پایه (در صورت نیاز)
-  isHighPriority   Boolean       @default(false)
-  shortAddress     String        @unique
-  sessionCount     Int           @default(0)
-  duration         Int           @default(0)
-  level            CourseLevel
-  participants     Int           @default(0)
-  rating           Float?        @default(5.0)
-  status           CourseStatus
-  activeStatus     Boolean       @default(false)
-  instructorId     Int
-  instructor       Instructor    @relation(fields: [instructorId], references: [id])
-  introVideoUrl    String?
-  courseTerms      CourseTerm[]  @relation("CourseToTerms") // ارتباط با ترم‌ها
-  cartCourses      CartCourse[] @relation("CourseToCartCourses")
-  comments         Comment[]
-  questions        Question[]
-  users            UserCourse[]  @relation("UserCourses")
-  tickets          Ticket[]
-  createAt         DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-}
-
-
-
-model UserCourse {
-  id           Int       @id @default(autoincrement())
-  userId       String
-  courseId     Int
-  purchasedAt  DateTime  @default(now())
-  status       PurchaseStatus @default(ACTIVE)
-
-  user         User      @relation("UserCourses", fields: [userId], references: [id])
-  course       Course    @relation("UserCourses", fields: [courseId], references: [id])
-
-  @@unique([userId, courseId]) // Prevent repeated purchase of a course by a user
-}
-
 enum PurchaseStatus {
   ACTIVE
   CANCELLED
   EXPIRED
-}
-
-model Term {
-  id            Int       @id @unique @default(autoincrement())
-  name          String
-  subtitle      String?
-  duration      Int       @default(0)
-  price         Int     @default(0)  // قیمت ترم
-  discount      Int?    @default(0)  // درصد تخفیف ترم
-  sessions      Session[] @relation("TermToSessions") // جلسات ترم
-  courseTerms   CourseTerm[] @relation("TermToCourses") // ارتباط با دوره‌ها
-  cartTerms     CartTerm[] @relation("CartToTerms")
-  userTerms     UserTerm[]    @relation("UserTerms")
-  createAt      DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-}
-model CourseTerm {
-  id           Int      @id @unique @default(autoincrement())
-  courseId     Int
-  termId       Int
-  isOptional   Boolean  @default(false) // نشان‌دهنده اختیاری بودن ترم در دوره
-  course       Course   @relation("CourseToTerms", fields: [courseId], references: [id])
-  term         Term     @relation("TermToCourses", fields: [termId], references: [id])
-  createAt     DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@unique([courseId, termId]) // جلوگیری از ارتباط تکراری یک ترم با یک دوره
-}
-model Session {
-  id             String           @id @unique @default(uuid())
-  name           String
-  duration       Int
-  termId         Int
-  order          Int              @default(0)
-  term           Term             @relation("TermToSessions", fields: [termId], references: [id])
-  isFree         Boolean          @default(false)
-  isActive       Boolean          @default(false)
-  video          SessionVideo?    @relation("SessionToVideo", fields: [videoId], references: [id])
-  videoId        Int?             @unique
-  sessionProgress SessionProgress[] @relation("SessionProgress")
-  questions      Question[]
-  createAt       DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-}
-
-model SessionVideo {
-  id            Int              @id @unique @default(autoincrement())
-  videoKey      String            // .m3u8
-  accessLevel   VideoAccessLevel @default(REGISTERED) 
-  status        VideoStatus      @default(AVAILABLE)
-  session       Session?         @relation("SessionToVideo")
-  createAt      DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-}
-
-
-model SessionProgress {
-  id                  Int          @id @default(autoincrement())
-  userId              String       // ID of the user
-  sessionId           String       // ID of the session
-  isCompleted         Boolean      @default(false) // Flag indicating if the session is marked as completed by the user
-  
-  // Relations
-  user                User         @relation("SessionProgress", fields: [userId], references: [id])
-  session             Session      @relation("SessionProgress", fields: [sessionId], references: [id])
-
-  createAt            DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-
-  @@unique([userId, sessionId]) // Ensures each user has only one progress entry per session
-}
-model Question {
-  id            String   @id @default(uuid())             
-  userId        String                                   
-  courseId      Int                                       
-  sessionId     String                                   
-  questionText  String   @db.Text                         
-  answerText    String?  @db.Text                         
-  isAnswered    Boolean  @default(false)                  
-  isReadByUser  Boolean  @default(false)                 
-  answeredAt    DateTime?                                
-  createdAt     DateTime @default(now())                 
-  updatedAt     DateTime @updatedAt                       
-
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)  
-  course        Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)  
-  session       Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)  
-}
-
-model Instructor {
-  id          Int      @id @unique @default(autoincrement())
-  userId      String   @unique
-  user        User     @relation(fields: [userId], references: [id])
-  describe    String?
-  bio         String?
-  skills      String?
-
-  createAt    DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  courses     Course[] 
-}
-
-model UserTerm {
-  id           Int       @id @default(autoincrement())
-  userId       String
-  termId       Int
-  purchasedAt  DateTime  @default(now())
-
-  user         User      @relation("UserTerms", fields: [userId], references: [id])
-  term         Term      @relation("UserTerms", fields: [termId], references: [id])
-
-  @@unique([userId, termId])
-}
-
-model Cart {
-  id              Int        @id @unique @default(autoincrement())
-  userId          String
-  status          CartStatus      @default(PENDING)
-  user            User       @relation("UserCarts", fields: [userId], references: [id])
-  payment         Payment?     @relation("CartToPayment") 
-  cartTerms       CartTerm[] @relation("CartToCartTerms")
-  cartCourses     CartCourse[] @relation("CartToCourses")
-  totalPrice      Int?
-  totalDiscount   Int?
-  createAt        DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-}
-
-model CartCourse {
-  id        Int       @id @unique @default(autoincrement())
-  cartId    Int
-  courseId  Int
-  cart      Cart      @relation("CartToCourses", fields: [cartId], references: [id])
-  course    Course    @relation("CourseToCartCourses", fields: [courseId], references: [id])
-}
-
-model CartTerm {
-  id         Int      @id @unique @default(autoincrement())
-  cartId     Int      
-  termId     Int
-  price      Int      // قیمت نهایی ترم در سبد خرید
-  discount   Int?     // تخفیف اعمال‌شده روی ترم
-  cart       Cart     @relation("CartToCartTerms", fields: [cartId], references: [id])
-  term       Term     @relation("CartToTerms", fields: [termId], references: [id])
-  createAt   DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@unique([cartId, termId]) // جلوگیری از تکرار ترم در یک سبد خرید
-}
-
-model Payment {
-  id              Int      @id @unique @default(autoincrement())
-  userId          String
-  cartId          Int     @unique 
-  amount          Int      // مبلغ کل پرداخت‌شده
-  status          PaymentStatus
-  method          PaymentMethod
-  transactionId   BigInt?
-  authority       String?   @unique
-  user            User     @relation("UserToPayments", fields: [userId], references: [id])
-  cart            Cart     @relation("CartToPayment", fields: [cartId], references: [id])
-  createAt        DateTime @default(now())
-  updatedAt       DateTime @updatedAt
 }
 
 enum PaymentStatus {
@@ -313,153 +424,32 @@ enum CartStatus {
 }
 
 enum CommentStatus {
-  PENDING 
-  APPROVED 
-  REJECTED 
-}
-
-model Comment {
-  id         Int      @id @default(autoincrement())
-  content    String
-  userId     String
-  courseId   Int?     
-  articleId  Int?    
-  parentId   Int?
-  status     CommentStatus @default(PENDING)     
-  replies    Comment[] @relation("CommentReplies")
-  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  
-  user       User     @relation(fields: [userId], references: [id]) 
-  course     Course?  @relation(fields: [courseId], references: [id]) 
-  article    Article? @relation(fields: [articleId], references: [id]) 
-
-  createAt   DateTime     @default(now())
-  updatedAt  DateTime    @updatedAt
-}
-
-model Article {
-  id          Int       @id @default(autoincrement())
-  title       String
-  content     String
-  subtitle    String
-  comments    Comment[] 
-  cover       String
-  createAt    DateTime     @default(now())
-  updatedAt   DateTime    @updatedAt
-}
-
-model VerificationCode {
-  id            Int      @id @default(autoincrement())
-  phone         String   @unique
-  code          Int
-  expiresAt     DateTime
-}
-
-model FAQ {
-  id        Int      @id @default(autoincrement()) 
-  question  String  
-  answer    String  
-  category  CategoryFAQ @default(GENERAL) // دسته‌بندی سوالات
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt 
-}
-
-
-model Newsletter {
-  id        Int   @id @default(autoincrement())
-  email     String   @unique             
-  userId    String?                    
-  createdAt DateTime @default(now())
-
-  @@index([email]) 
-}
-
-model Ticket {
-  id            Int   @id @default(autoincrement())
-  title         String  
-  description   String   
-  status        TicketStatus @default(PENDING)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  userId        String  
-  user          User     @relation(fields: [userId], references: [id]) 
-  ticketReplies TicketReply[] 
-  courseId      Int?      
-  course        Course?      @relation(fields: [courseId], references: [id])
-}
-
-model TicketReply {
-  id        Int   @id @default(autoincrement())
-  content   String   
-  createdAt DateTime @default(now())
-  userId    String  
-  user      User     @relation(fields: [userId], references: [id]) 
-  ticketId  Int   // شناسه تیکت
-  ticket    Ticket   @relation(fields: [ticketId], references: [id])
-  parentId  Int?  
-  parent    TicketReply?   @relation("ParentReply", fields: [parentId], references: [id]) 
-  children  TicketReply[]  @relation("ParentReply") 
-}
-
-model VisitLog {
-  id          Int       @id @default(autoincrement())
-  ipAddress   String    // آدرس IP بازدیدکننده
-  userAgent   String    // مرورگر یا دستگاه بازدیدکننده
-  pageUrl     String    // صفحه‌ای که بازدید شده
-  referrer    String?   // آدرس صفحه‌ای که از آن ارجاع شده است (در صورت وجود)
-  visitedAt   DateTime  @default(now()) // تاریخ و زمان بازدید
-}
-
-model SiteInfo {
-  id                  Int      @id @default(autoincrement())
-  shortDescription    String   // توضیحات مختصر سایت برای فوتر
-  fullDescription     String   // توضیحات جامع سایت
-  companyAddress      String?  // آدرس شرکت
-  companyEmail        String   // ایمیل شرکت
-  socialLinks         Json?    // لینک شبکه‌های اجتماعی (مانند فیس‌بوک، اینستاگرام و ...)
-  coursesLinks        Json?    // لینک‌های مربوط به دوره‌ها
-  articlesLinks       Json?    // لینک‌های مربوط به مقالات
-  usefulLinks         Json?    // لینک‌های مفید
-  companyPhone        String?
-  createdAt           DateTime @default(now()) // تاریخ ایجاد
-  updatedAt           DateTime @updatedAt      // تاریخ به‌روزرسانی
-}
-
-model SeoSetting {
-  id          Int      @id @default(autoincrement())
-  page        String   
-  key         String
-  value       String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@unique([page, key]) // ترکیب کلید یکتا برای جلوگیری از تکرار
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum TicketStatus {
-  PENDING  // در انتظار بررسی
-  IN_PROGRESS // در حال بررسی
+  PENDING
+  IN_PROGRESS
+  CLOSED
   ANSWERED
   OPEN
-  CLOSED   // بسته شده
 }
 
 enum CategoryFAQ {
-  COURSE        // سوالات متداول مربوط به دوره‌ها
-  ONLINE_CLASS  // سوالات متداول مربوط به کلاس‌های آنلاین
-  GENERAL       // سوالات متداول عمومی
+  COURSE
+  ONLINE_CLASS
+  GENERAL
 }
 
-// Enum for video access levels
 enum VideoAccessLevel {
-  PUBLIC       // Video is accessible to everyone
-  REGISTERED   // Only registered users can view
-  PURCHASED     // Only users who have purchased the course can view
+  PUBLIC
+  REGISTERED
+  PURCHASED
 }
 
-// Enum for video status
 enum VideoStatus {
-  AVAILABLE    // Video is available for viewing
-  UNAVAILABLE   // Video is not currently available
+  AVAILABLE
+  UNAVAILABLE
 }
-

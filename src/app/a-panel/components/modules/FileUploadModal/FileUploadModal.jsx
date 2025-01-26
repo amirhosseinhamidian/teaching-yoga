@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoClose } from 'react-icons/io5';
 import Button from '@/components/Ui/Button/Button';
@@ -22,6 +22,8 @@ const FileUploadModal = ({
   const [currentStage, setCurrentStage] = useState('processing'); // وضعیت مرحله‌ای
   const [isComplete, setIsComplete] = useState(false);
   const fileInputRef = useRef(null);
+  const pollingRef = useRef(null);
+  const controller = new AbortController();
 
   const handleFileChange = (e) => {
     const uploadedFile = e.target.files[0];
@@ -51,27 +53,36 @@ const FileUploadModal = ({
       );
       const data = await response.json();
       setProgress(data.progress);
-
-      if (data.progress >= 100) {
-        setIsComplete(true);
-        setIsLoading(false); // اتمام آپلود
-      }
     } catch (error) {
       console.error('Error fetching upload progress:', error);
     }
   };
 
   const startPolling = () => {
-    const interval = setInterval(() => {
+    if (pollingRef.current) return;
+    pollingRef.current = setInterval(() => {
       if (!isComplete) {
         fetchProgress();
       } else {
-        clearInterval(interval); // توقف پولینگ
+        clearInterval(pollingRef.current);
+        pollingRef.current = null; // ریست پولینگ
       }
     }, 5000);
-
-    return () => clearInterval(interval);
   };
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      controller.abort();
+    };
+  }, []);
 
   const handleUpload = async () => {
     if (!file) return;
@@ -98,7 +109,8 @@ const FileUploadModal = ({
     } finally {
       if (!isVideo) {
         setIsLoading(false);
-        setProgress(0); // اتمام آپلود
+        setProgress(100); // اتمام آپلود
+        setIsComplete(true);
       }
     }
   };

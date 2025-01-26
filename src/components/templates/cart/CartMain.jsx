@@ -71,7 +71,7 @@ const CartMain = () => {
         </div>
       ) : (
         <>
-          {cartData?.cart?.courses.length !== 0 ? (
+          {cartData && cartData?.cart?.courses.length !== 0 ? (
             <>
               <PageCheckoutTitle isSuccess={true} icon={BsHandbag}>
                 سبد خرید

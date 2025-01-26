@@ -95,5 +95,10 @@ export function getShamsiDate(dateString) {
 
 export function getTimeFromDate(dateString) {
   const date = new Date(dateString);
-  return `${date.getHours()}:${date.getMinutes()}`;
+
+  // گرفتن ساعت و دقیقه با پیشوند صفر در صورت نیاز
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${hours}:${minutes}`;
 }

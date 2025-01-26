@@ -34,6 +34,21 @@ const nextConfig = {
       },
     ];
   },
+
+  async rewrites() {
+    return [
+      // مسیر برای فایل sitemap.xml
+      {
+        source: '/sitemap.xml',
+        destination: '/api/admin/seo/sitemap',
+      },
+      // مسیر برای فایل robots.txt
+      {
+        source: '/robots.txt',
+        destination: '/api/admin/seo/sitemap/robots',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

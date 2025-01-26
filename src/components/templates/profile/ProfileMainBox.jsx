@@ -33,7 +33,7 @@ const ProfileMainBox = ({ status }) => {
     fetchUnreadQuestions();
   }, []);
 
-  const coursesCount = user.courses.length;
+  const coursesCount = user?.courses.length || 0;
 
   const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => {

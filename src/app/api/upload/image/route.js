@@ -4,7 +4,6 @@ import { S3 } from 'aws-sdk';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import { v4 as uuidv4 } from 'uuid';
 
 // S3 Configuration
 const s3 = new S3({
@@ -33,7 +32,7 @@ export async function POST(req) {
   const data = await req.formData();
   const file = data.get('file');
   const folderPath = data.get('folderPath');
-  const fileName = data.get('fileName');
+  let fileName = data.get('fileName');
 
   if (!file || typeof file.arrayBuffer !== 'function' || !folderPath) {
     return NextResponse.json(
@@ -42,31 +41,38 @@ export async function POST(req) {
     );
   }
 
-  const validImageTypes = [
-    'image/jpeg',
-    'image/png',
-    'image/gif',
-    'image/webp',
-  ];
-  if (!validImageTypes.includes(file.type)) {
+  // Allowed image types
+  const validImageTypes = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/gif': 'gif',
+    'image/webp': 'webp',
+    'image/jpg': 'jpg',
+  };
+
+  // Validate file type
+  const fileExtension = validImageTypes[file.type];
+  if (!fileExtension) {
     return NextResponse.json(
-      { error: 'Only image files (jpeg, png, gif, webp) are allowed.' },
+      { error: 'Only image files (jpeg, png, gif, webp, jpg) are allowed.' },
       { status: 400 },
     );
   }
 
+  // Add extension to fileName if missing
+  if (!fileName.endsWith(`.${fileExtension}`)) {
+    fileName = `${fileName}.${fileExtension}`;
+  }
+
   const tempDir = os.tmpdir();
-  const tempFilePath = path.join(
-    tempDir,
-    `${uuidv4()}_${fileName ? fileName : file.name}`,
-  );
+  const tempFilePath = path.join(tempDir, fileName);
 
   try {
     // Save file to temp directory
     await fs.writeFile(tempFilePath, Buffer.from(await file.arrayBuffer()));
 
     // Upload to S3
-    const key = `${folderPath}/${uuidv4()}_${fileName ? fileName : file.name}`;
+    const key = `${folderPath}/${fileName}`;
     const fileUrl = await uploadToS3(tempFilePath, key);
 
     return NextResponse.json({

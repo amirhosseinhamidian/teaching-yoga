@@ -1,10 +1,36 @@
+/* eslint-disable no-undef */
 'use client';
 import Button from '@/components/Ui/Button/Button';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const Hero = () => {
+  const [siteInfoData, setSiteInfoData] = useState(null);
+  const fetchData = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`,
+        {
+          method: 'GET',
+          next: {
+            revalidate: 86400, // 1 day
+          },
+        },
+      );
+      if (!res.ok) {
+        throw new Error('Error to fetch footer data!');
+      }
+      const data = await res.json();
+      console.log(data);
+      setSiteInfoData(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    fetchData();
+  }, []);
   return (
     <div className='bg-surface-light shadow-accent-custom-bottom dark:bg-surface-dark'>
       <div className='container grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 sm:gap-2 xl:grid-cols-3'>
@@ -50,7 +76,7 @@ const Hero = () => {
 
           {/* Hero Image */}
           <Image
-            src='/images/hero.png'
+            src={siteInfoData?.heroImage || '/images/hero.png'}
             alt='hero pic'
             width={2500}
             height={2500}

@@ -17,7 +17,10 @@ export async function GET(request) {
   try {
     // Fetch course details including terms and sessions
     const course = await prismadb.course.findUnique({
-      where: { shortAddress },
+      where: {
+        shortAddress,
+        activeStatus: true,
+      },
       select: {
         id: true,
         title: true,

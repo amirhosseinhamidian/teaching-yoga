@@ -4,52 +4,63 @@ import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
+import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { CheckPhoneAction } from '@/app/actions/CheckPhoneAction';
 
-const Page = () => {
-  const { username, setUsername, user } = useAuth();
-  const { userPhone, setUserPhone } = useAuth();
-  const { setToken } = useAuth();
+const LoginContent = () => {
+  const { userPhone, setUserPhone, setToken, user } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const inputRef = useRef(null);
+
   if (user) {
     router.back();
   }
 
-  const signupHandle = async () => {
-    if (!username || !userPhone) {
-      toast.showErrorToast('لطفاً نام کاربری و شماره موبایل خود را وارد کنید.');
+  useEffect(() => {
+    const handleResize = () => {
+      const inputElement = inputRef.current;
+      if (window.visualViewport && inputElement) {
+        const { height } = window.visualViewport;
+        const inputRect = inputElement.getBoundingClientRect();
+
+        // اگر کیبورد باز شد و Input زیر کیبورد قرار گرفت
+        if (inputRect.bottom > height) {
+          window.scrollTo({
+            top: inputRect.top + window.scrollY - 20, // اسکرول به بالای کیبورد
+            behavior: 'smooth',
+          });
+        }
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+  const loginHandler = async () => {
+    setIsSubmitting(true);
+
+    const validation = validatePhoneNumber(userPhone);
+    if (!validation.isValid) {
+      setIsSubmitting(false);
+      toast.showErrorToast(validation.errorMessage);
       return;
     }
 
-    setIsSubmitting(true);
-
-    // validation for correct phone number, unique phone number and username
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/signup-validation`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          username,
-          userPhone,
-        }),
-      },
-    );
-
-    const data = await response.json();
-
-    if (data.success) {
+    const checkResponse = await CheckPhoneAction(userPhone);
+    if (checkResponse) {
       try {
-        const result = await fetch(
+        const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/send-otp`,
           {
             method: 'POST',
@@ -60,9 +71,9 @@ const Page = () => {
           },
         );
 
-        const data = await result.json();
+        const data = await response.json();
         if (data.success) {
-          setToken(result.token);
+          setToken(data.token);
           router.push('/confirm-code');
         } else {
           if (data.error) {
@@ -72,12 +83,11 @@ const Page = () => {
           }
         }
       } catch (error) {
+        console.error(error);
         toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
       }
     } else {
-      toast.showErrorToast(
-        data.error || 'خطا در ثبت نام. لطفاً دوباره تلاش کنید.',
-      );
+      router.push('/signup');
     }
 
     setIsSubmitting(false);
@@ -87,49 +97,44 @@ const Page = () => {
       <div className='rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
         <Logo size='large' className='justify-center' />
         <h3 className='mt-4 text-xl font-semibold text-text-light dark:text-text-dark'>
-          ثبت نام
+          ورود
         </h3>
         <p className='mt-3 text-xs text-text-light dark:text-text-dark'>
-          لطفا یک نام کاربری و شماره موبایل خود را وارد کنید
+          سلام؛ لطفا شماره موبایل خود را وارد کنید
         </p>
         <Input
-          value={username}
-          onChange={setUsername}
-          fullWidth
-          placeholder='نام کاربری'
-          focus
-          className='mt-8 text-lg md:min-w-64'
-        />
-        <Input
+          ref={inputRef}
           value={userPhone}
           onChange={setUserPhone}
           fullWidth
           placeholder='شماره همراه'
+          focus
+          onEnterPress={loginHandler}
           type='number'
-          className='mt-6 text-lg md:min-w-64'
+          className='mt-12 text-lg md:min-w-64'
+          maxLength={11}
         />
 
         <Button
           shadow
-          onClick={signupHandle}
+          onClick={loginHandler}
           className='mt-8 w-full'
           isLoading={isSubmitting}
         >
-          ثبت نام
+          ورود
         </Button>
-        <p className='mt-6 text-center text-2xs text-subtext-light dark:text-subtext-dark'>
-          ثبت نام شما به معنای پذیرش{' '}
+        <p className='mt-6 text-center text-sm'>
+          حساب کاربری ندارید؟{' '}
           <Link
             href='/signup'
             className='text-primary hover:underline md:cursor-pointer'
           >
-            قوانین و مقررات{' '}
+            ثبت نام کنید{' '}
           </Link>
-          سمانه یوگا است
         </p>
       </div>
     </div>
   );
 };
 
-export default Page;
+export default LoginContent;

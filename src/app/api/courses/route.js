@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 export async function GET() {
   try {
     const courses = await prismadb.course.findMany({
+      where: { activeStatus: true },
       select: {
         id: true,
         title: true,

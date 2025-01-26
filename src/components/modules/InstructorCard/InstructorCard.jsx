@@ -15,7 +15,7 @@ const InstructorCard = ({ instructor, className }) => {
         </h4>
         <div className='mb-2 mt-1 flex items-center gap-2 md:mt-3'>
           <Image
-            src={user.avatar}
+            src={user?.avatar || '/images/default-profile.png'}
             alt='instructor avatar'
             width={240}
             height={240}

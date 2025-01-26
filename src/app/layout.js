@@ -11,42 +11,49 @@ import { Toaster } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
 
-export const metadata = {
-  title: 'سمانه یوگا',
-  description: 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
-  keywords: [
-    'یوگا',
-    'آموزش یوگا',
-    'دوره‌های یوگا',
-    'سمانه یوگا',
-    'یوگا برای مبتدیان',
-    'آموزش یوگا آنلاین',
-    'بهترین دوره‌های یوگا',
-    'کلاس یوگا در خانه',
-    'یوگا چیست؟',
-    'فواید یوگا برای سلامتی',
-    'مدیتیشن و یوگا',
-  ],
-  icons: {
-    icon: '/favicon.ico',
-  },
-  openGraph: {
-    siteName: 'سمانه یوگا',
-    title: 'سمانه یوگا',
-    images: [
-      {
-        url: '/images/hero.png',
-        width: 1200,
-        height: 630,
-        alt: 'لوگوی سمانه یوگا',
-      },
-    ],
-    description: 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
-    url: process.env.NEXT_PUBLIC_API_BASE_URL,
-    type: 'website',
-    local: 'fa_IR',
-  },
-};
+export async function generateMetadata() {
+  const seoSettings = await prismadb.seoSetting.findMany({
+    where: { page: 'general' },
+  });
+
+  const seoData = seoSettings.reduce((acc, setting) => {
+    acc[setting.key] = setting.value;
+    return acc;
+  }, {});
+
+  return {
+    title: seoData.siteTitle || 'سمانه یوگا',
+    description:
+      seoData.metaDescription || 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
+    keywords: (seoData.keywords || '')
+      .split(' ، ')
+      .map((keyword) => keyword.replace(/^"|"$/g, ' ')),
+    robots: seoData?.robotsTag || 'noindex, nofollow',
+    icons: {
+      icon: '/favicon.ico',
+    },
+    openGraph: {
+      siteName: seoData.ogSiteName || 'سمانه یوگا',
+      title: seoData.ogTitle || 'سمانه یوگا',
+      images: [
+        {
+          url: seoData.ogImage || '/images/hero.png',
+          width: 1200,
+          height: 630,
+          alt: seoData.ogImageAlt || 'لوگوی سمانه یوگا',
+        },
+      ],
+      description:
+        seoData.ogDescription || 'آموزش حرفه‌ای یوگا و مدیتیشن برای تمام سطوح.',
+      url: seoData.ogUrl || process.env.NEXT_PUBLIC_API_BASE_URL,
+      type: 'website',
+      local: 'fa_IR',
+    },
+    alternates: {
+      canonical: seoData?.canonicalTag || 'https://samaneyoga.ir',
+    },
+  };
+}
 
 // بارگذاری کامپوننت ClientSideAOS فقط در سمت کلاینت
 const ClientSideAOS = dynamic(() => import('@/components/ClientSideAOS'), {

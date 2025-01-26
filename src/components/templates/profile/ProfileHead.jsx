@@ -1,7 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
 import React, { useRef, useState } from 'react';
-import PropTypes from 'prop-types';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import { MdOutlineAddAPhoto } from 'react-icons/md';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,7 +139,5 @@ const ProfileHead = () => {
     </div>
   );
 };
-
-ProfileHead.propTypes = {};
 
 export default ProfileHead;

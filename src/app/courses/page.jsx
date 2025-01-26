@@ -9,6 +9,57 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
 import { headers } from 'next/headers';
 
+export async function generateMetadata() {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/courses`,
+    {
+      method: 'GET',
+      headers: headers(),
+    },
+  );
+
+  const result = await res.json();
+
+  // اطلاعات پیش‌فرض
+  const defaultSeoData = {
+    title: 'دوره‌ ها | سمانه یوگا',
+    description:
+      'لیستی از بهترین دوره‌های یوگا با امکان شرکت در کلاس‌های آنلاین و حضوری توسط سمانه یوگا ارائه شده است. سطح خود را ارتقا دهید!',
+    robots: 'index, follow',
+    alternates: {
+      canonical: 'https://samaneyoga.ir/courses',
+    },
+  };
+
+  if (!result.success || !result.data) {
+    return defaultSeoData;
+  }
+
+  const seoData = result.data;
+
+  return {
+    title: seoData?.siteTitle || defaultSeoData.title,
+    description: seoData?.metaDescription || defaultSeoData.description,
+    keywords: seoData?.keywords || '',
+    robots: seoData?.robotsTag || defaultSeoData.robots,
+    canonical: seoData?.canonicalTag || defaultSeoData.canonical,
+    openGraph: {
+      title: seoData?.ogTitle || '',
+      description: seoData?.ogDescription || '',
+      url: seoData.ogUrl || 'https://samaneyoga.ir/courses',
+      images: [
+        {
+          url: seoData?.ogImage || '',
+          alt: seoData?.ogImageAlt || '',
+        },
+      ],
+    },
+    alternates: {
+      canonical: seoData?.canonicalTag || defaultSeoData.canonical,
+    },
+  };
+}
+
 async function CoursesPage() {
   const session = await getServerSession(authOptions);
 
