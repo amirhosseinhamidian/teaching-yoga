@@ -30,7 +30,11 @@ const fetchTermsData = async (shortAddress, userId) => {
   }
 };
 
-const CourseLessonsCard = async ({ shortAddress, className }) => {
+const CourseLessonsCard = async ({
+  shortAddress,
+  activeSessionId,
+  className,
+}) => {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.userId ? session.user.userId : '';
   const data = await fetchTermsData(shortAddress, userId);
@@ -49,11 +53,15 @@ const CourseLessonsCard = async ({ shortAddress, className }) => {
             info1={`جلسات: ${term.term.sessions.length}`}
             info2={`زمان: ${formatTime(term.term.duration, 'hh:mm:ss')}`}
             className='mb-4'
+            isOpenDefault={term.term.sessions.find(
+              (session) => session.id === activeSessionId,
+            )}
             content={term.term.sessions.map((session, index) => (
               <SessionRow
                 key={session.id}
                 session={session}
                 number={index + 1}
+                activeSessionId={activeSessionId}
                 courseShortAddress={shortAddress}
               />
             ))}
@@ -66,6 +74,7 @@ const CourseLessonsCard = async ({ shortAddress, className }) => {
 CourseLessonsCard.propTypes = {
   shortAddress: PropTypes.string.isRequired,
   className: PropTypes.string,
+  activeSessionId: PropTypes.string,
 };
 
 export default CourseLessonsCard;

@@ -109,6 +109,7 @@ export default function Header({ isLogin }) {
             handelDarkMode={toggleTheme}
             isLogin={isLogin}
             user={user}
+            signOutModal={setShowSignOutModal}
           />
         </div>
       </div>

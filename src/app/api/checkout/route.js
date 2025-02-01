@@ -84,13 +84,20 @@ export const POST = async (req) => {
     );
   } else {
     // ایجاد رکورد در جدول Payment
-    const newPayment = await prismadb.payment.create({
-      data: {
-        userId: user.userId,
-        cartId: cartId, // cartId باید در body درخواست ارسال شود
+    const newPayment = await prismadb.payment.upsert({
+      where: { cartId },
+      update: {
         amount: parseInt(amount) * 10,
-        status: 'PENDING', // وضعیت اولیه
-        method: 'ONLINE', // روش پرداخت
+        status: 'PENDING', // بروزرسانی وضعیت
+        method: 'ONLINE',
+        authority: paymentResponse.authority, // بروزرسانی authority
+      },
+      create: {
+        userId: user.userId,
+        cartId: cartId,
+        amount: parseInt(amount) * 10,
+        status: 'PENDING',
+        method: 'ONLINE',
         authority: paymentResponse.authority,
       },
     });

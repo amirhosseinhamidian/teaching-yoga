@@ -42,29 +42,29 @@ export default async function Footer() {
           <div className='col-span-1 mb-4 flex flex-col items-start xs:col-span-2 sm:col-span-3 md:col-span-2 md:mb-0'>
             <Logo />
             <p className='mt-4 text-sm text-text-light dark:text-text-dark'>
-              {footerData.shortDescription}
+              {footerData?.shortDescription}
             </p>
 
-            <Socials size={30} socialLinks={footerData.socialLinks} />
+            <Socials size={30} socialLinks={footerData?.socialLinks} />
 
             <div className='mt-4 flex items-center gap-2 text-lg text-subtext-light transition-all duration-200 ease-in hover:text-secondary dark:text-subtext-dark'>
               <MdOutlineMail size={24} />
               <a
-                href={`mailto:${footerData.companyEmail}`}
+                href={`mailto:${footerData?.companyEmail}`}
                 aria-label='ارسال ایمیل'
                 className=''
               >
-                {footerData.companyEmail}
+                {footerData?.companyEmail}
               </a>
             </div>
             {footerData?.companyPhone && (
               <div className='mt-1 flex items-center gap-2 text-subtext-light transition-all duration-200 ease-in hover:text-secondary dark:text-subtext-dark'>
                 <LiaPhoneSolid size={24} />
                 <a
-                  href={`tel:${footerData.companyPhone}`}
+                  href={`tel:${footerData?.companyPhone}`}
                   className='font-faNa'
                 >
-                  {footerData.companyPhone}
+                  {footerData?.companyPhone}
                 </a>
               </div>
             )}
@@ -76,12 +76,12 @@ export default async function Footer() {
             )}
           </div>
           {/* Second section: Links category 1 */}
-          {footerData.coursesLinks.length !== 0 && (
+          {footerData?.coursesLinks.length !== 0 && (
             <div className='mb-4 flex flex-col gap-3 md:mb-0'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 دوره‌ها
               </h4>
-              {footerData.coursesLinks.map((courseLink) => (
+              {footerData?.coursesLinks.map((courseLink) => (
                 <Link
                   key={courseLink.value}
                   href={courseLink.value}
@@ -93,12 +93,12 @@ export default async function Footer() {
             </div>
           )}
 
-          {footerData.articlesLinks.length !== 0 && (
+          {footerData?.articlesLinks.length !== 0 && (
             <div className='mb-4 flex flex-col gap-3 md:mb-0'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 مقالات
               </h4>
-              {footerData.articlesLinks.map((articleLink) => (
+              {footerData?.articlesLinks.map((articleLink) => (
                 <Link
                   key={articleLink.value}
                   href={`/articles/${articleLink.value}`}
@@ -110,12 +110,12 @@ export default async function Footer() {
             </div>
           )}
 
-          {footerData.usefulLinks.length !== 0 && (
+          {footerData?.usefulLinks.length !== 0 && (
             <div className='flex flex-col gap-3'>
               <h4 className='mb-2 font-semibold text-text-light dark:text-text-dark'>
                 لینک‌های مفید
               </h4>
-              {footerData.usefulLinks.map((usefulLink) => (
+              {footerData?.usefulLinks.map((usefulLink) => (
                 <Link
                   key={usefulLink.value}
                   href={usefulLink.value}
@@ -129,7 +129,7 @@ export default async function Footer() {
         </div>
         <div className='mt-4 flex items-center gap-4'>
           <LicenseCard
-            licenseLogo='https://trustseal.enamad.ir/logo.aspx?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
+            licenseLogo='/images/enamad.png'
             title='اینماد'
             path='https://trustseal.enamad.ir/?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
           />

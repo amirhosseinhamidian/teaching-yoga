@@ -12,23 +12,60 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
+import { redirect } from 'next/navigation';
 
-// Fetch course details and progress
-async function fetchCourseDetails(courseShortAddress) {
+export async function generateMetadata({ params }) {
+  const { shortAddress, id } = params;
+
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/course-details?shortAddress=${courseShortAddress}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/courses/${shortAddress}/lesson/${id}`,
     {
-      cache: 'no-store', // Ensures SSR by disabling caching
       method: 'GET',
       headers: headers(),
     },
   );
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch course data');
+  const result = await res.json();
+
+  // اطلاعات پیش‌فرض
+  const defaultSeoData = {
+    title: 'سمانه یوگا',
+    robots: 'noindex, nofollow',
+  };
+
+  if (!result.success || !result.data) {
+    return defaultSeoData;
   }
 
-  return res.json();
+  const seoData = result.data;
+
+  return {
+    title: seoData?.siteTitle || defaultSeoData.title,
+    robots: seoData?.robotsTag || defaultSeoData.robots,
+  };
+}
+
+// Fetch course details and progress
+async function fetchCourseDetails(courseShortAddress) {
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/course-details?shortAddress=${courseShortAddress}`,
+      {
+        cache: 'no-store', // Ensures SSR by disabling caching
+        method: 'GET',
+        headers: headers(),
+      },
+    );
+
+    if (!res.ok) {
+      throw new Error('Failed to fetch course data');
+    }
+
+    return res.json();
+  } catch (error) {
+    console.error(error);
+    redirect('/not-found');
+  }
 }
 
 async function fetchSessionDetails(sessionId) {
@@ -107,6 +144,7 @@ const LessonPage = async ({ params }) => {
               {/* List of course lessons */}
               <CourseLessonsCard
                 className='mt-4'
+                activeSessionId={lessonId}
                 shortAddress={courseShortAddress}
               />
               <QuestionBox

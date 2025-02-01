@@ -1,16 +1,23 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import { MdOutlineDiscount } from 'react-icons/md';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuth } from '@/contexts/AuthContext';
 
-const DetailOrderCard = ({ data, className }) => {
+const DetailOrderCard = ({ data, setCartData, className }) => {
+  const { isDark } = useTheme();
+  const { user } = useAuth();
+  const toast = createToastHandler(isDark);
   const [discountCode, setDiscountCode] = useState('');
   const [addCourseLoading, setAddCourseLoading] = useState(false);
+  const [addDiscountCodeLoading, setAddDiscountCodeLoading] = useState(false);
   const router = useRouter();
 
   const getDiscount = (discount) => {
@@ -95,6 +102,58 @@ const DetailOrderCard = ({ data, className }) => {
     }
   };
 
+  const applyDiscountCode = async () => {
+    if (!discountCode) return;
+    try {
+      setAddDiscountCodeLoading(true);
+      const response = await fetch('/api/apply-discount-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          discountCode,
+          cartId: data.id,
+          userId: user.id,
+        }),
+      });
+
+      // بررسی پاسخ API
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setCartData((prev) => ({
+          ...prev,
+          totalDiscount: result.data.totalDiscount,
+          totalPrice: result.data.totalPrice - result.data.totalDiscount,
+          discountCodeId: result.data.discountCodeId,
+        }));
+        toast.showSuccessToast(`تخفیف با موفقیت اعمال شد.`);
+      } else {
+        console.error('خطا:', result.message);
+        toast.showErrorToast(result.message);
+      }
+    } catch (error) {
+      console.error('خطای درخواست:', error);
+      toast.showErrorToast('خطا در برقراری ارتباط با سرور.');
+    } finally {
+      setAddDiscountCodeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (data) {
+      // تأخیر یک ثانیه‌ای برای بررسی cartData
+      const timeout = setTimeout(() => {
+        console.log('یک ثانیه بعد از آپدیت cartData:', data);
+        // سایر عملیات روی cartData
+      }, 1000);
+
+      // پاک کردن تایمر برای جلوگیری از مشکلات احتمالی
+      return () => clearTimeout(timeout);
+    }
+  }, [data]);
+
   return (
     <div
       className={`rounded-xl bg-surface-light p-6 shadow sm:p-8 dark:bg-surface-dark ${className}`}
@@ -117,14 +176,15 @@ const DetailOrderCard = ({ data, className }) => {
       </div>
       {data.totalPrice !== 0 ? (
         <>
-          <div className='my-10 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4'>
-            <div className='relative xs:w-full xs:flex-1'>
+          <div className='mx-auto my-10 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4 xl:w-3/4'>
+            <div className='relative w-full xs:flex-1'>
               <Input
                 value={discountCode}
                 onChange={setDiscountCode}
                 placeholder='کد تخفیف'
                 fontDefault={false}
                 className='w-full pr-10'
+                maxLength={20}
                 isUppercase
               />
               <MdOutlineDiscount
@@ -132,7 +192,12 @@ const DetailOrderCard = ({ data, className }) => {
                 className='absolute right-2 top-2.5 text-subtext-light dark:text-subtext-dark'
               />
             </div>
-            <Button className='text-xs sm:text-sm' shadow>
+            <Button
+              className='text-xs sm:text-sm'
+              shadow
+              isLoading={addDiscountCodeLoading}
+              onClick={applyDiscountCode}
+            >
               ثبت
             </Button>
           </div>
@@ -161,6 +226,7 @@ const DetailOrderCard = ({ data, className }) => {
 
 DetailOrderCard.propTypes = {
   data: PropTypes.object.isRequired,
+  setCartData: PropTypes.func.isRequired,
   className: PropTypes.string,
 };
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
@@ -18,11 +18,13 @@ const UploadSessionVideoModal = ({
 }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const controller = new AbortController();
 
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0); // state برای پیشرفت
   const fileInputRef = useRef(null);
+  const pollingRef = useRef(null);
   const [isComplete, setIsComplete] = useState(false);
   const [videoDirection, setVideoDirection] = useState('HORIZONTAL');
   const [accessLevel, setAccessLevel] = useState(videoAccessLevel || '');
@@ -76,6 +78,28 @@ const UploadSessionVideoModal = ({
     e.stopPropagation();
   };
 
+  const openFilePicker = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
+
+  // تابعی برای دریافت درصد پیشرفت از API
+  const fetchProgress = async () => {
+    if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
+      );
+      const data = await response.json();
+
+      setProgress(data.progress); // به‌روزرسانی درصد پیشرفت
+    } catch (error) {
+      console.error('Error fetching progress:', error);
+    }
+  };
+
   const handleUpload = async () => {
     if (!validateInputs()) {
       toast.showErrorToast('مقادیر را به درستی وارد کنید');
@@ -101,57 +125,51 @@ const UploadSessionVideoModal = ({
       if (!outFiles || outFiles.length === 0) {
         throw new Error('No output files generated.');
       }
-      setCurrentStage('uploading'); // تغییر به مرحله آپلود
-      setProgress(0); // ریست پروگرس بار
-      startPolling(); // شروع پولینگ برای آپلود
+
+      setCurrentStage('uploading');
+      setProgress(0);
+      startPolling();
 
       await onUpload(outFiles, videoDirection === 'VERTICAL', accessLevel);
     } catch (error) {
-      console.error('Upload error:', error);
-      toast.showErrorToast('خطایی در آپلود فایل رخ داده است.');
+      if (error.name === 'AbortError') {
+        console.log('Upload canceled.');
+      } else {
+        console.error('Upload error:', error);
+        toast.showErrorToast('خطایی در آپلود فایل رخ داده است.');
+      }
     } finally {
       setIsLoading(false);
       setProgress(100);
-    }
-  };
-
-  const openFilePicker = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  // تابعی برای دریافت درصد پیشرفت از API
-  const fetchProgress = async () => {
-    if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
-      );
-      const data = await response.json();
-
-      setProgress(data.progress); // به‌روزرسانی درصد پیشرفت
-
-      if (data.progress >= 100) {
-        setIsComplete(true); // نشان دادن اینکه پردازش کامل شده
-      }
-    } catch (error) {
-      console.error('Error fetching progress:', error);
+      setIsComplete(true);
     }
   };
 
   const startPolling = () => {
-    const interval = setInterval(() => {
+    if (pollingRef.current) return;
+    pollingRef.current = setInterval(() => {
       if (!isComplete) {
         fetchProgress();
       } else {
-        clearInterval(interval); // توقف پولینگ
+        clearInterval(pollingRef.current);
+        pollingRef.current = null; // ریست پولینگ
       }
     }, 5000);
-
-    return () => clearInterval(interval);
   };
+
+  const stopPolling = () => {
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+      pollingRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      stopPolling();
+      controller.abort();
+    };
+  }, []);
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>

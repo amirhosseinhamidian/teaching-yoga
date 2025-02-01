@@ -4,24 +4,48 @@ import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import Link from 'next/link';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { CheckPhoneAction } from '../actions/CheckPhoneAction';
 import { useRouter } from 'next/navigation';
 import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { CheckPhoneAction } from '@/app/actions/CheckPhoneAction';
 
-const Login = () => {
+const LoginContent = () => {
   const { userPhone, setUserPhone, setToken, user } = useAuth();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const inputRef = useRef(null);
 
   if (user) {
     router.back();
   }
+
+  useEffect(() => {
+    const handleResize = () => {
+      const inputElement = inputRef.current;
+      if (window.visualViewport && inputElement) {
+        const { height } = window.visualViewport;
+        const inputRect = inputElement.getBoundingClientRect();
+
+        // اگر کیبورد باز شد و Input زیر کیبورد قرار گرفت
+        if (inputRect.bottom > height) {
+          window.scrollTo({
+            top: inputRect.top + window.scrollY - 20, // اسکرول به بالای کیبورد
+            behavior: 'smooth',
+          });
+        }
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
   const loginHandler = async () => {
     setIsSubmitting(true);
@@ -80,11 +104,13 @@ const Login = () => {
           سلام؛ لطفا شماره موبایل خود را وارد کنید
         </p>
         <Input
+          ref={inputRef}
           value={userPhone}
           onChange={setUserPhone}
           fullWidth
           placeholder='شماره همراه'
           focus
+          onEnterPress={loginHandler}
           type='number'
           className='mt-12 text-lg md:min-w-64'
           maxLength={11}
@@ -112,4 +138,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default LoginContent;

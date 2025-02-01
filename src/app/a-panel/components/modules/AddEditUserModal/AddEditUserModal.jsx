@@ -202,6 +202,7 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
             value={role}
             onChange={setRole}
             errorMessage={errorMessages.role}
+            fullWidth
             className='mt-4 bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
         </div>

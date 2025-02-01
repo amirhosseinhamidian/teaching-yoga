@@ -30,6 +30,16 @@ const fetchCartData = async () => {
   }
 };
 
+const checkDiscountCodeApplied = async () => {
+  try {
+    await fetch('/api/apply-discount-code', {
+      method: 'PATCH',
+    });
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 const CartMain = () => {
   const [cartData, setCartData] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -38,10 +48,11 @@ const CartMain = () => {
   useEffect(() => {
     const loadCartData = async () => {
       setIsLoading(true);
+      await checkDiscountCodeApplied();
       const data = await fetchCartData();
 
       if (data) {
-        setCartData(data);
+        setCartData(data.cart); // ذخیره داده‌های سبد خرید
       } else {
         console.error('Error in Fetch Cart Data');
       }
@@ -54,7 +65,7 @@ const CartMain = () => {
   const handleDeleteItem = async () => {
     const updatedCartData = await fetchCartData();
     if (updatedCartData) {
-      setCartData(updatedCartData);
+      setCartData(updatedCartData.cart); // به‌روزرسانی سبد خرید پس از حذف آیتم
     } else {
       console.error('خطا در به‌روزرسانی سبد خرید.');
     }
@@ -71,19 +82,20 @@ const CartMain = () => {
         </div>
       ) : (
         <>
-          {cartData?.cart?.courses.length !== 0 ? (
+          {cartData && cartData?.courses.length !== 0 ? (
             <>
               <PageCheckoutTitle isSuccess={true} icon={BsHandbag}>
                 سبد خرید
               </PageCheckoutTitle>
               <div className='mb-5 mt-4 grid grid-cols-1 gap-10 md:mb-8 md:mt-8 md:grid-cols-2 lg:gap-28'>
                 <CourseItemsCard
-                  data={cartData.cart}
+                  data={cartData}
                   className='order-last self-start md:order-first'
                   onDeleteItem={handleDeleteItem}
                 />
                 <DetailOrderCard
-                  data={cartData.cart}
+                  data={cartData}
+                  setCartData={setCartData} // ارسال تابع برای به‌روزرسانی داده‌ها
                   className='order-first self-start md:order-last'
                 />
               </div>

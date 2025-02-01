@@ -11,6 +11,7 @@ export async function GET(req, { params }) {
     const course = await prismadb.course.findUnique({
       where: {
         shortAddress: shortAddress,
+        activeStatus: true,
       },
       include: {
         instructor: {
@@ -35,7 +36,7 @@ export async function GET(req, { params }) {
     if (!course) {
       return NextResponse.json(
         { message: 'Course not found' },
-        { status: 404 },
+        { status: 400 },
       );
     }
 

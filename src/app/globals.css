@@ -78,4 +78,23 @@
   .hide-scrollbar {
     scrollbar-width: none; /* برای مرورگرهای Gecko مثل Firefox */
   }
+
+  .custom-input-datepicker {
+    border-radius: 12px;
+    padding: 4px 12px;
+    height: 100%;
+    width: 100%;
+    font-family: 'PersianNumbers';
+    font-size: 16px;
+    padding: 8px 16px;
+    background: transparent;
+  }
+
+  .custom-input-datepicker::placeholder {
+    font-size: 12px;
+  }
+
+  .custom-input-datepicker:focus {
+    outline: none;
+  }
 }

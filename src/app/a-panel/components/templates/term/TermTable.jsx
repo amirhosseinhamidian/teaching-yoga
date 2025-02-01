@@ -153,12 +153,16 @@ const TermTable = ({
         data={data}
         className='mb-3 mt-6 sm:mb-4 sm:mt-10'
         loading={isLoading}
+        empty={terms.length === 0}
+        emptyText='ترمی تا کنون ثبت نشده است.'
       />
-      <Pagination
-        currentPage={page}
-        onPageChange={onPageChange}
-        totalPages={totalPages}
-      />
+      {terms.length !== 0 && (
+        <Pagination
+          currentPage={page}
+          onPageChange={onPageChange}
+          totalPages={totalPages}
+        />
+      )}
       {showDeleteModal && (
         <Modal
           title='حذف ترم'

@@ -90,6 +90,14 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
   const [openUploadImageModal, setOpenUploadImageModal] = useState(false);
   const [openUploadIntroModal, setOpenUploadIntroModal] = useState(false);
 
+  const handleOpenUploadCoverImageModal = () => {
+    if (!title) {
+      toast.showErrorToast('ابتدا عنوان دوره را وارد کنید.');
+      return;
+    }
+    setOpenUploadImageModal(true);
+  };
+
   const handleCoverImageUpload = async (file) => {
     if (!file) {
       toast.showErrorToast('لطفاً یک تصویر انتخاب کنید.');
@@ -97,12 +105,13 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     }
 
     // مسیر ذخیره‌سازی دلخواه
-    const folderPath = 'images/course_covers';
+    const folderPath = `images/course_covers/${title}`;
 
     // آپلود فایل
     const formData = new FormData();
     formData.append('file', file);
     formData.append('folderPath', folderPath);
+    formData.append('fileName', 'cover');
 
     try {
       const response = await fetch(
@@ -410,8 +419,8 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           <ActionButtonIcon
             icon={FiPlus}
             color='accent'
-            className='absolute left-1 top-[38px]'
-            onClick={() => setOpenUploadImageModal(true)}
+            className='absolute left-1 top-[39px]'
+            onClick={handleOpenUploadCoverImageModal}
           />
         </div>
         <div className='relative'>
@@ -426,7 +435,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           <ActionButtonIcon
             icon={FiPlus}
             color='accent'
-            className='absolute left-1 top-[38px]'
+            className='absolute left-1 top-[39px]'
             onClick={handleOpenUploadVideoModal}
           />
         </div>
@@ -436,6 +445,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           placeholder='سطح دوره را مشخص کنید'
           value={level}
           onChange={setLevel}
+          fullWidth
           errorMessage={errorMessages.level}
           className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
         />
@@ -445,6 +455,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           placeholder='وضعیت دوره را مشخص کنید'
           value={status}
           onChange={setStatus}
+          fullWidth
           errorMessage={errorMessages.status}
           className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
         />

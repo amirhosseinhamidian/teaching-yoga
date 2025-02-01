@@ -14,6 +14,7 @@ export async function POST(req) {
       coursesLinks,
       articlesLinks,
       usefulLinks,
+      heroImageUrl,
     } = await req.json();
 
     // اطلاعات را در پایگاه داده ذخیره می‌کنیم
@@ -28,6 +29,7 @@ export async function POST(req) {
         coursesLinks,
         articlesLinks,
         usefulLinks,
+        heroImageUrl,
       },
     });
 
@@ -55,6 +57,7 @@ export async function PUT(req) {
       coursesLinks,
       articlesLinks,
       usefulLinks,
+      heroImage,
     } = await req.json();
 
     // به‌روزرسانی اطلاعات سایت بر اساس id
@@ -70,6 +73,7 @@ export async function PUT(req) {
         coursesLinks,
         articlesLinks,
         usefulLinks,
+        heroImage,
       },
     });
 

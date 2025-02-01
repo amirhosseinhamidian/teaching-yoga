@@ -9,13 +9,13 @@ import Link from 'next/link';
 const Socials = ({ size, socialLinks }) => {
   return (
     <div className='mt-6 flex items-center gap-4'>
-      <Link href={socialLinks.instagram}>
+      <Link href={socialLinks?.instagram || ''}>
         <IconButton icon={AiOutlineInstagram} size={size} />
       </Link>
-      <Link href={socialLinks.telegram}>
+      <Link href={socialLinks?.telegram || ''}>
         <IconButton icon={LiaTelegram} size={size} />
       </Link>
-      <Link href={socialLinks.youtube}>
+      <Link href={socialLinks?.youtube || ''}>
         <IconButton icon={AiOutlineYoutube} size={size} />
       </Link>
     </div>

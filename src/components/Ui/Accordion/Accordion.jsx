@@ -11,9 +11,10 @@ const Accordion = ({
   info2,
   actionLeftContent,
   className,
+  isOpenDefault = false,
   onToggle,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(isOpenDefault);
 
   const toggleAccordion = (e) => {
     e.stopPropagation(); // جلوگیری از تاثير کلیک بر روی دیگر بخش‌ها
@@ -104,6 +105,7 @@ Accordion.propTypes = {
   actionLeftContent: PropTypes.node, // تغییر نوع به node برای دکمه
   content: PropTypes.string.isRequired,
   onToggle: PropTypes.func,
+  isOpenDefault: PropTypes.bool,
 };
 
 export default Accordion;

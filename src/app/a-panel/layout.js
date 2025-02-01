@@ -6,6 +6,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 
 export const metadata = {
   title: 'پنل مدیریت',
+  robots: 'noindex, nofollow',
 };
 
 export default function AdminLayout({ children }) {

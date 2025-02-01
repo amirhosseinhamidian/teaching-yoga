@@ -193,6 +193,8 @@ const CoursesTable = () => {
         data={data}
         className='my-6 sm:my-10'
         loading={loading}
+        empty={courses.length === 0}
+        emptyText='دوره ای وجود ندارد!'
       />
       {showDeleteModal && (
         <Modal

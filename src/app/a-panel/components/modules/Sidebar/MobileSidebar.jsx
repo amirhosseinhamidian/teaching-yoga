@@ -62,7 +62,7 @@ const MobileSidebar = () => {
                 />
               </div>
               <div className='w-full border border-b dark:border-subtext-dark'></div>
-              <NavRoutes />
+              <NavRoutes onLinkClick={toggleSidebar} />
             </aside>
           </>,
           document.body,

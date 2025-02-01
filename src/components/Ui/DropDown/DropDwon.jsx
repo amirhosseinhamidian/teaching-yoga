@@ -55,10 +55,10 @@ const DropDown = ({
       >
         {/* Placeholder or Selected Value */}
         <div
-          className={`flex cursor-pointer items-center justify-between gap-1 transition-all sm:gap-2 ${
+          className={`flex cursor-pointer items-center justify-between gap-1 text-xs transition-all sm:gap-2 sm:text-sm ${
             value
-              ? 'text-xs font-medium text-subtext-light sm:text-sm dark:text-subtext-dark'
-              : 'text-xs text-subtext-light sm:text-sm dark:text-subtext-dark'
+              ? 'font-medium text-text-light dark:text-text-dark'
+              : 'text-subtext-light dark:text-subtext-dark'
           }`}
         >
           <span>

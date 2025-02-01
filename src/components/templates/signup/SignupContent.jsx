@@ -9,8 +9,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { FaArrowRight } from 'react-icons/fa6';
 
-const Page = () => {
+const SignupContent = () => {
   const { username, setUsername, user } = useAuth();
   const { userPhone, setUserPhone } = useAuth();
   const { setToken } = useAuth();
@@ -21,6 +22,10 @@ const Page = () => {
   if (user) {
     router.back();
   }
+
+  const backwardHandle = () => {
+    router.back();
+  };
 
   const signupHandle = async () => {
     if (!username || !userPhone) {
@@ -84,7 +89,11 @@ const Page = () => {
   };
   return (
     <div className='flex h-svh items-center justify-center'>
-      <div className='rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
+      <div className='relative rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
+        <FaArrowRight
+          onClick={backwardHandle}
+          className='absolute top-20 text-xl text-text-light md:cursor-pointer dark:text-text-dark'
+        />
         <Logo size='large' className='justify-center' />
         <h3 className='mt-4 text-xl font-semibold text-text-light dark:text-text-dark'>
           ثبت نام
@@ -104,6 +113,7 @@ const Page = () => {
           value={userPhone}
           onChange={setUserPhone}
           fullWidth
+          onEnterPress={signupHandle}
           placeholder='شماره همراه'
           type='number'
           className='mt-6 text-lg md:min-w-64'
@@ -132,4 +142,4 @@ const Page = () => {
   );
 };
 
-export default Page;
+export default SignupContent;

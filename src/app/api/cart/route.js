@@ -64,6 +64,7 @@ export async function GET() {
             totalPrice: 0,
             totalDiscount: 0,
             totalPriceWithoutDiscount: 0,
+            discountCodeAmount: 0,
             courses: [],
           },
         },
@@ -142,11 +143,11 @@ export async function GET() {
     const coursesInfo = Array.from(coursesMap.values());
 
     // محاسبه مجموع قیمت‌ها و تخفیف‌ها
-    const totalPrice = coursesInfo.reduce(
+    let totalPrice = coursesInfo.reduce(
       (sum, course) => sum + course.finalPrice,
       0,
     );
-    const totalDiscount = coursesInfo.reduce(
+    let totalDiscount = coursesInfo.reduce(
       (sum, course) => sum + course.discount,
       0,
     );
@@ -155,6 +156,11 @@ export async function GET() {
       0,
     );
 
+    if (cart.discountCodeAmount) {
+      totalDiscount += cart.discountCodeAmount;
+      totalPrice -= cart.discountCodeAmount;
+    }
+
     // بازگشت داده‌ها
     return NextResponse.json({
       cart: {
@@ -162,6 +168,7 @@ export async function GET() {
         totalPrice,
         totalDiscount,
         totalPriceWithoutDiscount,
+        discountAmount: cart.discountCodeAmount,
         courses: coursesInfo,
       },
     });

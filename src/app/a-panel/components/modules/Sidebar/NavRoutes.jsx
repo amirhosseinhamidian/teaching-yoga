@@ -1,5 +1,6 @@
 'use client';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
 import { usePathname } from 'next/navigation'; // هوک برای گرفتن مسیر فعلی
 import { RxDashboard } from 'react-icons/rx';
 import { TbSchool, TbRosetteDiscount, TbSettings, TbSeo } from 'react-icons/tb';
@@ -7,6 +8,7 @@ import { PiUsersBold } from 'react-icons/pi';
 import { GrBlog } from 'react-icons/gr';
 import { BsCart } from 'react-icons/bs';
 import { FaRegComments, FaRegCircleQuestion } from 'react-icons/fa6';
+import { IoIosArrowBack } from 'react-icons/io';
 import {
   MdOutlinePlayLesson,
   MdMailOutline,
@@ -16,9 +18,10 @@ import {
 import Link from 'next/link';
 import { useNotifications } from '@/contexts/NotificationContext';
 
-function NavRoutes() {
+function NavRoutes({ onLinkClick }) {
   const { notifications } = useNotifications();
   const pathname = usePathname(); // گرفتن مسیر فعلی
+  const [openSubMenu, setOpenSubMenu] = useState(null);
 
   const navRoutes = [
     { href: '/a-panel', label: 'داشبورد', icon: RxDashboard, statusNumber: 0 },
@@ -79,7 +82,7 @@ function NavRoutes() {
       statusNumber: notifications.details[4]?.count,
     },
     {
-      href: '/a-panel/discounts',
+      href: '/a-panel/discount-code',
       label: 'مدیریت کدهای تخفیف',
       icon: TbRosetteDiscount,
       statusNumber: 0,
@@ -90,44 +93,129 @@ function NavRoutes() {
       icon: TbSettings,
       statusNumber: 0,
     },
-    { href: '/a-panel/seo', label: 'سئو', icon: TbSeo, statusNumber: 0 },
+    {
+      href: '/a-panel/seo',
+      label: 'سئو',
+      icon: TbSeo,
+      statusNumber: 0,
+      subRoutes: [
+        { href: '/a-panel/seo/general', label: 'تنظیمات کلی' },
+        { href: '/a-panel/seo/internal', label: 'صفحات داخلی' },
+        { href: '/a-panel/seo/sitemap', label: 'سایت مپ' },
+      ],
+    },
   ];
+
+  useEffect(() => {
+    navRoutes.forEach((route) => {
+      if (route.subRoutes) {
+        route.subRoutes.forEach((subRoute) => {
+          if (pathname.startsWith(subRoute.href)) {
+            setOpenSubMenu(route.label); // باز کردن زیرمنو برای روت با ساب‌روت
+          }
+        });
+      }
+    });
+  }, []);
+
+  const handleRouteClick = (route) => {
+    if (route.subRoutes) {
+      setOpenSubMenu((prev) => (prev === route.label ? null : route.label)); // باز یا بسته کردن زیرمنو
+    } else {
+      setOpenSubMenu(null); // بستن تمام زیرمنوها هنگام رفتن به لینک بدون زیرمنو
+      onLinkClick && onLinkClick();
+    }
+  };
+
+  const isActive = (route) => {
+    // حذف "/a-panel" از مسیر
+    const trimmedPathname = pathname.replace('/a-panel', '');
+    const trimmedRoute = route.href.replace('/a-panel', '');
+
+    if (route.href === '/a-panel') {
+      return pathname === '/a-panel'; // فقط اگر مسیر دقیقاً داشبورد باشد
+    }
+
+    // بررسی اکتیو بودن فقط بر اساس بخش باقی‌مانده از مسیر
+    return trimmedPathname.startsWith(trimmedRoute);
+  };
+
+  const isSubRouteActive = (subroute) => {
+    // استخراج قسمت پایانی مسیر
+    const lastSegmentPathname = pathname.split('/').pop();
+    const lastSegmentSubroute = subroute.split('/').pop();
+
+    // مقایسه با ساب‌روت
+    return lastSegmentPathname === lastSegmentSubroute;
+  };
 
   return (
     <nav className='px-2 py-6'>
       {navRoutes.map((route) => {
-        const isActive = pathname === route.href; // بررسی لینک فعال
-
         return (
-          <Link
+          <div
             key={route.href}
-            href={route.href}
-            className={`flex items-center gap-1 rounded-lg px-3 py-2 transition-all duration-150 ease-in sm:gap-2 ${isActive ? 'bg-background-light text-secondary dark:bg-background-dark' : 'hover:bg-background-light hover:dark:bg-background-dark'}`}
+            className={`mt-1 rounded-lg transition-all duration-150 ease-in ${
+              isActive(route)
+                ? 'bg-background-light text-secondary dark:bg-background-dark'
+                : 'hover:bg-background-light hover:dark:bg-background-dark'
+            }`}
           >
-            <route.icon
-              className={`text-xl sm:text-2xl ${
-                isActive
-                  ? 'dark:text-primary-dark text-secondary'
-                  : 'text-text-light dark:text-text-dark'
-              }`}
-            />
-            <h4
-              className={`text-sm font-medium sm:text-base ${isActive ? 'font-bold' : ''}`.trim()}
+            <div
+              className={`flex cursor-pointer items-center justify-between gap-1 px-3 py-1 sm:gap-2`}
+              onClick={() => handleRouteClick(route)}
             >
-              {route.label}
-            </h4>
-            {route.statusNumber > 0 && (
-              <div className='mr-1 flex h-5 w-5 items-start justify-center rounded-full bg-red sm:mr-2 sm:h-6 sm:w-6'>
-                <span className='font-faNa text-xs text-white sm:pt-0.5 sm:text-sm'>
-                  {route.statusNumber}
-                </span>
+              <div className='flex items-center gap-1'>
+                <route.icon
+                  className={`text-xl sm:text-2xl ${
+                    isActive(route)
+                      ? 'text-secondary'
+                      : 'text-text-light dark:text-text-dark'
+                  }`}
+                />
+                <Link href={route.subRoutes ? '#' : route.href}>
+                  <h4
+                    className={`text-sm font-medium sm:text-base ${
+                      isActive(route) ? 'font-bold' : ''
+                    }`.trim()}
+                  >
+                    {route.label}
+                  </h4>
+                </Link>
+              </div>
+              {route.subRoutes && (
+                <IoIosArrowBack
+                  className={`transition-transform duration-200 ${openSubMenu === route.label ? '-rotate-90' : ''}`}
+                />
+              )}
+            </div>
+            {route.subRoutes && openSubMenu === route.label && (
+              <div className='ml-2 mr-6 mt-1 space-y-1 pb-2'>
+                {route.subRoutes.map((subRoute) => (
+                  <Link
+                    key={subRoute.href}
+                    href={subRoute.href}
+                    onClick={() => onLinkClick && onLinkClick()}
+                    className={`block rounded-lg px-3 py-1 text-sm transition-all duration-150 ease-in ${
+                      isSubRouteActive(subRoute.href)
+                        ? 'bg-foreground-light text-secondary dark:bg-foreground-dark'
+                        : 'text-text-light hover:bg-foreground-light dark:text-text-dark hover:dark:bg-foreground-dark'
+                    }`}
+                  >
+                    {subRoute.label}
+                  </Link>
+                ))}
               </div>
             )}
-          </Link>
+          </div>
         );
       })}
     </nav>
   );
 }
+
+NavRoutes.propTypes = {
+  onLinkClick: PropTypes.func,
+};
 
 export default NavRoutes;

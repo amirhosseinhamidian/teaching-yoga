@@ -1,6 +1,7 @@
 /* eslint-disable no-undef */
 import CourseCard from '@/components/CourseCards/CourseCard';
 import { headers } from 'next/headers';
+import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
 
@@ -11,14 +12,10 @@ const fetchCourseData = async () => {
       {
         method: 'GET',
         headers: headers(),
-        next: {
-          revalidate: 7200, // 2 hours
-        },
+        next: { revalidate: 7200 },
       },
     );
-    if (!response.ok) {
-      throw new Error('Failed to fetch course data');
-    }
+    if (!response.ok) throw new Error('Failed to fetch course data');
 
     const courses = await response.json();
     return courses;
@@ -29,8 +26,24 @@ const fetchCourseData = async () => {
 
 async function CoursesSection() {
   const { data } = await fetchCourseData();
+
   return (
-    <div className='mt-2 -skew-y-6 transform bg-surface-light shadow-accent-custom sm:mt-10 dark:bg-surface-dark'>
+    <div className='relative mt-2 -skew-y-6 transform bg-surface-light shadow-accent-custom sm:mt-10 dark:bg-surface-dark'>
+      <Image
+        src='/images/yoga.png' // مسیر سمبل چپ
+        alt='Yoga Symbol Left'
+        className='absolute -bottom-12 left-0 w-32 -translate-y-1/2 -rotate-12 animate-pulse opacity-20 md:w-48'
+        width={800}
+        height={800}
+      />
+      <Image
+        src='/images/yoga.png' // مسیر سمبل راست
+        alt='Yoga Symbol Right'
+        className='absolute -top-16 right-0 w-32 translate-y-1/2 rotate-12 animate-pulse opacity-20 md:w-48 md:opacity-20'
+        width={800}
+        height={800}
+      />
+
       <div className='flex skew-y-6 flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
         <h2
           className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
@@ -38,7 +51,7 @@ async function CoursesSection() {
           data-aos-delay='200'
           data-aos-duration='1000'
         >
-          دوره ها
+          دوره‌ها
         </h2>
         <div className='container my-5 grid grid-cols-1 gap-4 sm:my-7 sm:grid-cols-2 sm:gap-6 md:gap-8 lg:grid-cols-3 lg:gap-12 xl:px-32'>
           {data.map((course, index) => (
@@ -65,7 +78,7 @@ async function CoursesSection() {
           href='/courses'
           className='rounded-full border border-subtext-light bg-transparent px-6 py-3 font-medium text-subtext-light transition-all duration-200 ease-in hover:border-transparent hover:bg-accent hover:text-text-light dark:border-subtext-dark dark:text-subtext-dark'
         >
-          دیدن همه دوره ها
+          دیدن همه دوره‌ها
         </Link>
       </div>
     </div>

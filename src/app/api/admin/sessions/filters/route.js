@@ -27,7 +27,7 @@ export async function GET() {
 
     const courseOptions = [
       { label: 'همه دوره‌ها', value: -1 }, // مقدار پیش‌فرض
-      ...courses.map((course) => ({ label: course.title, id: course.id })), // لیست دوره‌ها
+      ...courses.map((course) => ({ label: course.title, value: course.id })), // لیست دوره‌ها
     ];
 
     // بازگرداندن پاسخ

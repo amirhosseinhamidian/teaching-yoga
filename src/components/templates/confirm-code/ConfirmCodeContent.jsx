@@ -10,9 +10,9 @@ import React, { useEffect, useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa6';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { updateUser } from '../actions/updateUser';
+import { updateUser } from '@/app/actions/updateUser';
 
-const ConfirmCodePage = () => {
+const ConfirmCodeContent = () => {
   const { userPhone, username, token, setToken, setUser } = useAuth();
   const [confirmCode, setConfirmCode] = useState('');
   const [time, setTime] = useState('02:00');
@@ -148,7 +148,6 @@ const ConfirmCodePage = () => {
       toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
     }
   };
-
   return (
     <div className='flex h-svh items-center justify-center'>
       <div className='relative rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
@@ -170,6 +169,7 @@ const ConfirmCodePage = () => {
           fullWidth
           placeholder='کد تایید'
           focus
+          onEnterPress={loginHandle}
           type='number'
           className='mt-12 text-lg md:min-w-64'
           maxLength={5}
@@ -202,4 +202,4 @@ const ConfirmCodePage = () => {
   );
 };
 
-export default ConfirmCodePage;
+export default ConfirmCodeContent;

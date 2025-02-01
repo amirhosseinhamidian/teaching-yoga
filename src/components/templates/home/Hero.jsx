@@ -1,10 +1,35 @@
+/* eslint-disable no-undef */
 'use client';
 import Button from '@/components/Ui/Button/Button';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 const Hero = () => {
+  const [siteInfoData, setSiteInfoData] = useState(null);
+  const fetchData = async () => {
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`,
+        {
+          method: 'GET',
+          next: {
+            revalidate: 86400, // 1 day
+          },
+        },
+      );
+      if (!res.ok) {
+        throw new Error('Error to fetch footer data!');
+      }
+      const data = await res.json();
+      setSiteInfoData(data);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  useEffect(() => {
+    fetchData();
+  }, []);
   return (
     <div className='bg-surface-light shadow-accent-custom-bottom dark:bg-surface-dark'>
       <div className='container grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 sm:gap-2 xl:grid-cols-3'>
@@ -20,14 +45,22 @@ const Hero = () => {
             و مدیتیشن
           </h1>
           <p
-            className='mb-6 mt-2 text-xs text-subtext-light xs:text-sm sm:text-base dark:text-subtext-dark'
+            className='mt-2 text-xs text-subtext-light xs:text-sm sm:text-base dark:text-subtext-dark'
             data-aos='fade-up'
             data-aos-delay='400'
             data-aos-duration='1000'
           >
             با من همراه شوید تا با تمرینات روزانه یوگا، مراقبه و تکنیک‌های
             تنفسی، ذهن و بدن خود را تقویت کنید و به یک زندگی متعادل‌تر و آرام‌تر
-            دست یابید. آماده‌اید سفر درونی خود را آغاز کنید؟
+            دست یابید.
+          </p>
+          <p
+            className='mb-6 text-sm font-semibold text-secondary xs:text-base sm:text-lg'
+            data-aos='fade-up'
+            data-aos-delay='400'
+            data-aos-duration='1000'
+          >
+            آماده‌اید سفر درونی خود را آغاز کنید؟
           </p>
           <Link
             href='/courses'
@@ -50,7 +83,7 @@ const Hero = () => {
 
           {/* Hero Image */}
           <Image
-            src='/images/hero.png'
+            src={siteInfoData?.heroImage || '/images/hero.png'}
             alt='hero pic'
             width={2500}
             height={2500}
