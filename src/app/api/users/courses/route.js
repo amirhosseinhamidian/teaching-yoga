@@ -114,8 +114,14 @@ export async function POST(request) {
     }
 
     // ایجاد رکورد جدید در جدول Payment
-    const payment = await prismadb.payment.create({
-      data: {
+    const payment = await prismadb.payment.upsert({
+      where: { cartId }, // چک می‌کند که آیا این cartId قبلاً ثبت شده است یا نه
+      update: {
+        amount: 0, // مبلغ پرداختی
+        status: 'SUCCESSFUL', // وضعیت پرداخت
+        method: 'FREE', // روش پرداخت
+      },
+      create: {
         userId: userId,
         cartId: cartId,
         amount: 0, // مبلغ پرداختی

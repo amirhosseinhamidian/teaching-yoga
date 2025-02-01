@@ -1,6 +1,8 @@
 /* eslint-disable no-undef */
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { authOptions } from '../auth/[...nextauth]/route';
+import { getServerSession } from 'next-auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,12 +27,13 @@ export const GET = async (request) => {
     }
 
     const paymentRecord = await prismadb.payment.findUnique({
-      where: { id: tokenNumber },
+      where: { id: 3 },
       include: {
         cart: {
-          include: {
+          select: {
+            discountCodeId: true,
             cartCourses: {
-              include: {
+              select: {
                 course: {
                   select: {
                     id: true,
@@ -51,6 +54,29 @@ export const GET = async (request) => {
         { error: 'Payment not found.' },
         { status: 404 },
       );
+    }
+
+    if (
+      paymentRecord.status === 'SUCCESSFUL' &&
+      paymentRecord.cart.discountCodeId
+    ) {
+      const session = await getServerSession(authOptions);
+      if (!session) {
+        return NextResponse.json({ message: 'unauthorized' }, { status: 401 });
+      }
+
+      const userId = session.user.userId;
+      await prismadb.userDiscount.create({
+        data: {
+          userId,
+          discountCodeId: paymentRecord.cart.discountCodeId,
+        },
+      });
+
+      await prismadb.discountCode.update({
+        where: { id: paymentRecord.cart.discountCodeId },
+        data: { usageCount: { increment: 1 } },
+      });
     }
 
     // تبدیل BigInt به string برای سریالایز کردن

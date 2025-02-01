@@ -8,7 +8,7 @@ export const validatePhoneNumber = (phone) => {
     return {
       isValid: false,
       errorMessage:
-        'شماره موبایل معتبر نیست. شماره شما باید 11 رقم باشد و با 09 شروع شود.',
+        'شماره موبایل معتبر نیست. شماره شما باید ۱۱ رقم باشد و با ۰۹ شروع شود.',
     };
   }
 };

@@ -59,6 +59,9 @@ export async function generateMetadata() {
 const ClientSideAOS = dynamic(() => import('@/components/ClientSideAOS'), {
   ssr: false, // غیرفعال کردن رندر در سمت سرور
 });
+const ClientWrapper = dynamic(() => import('@/components/ClientWrapper'), {
+  ssr: false,
+});
 
 export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions);
@@ -126,7 +129,7 @@ export default async function RootLayout({ children }) {
           >
             <VisitLogger />
             <ClientSideAOS />
-            {children}
+            <ClientWrapper>{children}</ClientWrapper>
             <Toaster />
           </body>
         </html>

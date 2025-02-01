@@ -92,6 +92,7 @@ const LoginContent = () => {
 
     setIsSubmitting(false);
   };
+
   return (
     <div className='flex h-svh items-center justify-center'>
       <div className='rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>

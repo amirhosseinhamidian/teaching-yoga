@@ -82,7 +82,7 @@ function NavRoutes({ onLinkClick }) {
       statusNumber: notifications.details[4]?.count,
     },
     {
-      href: '/a-panel/discounts',
+      href: '/a-panel/discount-code',
       label: 'مدیریت کدهای تخفیف',
       icon: TbRosetteDiscount,
       statusNumber: 0,

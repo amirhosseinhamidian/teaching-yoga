@@ -129,7 +129,7 @@ export default async function Footer() {
         </div>
         <div className='mt-4 flex items-center gap-4'>
           <LicenseCard
-            licenseLogo='https://trustseal.enamad.ir/logo.aspx?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
+            licenseLogo='/images/enamad.png'
             title='اینماد'
             path='https://trustseal.enamad.ir/?id=561226&Code=5i7lbcOCSlvbB2Bbsejbsx57LJOweheK'
           />

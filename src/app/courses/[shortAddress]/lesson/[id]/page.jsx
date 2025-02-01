@@ -144,6 +144,7 @@ const LessonPage = async ({ params }) => {
               {/* List of course lessons */}
               <CourseLessonsCard
                 className='mt-4'
+                activeSessionId={lessonId}
                 shortAddress={courseShortAddress}
               />
               <QuestionBox

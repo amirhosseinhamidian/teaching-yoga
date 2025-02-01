@@ -48,6 +48,7 @@ model User {
   ticketReplies   TicketReply[]
   courses         UserCourse[]      @relation("UserCourses")
   terms           UserTerm[]        @relation("UserTerms")
+  userDiscount      UserDiscount[]
 }
 
 model Course {
@@ -78,6 +79,7 @@ model Course {
   questions        Question[]
   tickets          Ticket[]
   users            UserCourse[] @relation("UserCourses")
+  discountCodes DiscountCode[] 
 }
 
 model UserCourse {
@@ -206,8 +208,11 @@ model Cart {
   status        CartStatus   @default(PENDING)
   totalPrice    Int?
   totalDiscount Int?
+  discountCodeId  Int? 
+  discountCodeAmount Int?
   createAt      DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  discountAppliedAt DateTime?
   user          User         @relation("UserCarts", fields: [userId], references: [id])
   cartCourses   CartCourse[] @relation("CartToCourses")
   cartTerms     CartTerm[]   @relation("CartToCartTerms")
@@ -378,6 +383,37 @@ model SitemapSetting {
 
   @@unique([section]) // جلوگیری از ثبت مقادیر تکراری برای هر بخش و نوع
 }
+
+model DiscountCode {
+  id                Int       @id @default(autoincrement()) // شناسه یکتا
+  title             String    // عنوان کد تخفیف
+  code              String    @unique // کد تخفیف (باید یکتا باشد)
+  discountPercent   Float     // درصد تخفیف (مثلاً 20 برای 20%)
+  maxDiscountAmount Float?    // سقف مبلغ تخفیف (اختیاری)
+  usageLimit        Int?      // سقف تعداد استفاده (اختیاری)
+  usageCount        Int       @default(0) // تعداد استفاده‌شده
+  minPurchaseAmount Float?    // حداقل مبلغ لازم برای استفاده از تخفیف (اختیاری)
+  expiryDate        DateTime? // تاریخ انقضا (اختیاری)
+  description       String?   // توضیحات کد تخفیف (اختیاری)
+  courseId          Int?      // ارتباط با دوره خاص (اختیاری)
+  course            Course?   @relation(fields: [courseId], references: [id]) // رابطه با مدل Course
+  isActive          Boolean   @default(true) // وضعیت فعال/غیرفعال بودن کد تخفیف
+  createdAt         DateTime  @default(now()) // تاریخ ایجاد
+  updatedAt         DateTime  @updatedAt      // تاریخ به‌روزرسانی
+  userDiscount      UserDiscount[]
+}
+
+model UserDiscount {
+  id             Int          @id @default(autoincrement()) // شناسه یکتا
+  userId         String       // شناسه کاربر
+  discountCodeId Int          // شناسه کد تخفیف
+  usedAt         DateTime     @default(now()) // تاریخ استفاده
+  user           User         @relation(fields: [userId], references: [id])
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id])
+
+  @@unique([userId, discountCodeId]) // هر کاربر فقط یک بار می‌تواند از یک کد تخفیف استفاده کند
+}
+
 
 enum Role {
   USER

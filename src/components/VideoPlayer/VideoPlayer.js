@@ -5,6 +5,7 @@ import PropTypes from 'prop-types';
 import Plyr from 'plyr';
 import Hls from 'hls.js';
 import 'plyr/dist/plyr.css';
+import { useAuth } from '@/contexts/AuthContext';
 
 const VideoPlayer = ({
   videoUrl,
@@ -14,10 +15,17 @@ const VideoPlayer = ({
   isAdmin = false,
 }) => {
   const playerRef = useRef(null);
-  let hls;
-
+  const hlsRef = useRef(null);
+  const watermarkRef = useRef(null);
   const [isVideoCompleted, setIsVideoCompleted] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [speedOptions] = useState([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
+  const { user } = useAuth();
+  const [videoDimensions, setVideoDimensions] = useState({
+    width: 16,
+    height: 9,
+  });
+  let isPortrait;
 
   const markVideoAsCompleted = async () => {
     try {
@@ -52,10 +60,37 @@ const VideoPlayer = ({
 
       const data = await response.json();
       if (data.isCompleted !== undefined) {
-        setIsVideoCompleted(data.isCompleted); // وضعیت تکمیل را در state ذخیره می‌کنیم
+        setIsVideoCompleted(data.isCompleted);
       }
     } catch (error) {
       console.error('Error fetching video completion status:', error);
+    }
+  };
+
+  const moveWatermark = () => {
+    if (watermarkRef.current && playerRef.current) {
+      // به‌دست آوردن ابعاد پلیر
+      const playerRect = playerRef.current.getBoundingClientRect();
+      const maxX = playerRect.width - watermarkRef.current.offsetWidth - 20; // فاصله از راست
+      const maxY = playerRect.height - watermarkRef.current.offsetHeight - 20; // فاصله از پایین
+
+      // جلوگیری از موقعیت‌های منفی
+      const randomX = Math.max(200, Math.random() * maxX); // حداقل فاصله 20px از چپ
+      const randomY = Math.max(200, Math.random() * maxY); // حداقل فاصله 20px از بالا
+
+      // تنظیم موقعیت واترمارک
+      watermarkRef.current.style.left = `${randomX}px`;
+      watermarkRef.current.style.top = `${randomY}px`;
+    }
+  };
+
+  const onFullscreenChange = () => {
+    try {
+      if (document.fullscreenElement) {
+        playerRef.current.style.height = '100%';
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
 
@@ -63,24 +98,92 @@ const VideoPlayer = ({
     if (!isAdmin && sessionId) fetchVideoCompletionStatus();
     const video = playerRef.current;
 
-    // تنظیم پوستر برای ویدیو
     if (posterUrl) {
       video.poster = posterUrl;
     }
 
+    if (!watermarkRef.current) {
+      // اضافه کردن واترمارک به پلیر
+      const watermarkElement = document.createElement('div');
+      watermarkElement.innerText = user.phone || 'سمانه یوگا'; // متن واترمارک
+      watermarkElement.style.position = 'absolute';
+      watermarkElement.style.pointerEvents = 'none'; // برای عدم تداخل با تعاملات ویدیو
+      watermarkElement.style.color = 'rgba(255, 70, 70, 0.7)';
+      watermarkElement.style.zIndex = '999'; // قرار دادن روی ویدیو
+      watermarkElement.style.display = 'none';
+      document.body.appendChild(watermarkElement);
+      watermarkRef.current = watermarkElement;
+    }
+
+    const updateFontSize = () => {
+      if (window.innerWidth <= 768) {
+        watermarkRef.current.style.fontSize = '12px';
+      } else {
+        watermarkRef.current.style.fontSize = '16px';
+      }
+    };
+
+    updateFontSize();
+    window.addEventListener('resize', updateFontSize);
+
+    const updateVideoSize = () => {
+      if (video.videoWidth && video.videoHeight) {
+        setVideoDimensions({
+          width: video.videoWidth,
+          height: video.videoHeight,
+        });
+      }
+    };
+    isPortrait = videoDimensions.height > videoDimensions.width;
+
+    video.addEventListener('loadedmetadata', updateVideoSize);
+
+    const updatePlayerSize = () => {
+      if (isPortrait) {
+        if (window.innerWidth >= 1536) {
+          playerRef.current.style.height = '666px';
+        } else if (window.innerWidth < 1536 && window.innerWidth >= 1280) {
+          playerRef.current.style.height = '522px';
+        } else if (window.innerWidth < 1280 && window.innerWidth >= 1024) {
+          playerRef.current.style.height = '451px';
+        } else if (window.innerWidth < 1024 && window.innerWidth >= 768) {
+          playerRef.current.style.height = '396px';
+        } else if (window.innerWidth < 768 && window.innerWidth >= 640) {
+          playerRef.current.style.height = '324px';
+        } else {
+          playerRef.current.style.height = 'auto';
+        }
+      }
+    };
+
+    updatePlayerSize();
+    window.addEventListener('resize', updatePlayerSize);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    moveWatermark();
+
+    // حرکت واترمارک در فواصل زمانی
+    const watermarkInterval = setInterval(moveWatermark, 5000); // هر 5 ثانیه
+
     if (Hls.isSupported()) {
-      hls = new Hls({
+      const hls = new Hls({
         autoStartLoad: true,
         startLevel: -1,
         capLevelToPlayerSize: true,
       });
-      // بارگذاری فایل m3u8 با استفاده از loadSource
-      hls.loadSource(videoUrl); // استفاده از `loadSource` برای بارگذاری master.m3u8
+
+      hls.loadSource(videoUrl);
       hls.attachMedia(video);
+      hlsRef.current = hls;
+
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        const availableQualities = hls.levels.map((level, index) => ({
+          label: level.height,
+          value: index,
+        }));
+
         new Plyr(video, {
           controls: [
-            'play-large', // دکمه پخش بزرگ
+            'play-large',
             'play',
             'progress',
             'current-time',
@@ -89,6 +192,37 @@ const VideoPlayer = ({
             'fullscreen',
             'settings',
           ],
+          settings: ['quality', 'speed'],
+          quality: {
+            default: 'auto',
+            options: ['auto', ...availableQualities.map((q) => q.label)],
+            forced: true,
+            onChange: (newQuality) => {
+              if (hlsRef.current) {
+                const video = playerRef.current;
+                const currentTime = video.currentTime;
+                const wasPlaying = !video.paused;
+                const quality = availableQualities.find(
+                  (quality) => quality.label === newQuality,
+                );
+                hlsRef.current.currentLevel =
+                  newQuality === 'auto' ? -1 : quality.value;
+
+                setTimeout(() => {
+                  video.currentTime = currentTime;
+                  if (wasPlaying) video.play();
+                }, 100);
+              }
+            },
+          },
+          speed: {
+            selected: 1, // مقدار پیش‌فرض سرعت پخش
+            options: speedOptions, // تنظیمات سرعت
+            onChange: (newSpeed) => {
+              const video = playerRef.current;
+              video.playbackRate = newSpeed; // تغییر سرعت پخش ویدیو
+            },
+          },
         });
       });
 
@@ -96,13 +230,25 @@ const VideoPlayer = ({
         console.error('HLS Error:', data);
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = videoUrl; // در صورتی که HLS پشتیبانی نمی‌شود
+      video.src = videoUrl;
     }
+
+    // رویدادهای پلی و پاز برای نمایش/مخفی کردن واترمارک
+    video.addEventListener('play', () => {
+      watermarkRef.current.style.display = 'block'; // نمایش واترمارک هنگام پخش
+    });
+
+    video.addEventListener('pause', () => {
+      watermarkRef.current.style.display = 'block'; // واترمارک هنگام توقف هم نمایش داده شود
+    });
+
+    video.addEventListener('ended', () => {
+      watermarkRef.current.style.display = 'none'; // واترمارک بعد از پایان ویدیو مخفی شود
+    });
 
     if (userId) {
       video.ontimeupdate = () => {
         const currentTime = video.currentTime;
-        // بررسی 80% ویدیو مشاهده شده
         if (
           !isVideoCompleted &&
           videoDuration > 0 &&
@@ -113,15 +259,19 @@ const VideoPlayer = ({
       };
 
       video.onloadedmetadata = () => {
-        setVideoDuration(video.duration); // ذخیره مدت زمان ویدیو
+        setVideoDuration(video.duration);
       };
     }
 
     return () => {
-      // در هنگام رندر مجدد، پلیر را تمیز کنیم
-      if (hls) {
-        hls.destroy();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
       }
+      clearInterval(watermarkInterval);
+      window.removeEventListener('resize', updateFontSize);
+      window.removeEventListener('resize', updatePlayerSize);
+      window.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('loadedmetadata', updateVideoSize);
     };
   }, [videoUrl, posterUrl, videoDuration]);
 
@@ -129,15 +279,25 @@ const VideoPlayer = ({
     if (isVideoCompleted) {
       markVideoAsCompleted();
     }
-  }, [isVideoCompleted, markVideoAsCompleted]);
+  }, [isVideoCompleted]);
 
   return (
-    <div className='plyr-container overflow-hidden rounded-xl'>
+    <div
+      className='relative flex items-center justify-center overflow-hidden rounded-xl'
+      style={{
+        width: '100%',
+        backgroundColor: 'black', // پس‌زمینه مشکی برای ویدیوهای عمودی
+      }}
+    >
       <video
         ref={playerRef}
         controls
         crossOrigin='anonymous'
-        className='w-full'
+        style={{
+          display: 'block', // از ایجاد فضای اضافی جلوگیری می‌کند
+          maxWidth: isPortrait ? 'auto' : '100%', // ویدیوهای افقی کل عرض را بگیرند
+          maxHeight: isPortrait ? '100%' : 'auto', // ویدیوهای عمودی ارتفاع را بگیرند
+        }}
       />
     </div>
   );
