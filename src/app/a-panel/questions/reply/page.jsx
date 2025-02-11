@@ -23,7 +23,7 @@ const fetchQuestion = async (questionId) => {
   }
 };
 
-function QuestionPage() {
+function QuestionReplyPage() {
   const searchParams = useSearchParams();
   const questionId = searchParams.get('questionId');
   const [question, setQuestion] = useState(null);
@@ -46,11 +46,7 @@ function QuestionPage() {
   }
 
   if (!question) {
-    return (
-      <div className='font-faNa'>
-        اطلاعات برای تیکت با ایدی {ticketId} یافت نشد!
-      </div>
-    );
+    return <div className='font-faNa'>اطلاعات برای سوال یافت نشد!</div>;
   }
 
   return (
@@ -67,4 +63,4 @@ function QuestionPage() {
   );
 }
 
-export default QuestionPage;
+export default QuestionReplyPage;

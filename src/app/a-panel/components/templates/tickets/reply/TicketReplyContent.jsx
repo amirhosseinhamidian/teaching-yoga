@@ -46,7 +46,7 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
   };
 
   useEffect(() => {
-    if (ticket.status === PENDING) {
+    if (ticket?.status === PENDING) {
       handleStatusChange(IN_PROGRESS);
     }
   }, [ticketId]);

@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 'use client';
 import React, { useEffect, useState } from 'react';
 import CreateEditBlog from '../../components/modules/CreateEditBlog/CreateEditBlog';
@@ -5,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const page = ({ params }) => {
+const Page = ({ params }) => {
   const { mode } = params;
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -15,11 +16,20 @@ const page = ({ params }) => {
 
   const [article, setArticle] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isValidMode, setIsValidMode] = useState(true); // اضافه شد
 
-  if (mode !== 'create' && mode !== 'edit') {
-    router.replace('/not-found');
-    return;
-  }
+  useEffect(() => {
+    if (mode !== 'create' && mode !== 'edit') {
+      setIsValidMode(false);
+      router.replace('/not-found');
+    }
+  }, [mode, router]);
+
+  useEffect(() => {
+    if (mode === 'edit') {
+      fetchEditData();
+    }
+  }, [mode]);
 
   const fetchEditData = async () => {
     setIsLoading(true);
@@ -39,11 +49,7 @@ const page = ({ params }) => {
     }
   };
 
-  useEffect(() => {
-    if (mode === 'edit') {
-      fetchEditData();
-    }
-  }, [mode]);
+  if (!isValidMode) return null; // اینجا کنترل نمایش انجام می‌شود
 
   return (
     <div>
@@ -52,4 +58,4 @@ const page = ({ params }) => {
   );
 };
 
-export default page;
+export default Page;
