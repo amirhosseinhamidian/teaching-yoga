@@ -214,7 +214,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
 
     setShortAddressStatus('loading');
     const response = await fetch(
-      `/api/admin/validate-short-address?shortAddress=${encodeURIComponent(shortAddress)}`,
+      `/api/admin/validate-course-short-address?shortAddress=${encodeURIComponent(shortAddress)}`,
     );
     const data = await response.json();
 

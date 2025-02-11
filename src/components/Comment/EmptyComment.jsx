@@ -2,7 +2,7 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { AiOutlineComment } from 'react-icons/ai';
 
-const EmptyComment = (isCourse, className) => {
+const EmptyComment = ({ isCourse, className }) => {
   return (
     <div
       className={`py-6 text-center text-subtext-light dark:text-subtext-dark ${className}`}
@@ -11,9 +11,7 @@ const EmptyComment = (isCourse, className) => {
       <p className='text-xs md:text-sm'>
         تا کنون نظری برای این {isCourse ? 'دوره' : 'مقاله'} ثبت نشده است.
       </p>
-      <p className='text-xs md:text-sm'>
-        اولین نفری باشید که برای این دوره نظری ثبت می کند!
-      </p>
+      <p className='text-xs md:text-sm'>اولین نفری باشید که نظری ثبت می کند!</p>
     </div>
   );
 };

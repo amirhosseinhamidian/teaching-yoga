@@ -4,7 +4,7 @@ import prismadb from '@/libs/prismadb';
 // Handler for GET request to fetch course details with terms, sessions, and progress data
 export async function GET(request) {
   // Parse course short address from query parameters
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   const shortAddress = searchParams.get('shortAddress');
 
   if (!shortAddress) {

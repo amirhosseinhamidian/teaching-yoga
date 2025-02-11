@@ -6,7 +6,7 @@ import { authOptions } from '../auth/[...nextauth]/route';
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const courseId = parseInt(searchParams.get('courseId'));
     const page = parseInt(searchParams.get('page')) || 1;
 
@@ -67,7 +67,7 @@ export async function PUT(request) {
 }
 
 export async function DELETE(request) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   const commentId = searchParams.get('commentId');
 
   try {

@@ -3,7 +3,7 @@ import prismadb from '@/libs/prismadb';
 
 export async function GET(request) {
   // دریافت پارامترهای URL
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   const shortAddress = searchParams.get('shortAddress');
   const requestHeaders = new Headers(request.headers);
   const userId = requestHeaders.get('userid');

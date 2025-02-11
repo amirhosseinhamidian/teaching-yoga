@@ -38,7 +38,7 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const category = searchParams.get('category');
     const whereClause = category
       ? VALID_CATEGORIES.includes(category)

@@ -26,7 +26,9 @@ const TicketItem = ({ user, date, content, divider = true, className }) => {
             {getShamsiDate(date)} {`(${getTimeFromDate(date)})`}
           </p>
         </div>
-        <div className='text-xs sm:mt-4 sm:text-sm md:basis-4/5'>{content}</div>
+        <div className='text-xs sm:mt-4 sm:text-sm md:basis-4/5'>
+          <div dangerouslySetInnerHTML={{ __html: content }} />
+        </div>
       </div>
       {divider && (
         <div className='mt-6 border-b border-gray-300 dark:border-gray-600'></div>

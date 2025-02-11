@@ -3,7 +3,7 @@ import prismadb from '@/libs/prismadb';
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
 
     // دریافت پارامترها از URL
     const page = parseInt(searchParams.get('page') || '1', 10); // شماره صفحه، پیش‌فرض: 1

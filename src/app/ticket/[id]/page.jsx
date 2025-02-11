@@ -19,7 +19,7 @@ async function TicketPage({ params }) {
   const { id } = params;
 
   return (
-    <div>
+    <div className='overflow-x-hidden'>
       <Header isLogin={session} />
       <TicketPageContent ticketId={id} />
       <Footer />

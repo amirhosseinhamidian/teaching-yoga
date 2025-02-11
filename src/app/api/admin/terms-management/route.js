@@ -41,7 +41,7 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     // دریافت پارامترهای کوئری از URL
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10); // شماره صفحه
     const perPage = parseInt(searchParams.get('perPage') || '10', 10); // تعداد در هر صفحه
     const courseId = searchParams.get('courseId'); // دریافت شناسه دوره

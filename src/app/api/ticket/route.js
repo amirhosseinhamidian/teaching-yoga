@@ -46,7 +46,7 @@ export async function GET(req) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
+    const { searchParams } = req.nextUrl;
 
     const userId = session.user.userId;
     const page = parseInt(searchParams.get('page') || '1', 10);

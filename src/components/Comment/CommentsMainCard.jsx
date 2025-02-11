@@ -26,19 +26,18 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
     const controller = new AbortController();
     const fetchComments = async () => {
       setLoading(true);
-
+      const url = isCourse
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`
+        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments-article?articleId=${referenceId}&page=${page}`;
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`,
-          {
-            signal: controller.signal,
-            method: 'GET',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            credentials: 'include',
+        const response = await fetch(url, {
+          signal: controller.signal,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
           },
-        );
+          credentials: 'include',
+        });
 
         if (!response.ok) {
           throw new Error('Network response was not ok');
@@ -83,7 +82,7 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
       <div className='flex items-baseline justify-between'>
         <h3 className='mb-4 font-semibold md:text-lg'>نظرات کاربران</h3>
         <OutlineButton
-          className='text-xs sm:text-base'
+          className='text-2xs sm:text-sm'
           onClick={createToggleHandler}
         >
           {showCreateCard ? 'بستن' : 'ایجاد نظر جدید'}
@@ -92,9 +91,10 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
       {showCreateCard && (
         <CreateCommentCard
           user={user}
-          courseId={referenceId}
+          referenceId={referenceId}
           onCloseClick={createToggleHandler}
           onCommentAdded={addComment}
+          isCourse={isCourse}
         />
       )}
       {loading && page === 1 ? (

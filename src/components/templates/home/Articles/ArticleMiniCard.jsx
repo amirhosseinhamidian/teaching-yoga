@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 const ArticleMiniCard = ({ article, className }) => {
   const router = useRouter();
   const handleClickArticle = () => {
-    router.push(`/articles/${article.id}`);
+    router.push(`/articles/${article.shortAddress}`);
   };
 
   return (
@@ -34,7 +34,7 @@ const ArticleMiniCard = ({ article, className }) => {
             {getShamsiDate(article.updatedAt)}
           </h5>
           <Link
-            href={`/articles/${article.id}`}
+            href={`/articles/${article.shortAddress}`}
             className='text-xs text-accent transition-all duration-200 ease-in hover:scale-110 sm:text-sm'
           >
             خواندن مقاله

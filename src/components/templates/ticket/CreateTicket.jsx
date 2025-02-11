@@ -3,11 +3,11 @@ import React, { useEffect, useState } from 'react';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import Input from '@/components/Ui/Input/Input';
-import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useRouter } from 'next/navigation';
+import TextEditor from '@/components/Ui/TextEditor/TextEditor';
 
 const CreateTicket = () => {
   const { isDark } = useTheme();
@@ -47,19 +47,19 @@ const CreateTicket = () => {
     let errors = {};
 
     if (!subject.trim()) {
-      errors.title = 'موضوع تیکت را مشخص کنید.';
+      errors.subject = 'موضوع تیکت را مشخص کنید.';
     }
 
-    if (subject.length < 4) {
-      errors.title = 'موضوع تیکت حداقل باید سه کارکتر باشد.';
+    if (subject.length < 3) {
+      errors.subject = 'موضوع تیکت حداقل باید سه کارکتر باشد.';
     }
 
     if (!ticketText.trim()) {
-      errors.shortDesc = 'متن تیکت را بنویسید.';
+      errors.description = 'متن تیکت را بنویسید.';
     }
 
     if (ticketText.length < 10) {
-      errors.shortDesc = 'متن تیکت باید بیش از ۱۰ کارکتر باشد.';
+      errors.description = 'متن تیکت باید بیش از ۱۰ کارکتر باشد.';
     }
 
     setErrorMessages(errors);
@@ -132,16 +132,23 @@ const CreateTicket = () => {
           errorMessage={errorMessages.subject}
           className='bg-surface-light dark:bg-surface-dark'
         />
-        <TextArea
+        <TextEditor
           fullWidth
           label='متن تیکت'
           placeholder='متن تیکت را بنویسید'
           value={ticketText}
           onChange={setTicketText}
           maxLength={2000}
-          rows={6}
           errorMessage={errorMessages.description}
           className='bg-surface-light dark:bg-surface-dark'
+          toolbarItems={[
+            ['bold', 'italic', 'underline', 'strike'],
+            [{ align: [] }, { direction: 'rtl' }],
+            [{ list: 'ordered' }, { list: 'bullet' }],
+            [{ indent: '-1' }, { indent: '+1' }],
+            ['link'],
+            ['clean'],
+          ]}
         />
         <div className='mb-10 flex w-full items-center justify-center'>
           <Button
