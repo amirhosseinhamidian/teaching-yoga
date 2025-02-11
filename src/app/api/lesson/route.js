@@ -4,7 +4,7 @@ import prismadb from '@/libs/prismadb';
 import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
 
 export async function GET(request) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = request.nextUrl;
   const sessionId = searchParams.get('sessionId');
 
   if (!sessionId) {

@@ -8,6 +8,7 @@ import Header from '@/components/Header/Header';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../api/auth/[...nextauth]/route';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -76,13 +77,13 @@ async function CoursesPage() {
 
   const result = await res.json();
   if (!result.success) {
-    // TODO: error request ui with refresh button
+    redirect('/not-found');
   }
 
   const courses = result.data;
 
   if (courses === 0) {
-    return <p>loading</p>;
+    redirect('/not-found');
   }
 
   return (

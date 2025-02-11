@@ -62,9 +62,11 @@ const QuestionSliderItem = ({ question }) => {
               </span>
             </div>
           </div>
-          <p className='my-4 mr-2 text-xs sm:mr-16 sm:text-sm lg:mr-8'>
-            {question.answerText}
-          </p>
+          <div className='my-4 mr-2 text-xs sm:mr-16 sm:text-sm lg:mr-8'>
+            <div
+              dangerouslySetInnerHTML={{ __html: question.answerText }} // رندر HTML در JSX
+            />
+          </div>
         </div>
       ) : (
         <div className='flex min-h-44 flex-col items-center justify-center gap-4 rounded-xl border border-subtext-light px-4 py-2 text-xs text-secondary sm:text-sm dark:border-subtext-dark'>

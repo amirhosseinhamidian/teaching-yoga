@@ -16,10 +16,10 @@ const routes = [
   //   label: 'کلاس آنلاین',
   //   path: '/',
   // },
-  // {
-  //   label: 'مقالات',
-  //   path: '/',
-  // },
+  {
+    label: 'مقالات',
+    path: '/articles',
+  },
   {
     label: 'ارتباط با ما',
     path: '/contact-us',

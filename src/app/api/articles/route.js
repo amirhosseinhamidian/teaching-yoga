@@ -8,11 +8,13 @@ export async function GET(req) {
     const { searchParams } = req.nextUrl;
     const onlyLastThree = searchParams.get('lastThree') === 'true';
     const articles = await prismadb.article.findMany({
+      where: { isActive: true },
       select: {
         id: true,
         title: true,
         subtitle: true,
         cover: true,
+        shortAddress: true,
         updatedAt: true,
       },
       orderBy: {

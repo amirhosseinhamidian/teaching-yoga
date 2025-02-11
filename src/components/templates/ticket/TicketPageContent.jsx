@@ -3,13 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
-import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
 import TicketItem from './TicketItem';
 import { ANSWERED, CLOSED, OPEN } from '@/constants/ticketStatus';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
+import TextEditor from '@/components/Ui/TextEditor/TextEditor';
 
 const TicketPageContent = ({ ticketId }) => {
   const { isDark } = useTheme();
@@ -183,11 +183,11 @@ const TicketPageContent = ({ ticketId }) => {
   };
 
   return (
-    <div className='container py-10'>
+    <div className='container overflow-x-hidden py-10'>
       {isLoading ? (
         <></>
       ) : (
-        <div className='mx-auto lg:w-4/5'>
+        <div className='mx-auto overflow-x-hidden lg:w-4/5'>
           {ticket.status !== CLOSED && (
             <div className='mb-4 flex justify-end'>
               <OutlineButton
@@ -198,7 +198,7 @@ const TicketPageContent = ({ ticketId }) => {
               </OutlineButton>
             </div>
           )}
-          <div className='rounded-xl bg-surface-light px-4 py-6 dark:bg-surface-dark'>
+          <div className='overflow-x-hidden rounded-xl bg-surface-light px-4 py-6 dark:bg-surface-dark'>
             <div className='flex items-center justify-between gap-3'>
               <div>
                 <h1 className='mb-2 text-base sm:text-lg md:text-xl xl:text-2xl'>
@@ -217,7 +217,7 @@ const TicketPageContent = ({ ticketId }) => {
               <>
                 <div className='mt-5 border-b border-gray-300 dark:border-gray-600'></div>
                 <div className='flex flex-col items-end gap-4 py-3 sm:flex-row sm:px-6'>
-                  <TextArea
+                  <TextEditor
                     value={replyText}
                     onChange={setReplyText}
                     maxLength={2000}
@@ -225,7 +225,14 @@ const TicketPageContent = ({ ticketId }) => {
                     placeholder='متن پاسخ را بنویسید'
                     fullWidth
                     errorMessage={errorReplyText}
-                    className='text-sm md:text-base'
+                    toolbarItems={[
+                      ['bold', 'italic', 'underline', 'strike'],
+                      [{ align: [] }, { direction: 'rtl' }],
+                      [{ list: 'ordered' }, { list: 'bullet' }],
+                      [{ indent: '-1' }, { indent: '+1' }],
+                      ['link'],
+                      ['clean'],
+                    ]}
                   />
                   <Button
                     shadow

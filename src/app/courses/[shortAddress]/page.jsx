@@ -48,8 +48,8 @@ export async function generateMetadata({ params }) {
 
   // اطلاعات پیش‌فرض
   const defaultSeoData = {
-    title: 'Default Course Title',
-    description: 'Default description for the course details page.',
+    title: 'سمانه یوگا',
+    description: 'دوره های یوگا و مدیتیشن با سمانه',
     robots: 'index, follow',
     canonical: `https://samaneyoga.ir/courses/${shortAddress}`,
   };

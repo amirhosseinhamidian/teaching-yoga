@@ -10,9 +10,10 @@ import { useTheme } from '@/contexts/ThemeContext';
 
 const CreateCommentCard = ({
   user,
-  courseId,
+  referenceId,
   onCommentAdded,
   onCloseClick,
+  isCourse,
 }) => {
   const [content, setContent] = useState('');
   const router = useRouter();
@@ -28,21 +29,23 @@ const CreateCommentCard = ({
 
   const sendCommentHandler = async () => {
     if (!content || content.length < 10) {
-      toast.showErrorToast('حداقل نظر قابل قبول 10 کارکتر است');
+      toast.showErrorToast('حداقل نظر قابل قبول ۱۰ کارکتر است');
       return;
     }
+    const payload = {
+      ...(isCourse ? { courseId: referenceId } : { articleId: referenceId }),
+      content,
+      userId: user.id,
+    };
+    const url = isCourse ? '/api/comments' : '/api/comments-article';
     setSendLoading(true);
     try {
-      const res = await fetch('/api/comments', {
+      const res = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          courseId,
-          content,
-          userId: user.id,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -85,7 +88,6 @@ const CreateCommentCard = ({
             placeholder='نظرت رو بنویس'
             value={content}
             onChange={setContent}
-            className='sm:mx-6'
           />
           <div className='flex w-full items-center justify-end gap-2 sm:pl-6'>
             <OutlineButton onClick={() => onCloseClick()}>لغو</OutlineButton>
@@ -109,9 +111,10 @@ const CreateCommentCard = ({
 
 CreateCommentCard.propTypes = {
   user: PropTypes.object.isRequired,
-  courseId: PropTypes.number.isRequired,
+  referenceId: PropTypes.number.isRequired,
   onCloseClick: PropTypes.func.isRequired,
   onCommentAdded: PropTypes.func.isRequired,
+  isCourse: PropTypes.bool.isRequired,
 };
 
 export default CreateCommentCard;

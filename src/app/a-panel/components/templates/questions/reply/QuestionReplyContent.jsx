@@ -6,8 +6,8 @@ import Image from 'next/image';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
-import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
+import TextEditor from '@/components/Ui/TextEditor/TextEditor';
 
 const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
   const { isDark } = useTheme();
@@ -118,7 +118,7 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
           </div>
           <div>
             <div className='flex flex-col items-end gap-4 py-3 sm:flex-row sm:px-6'>
-              <TextArea
+              <TextEditor
                 value={replyText}
                 onChange={setReplyText}
                 maxLength={2000}
@@ -126,7 +126,15 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
                 placeholder='متن پاسخ را بنویسید'
                 fullWidth
                 errorMessage={errorReplyText}
-                className='text-sm md:text-base'
+                toolbarItems={[
+                  ['bold', 'italic', 'underline', 'strike'],
+                  [{ align: [] }, { direction: 'rtl' }], // تنظیم جهت متن
+                  [{ list: 'ordered' }, { list: 'bullet' }],
+                  [{ indent: '-1' }, { indent: '+1' }],
+                  [{ color: [] }, { background: [] }],
+                  ['link'],
+                  ['clean'], // پاک کردن فرمت
+                ]}
               />
               <Button
                 shadow

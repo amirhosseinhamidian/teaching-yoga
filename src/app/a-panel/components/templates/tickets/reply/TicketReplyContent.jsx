@@ -8,9 +8,9 @@ import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { ANSWERED, IN_PROGRESS, PENDING } from '@/constants/ticketStatus';
 import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
-import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
 import TicketItem from '@/components/templates/ticket/TicketItem';
+import TextEditor from '@/components/Ui/TextEditor/TextEditor';
 
 const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
   const { isDark } = useTheme();
@@ -152,7 +152,7 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
         <div>
           <div className='mt-5 border-b border-gray-300 dark:border-gray-600'></div>
           <div className='flex flex-col items-end gap-4 py-3 sm:flex-row sm:px-6'>
-            <TextArea
+            <TextEditor
               value={replyText}
               onChange={setReplyText}
               maxLength={2000}
@@ -160,7 +160,14 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
               placeholder='متن پاسخ را بنویسید'
               fullWidth
               errorMessage={errorReplyText}
-              className='text-sm md:text-base'
+              toolbarItems={[
+                ['bold', 'italic', 'underline', 'strike'],
+                [{ align: [] }, { direction: 'rtl' }],
+                [{ list: 'ordered' }, { list: 'bullet' }],
+                [{ indent: '-1' }, { indent: '+1' }],
+                ['link'],
+                ['clean'],
+              ]}
             />
             <Button
               shadow

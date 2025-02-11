@@ -3,7 +3,7 @@ import prismadb from '@/libs/prismadb';
 
 export async function GET(request) {
   try {
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const type = searchParams.get('type'); // course یا article
     const page = parseInt(searchParams.get('page') || '1', 10);
     const perPage = parseInt(searchParams.get('perPage') || '10', 10);

@@ -46,7 +46,7 @@ export async function POST(request) {
 export async function GET(request) {
   try {
     // استخراج شماره صفحه از Query Parameters
-    const { searchParams } = new URL(request.url);
+    const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10);
 
     if (page < 1) {
