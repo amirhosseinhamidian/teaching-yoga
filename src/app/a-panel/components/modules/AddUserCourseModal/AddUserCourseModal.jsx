@@ -8,6 +8,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import Button from '@/components/Ui/Button/Button';
 import Image from 'next/image';
+import Input from '@/components/Ui/Input/Input';
 
 function AddUserCourseModal({ onClose, onSuccess, userId }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -15,16 +16,29 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
   const toast = createToastHandler(isDark);
 
   const [courseId, setCourseId] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+
   const [errorMessages, setErrorMessages] = useState({
     course: '',
+    paymentMethod: '',
   });
   const [courseOptions, setCourseOptions] = useState([]);
+  const paymentOptions = [
+    { label: 'کارت به کارت', value: 'CREDIT_CARD' },
+    { label: 'آنلاین', value: 'ONLINE' },
+    { label: 'رایگان', value: 'FREE' },
+  ];
 
   const isValidInput = () => {
     let errors = {};
 
     if (!courseId) {
       errors.course = 'یک دوره انتخاب کنید';
+    }
+
+    if (!paymentMethod) {
+      errors.paymentMethod = 'روش پرداخت را انتخاب کنید';
     }
 
     setErrorMessages(errors);
@@ -95,6 +109,8 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
           body: JSON.stringify({
             userId,
             courseId,
+            amount: amount ? Number(amount) : 0,
+            paymentMethod,
           }),
         },
       );
@@ -134,12 +150,31 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
           </p>
           <DropDown
             options={courseOptions}
+            fullWidth
             placeholder='دوره مورد نظر را انتخاب کنید'
             value={courseId}
             onChange={setCourseId}
             errorMessage={errorMessages.course}
             className='mt-4 bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
+          <div className='mt-4 grid grid-cols-1 gap-4 md:grid-cols-2'>
+            <DropDown
+              options={paymentOptions}
+              fullWidth
+              placeholder='نوع پرداخت را انتخاب کنید'
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+              errorMessage={errorMessages.paymentMethod}
+              className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+            />
+            <Input
+              placeholder='مبلغ پرداختی را وارد کنید'
+              value={amount}
+              onChange={setAmount}
+              thousandSeparator={true}
+              className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
+            />
+          </div>
         </div>
 
         <Button
