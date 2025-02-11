@@ -75,7 +75,7 @@ const UserCourseRow = ({
         </div>
       ) : (
         <>
-          {courses.map((course) => (
+          {courses?.map((course) => (
             <div
               className='relative col-span-1 flex flex-col items-center rounded-xl bg-background-light dark:bg-background-dark'
               key={course.courseId}
