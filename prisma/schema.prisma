@@ -88,8 +88,8 @@ model UserCourse {
   courseId    Int
   purchasedAt DateTime       @default(now())
   status      PurchaseStatus @default(ACTIVE)
-  course      Course         @relation("UserCourses", fields: [courseId], references: [id])
-  user        User           @relation("UserCourses", fields: [userId], references: [id])
+  course      Course         @relation("UserCourses", fields: [courseId], references: [id], onDelete: Cascade)
+  user        User           @relation("UserCourses", fields: [userId], references: [id] , onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -116,8 +116,8 @@ model CourseTerm {
   isOptional Boolean  @default(false)
   createAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  course     Course   @relation("CourseToTerms", fields: [courseId], references: [id])
-  term       Term     @relation("TermToCourses", fields: [termId], references: [id])
+  course     Course   @relation("CourseToTerms", fields: [courseId], references: [id] , onDelete: Cascade)
+  term       Term     @relation("TermToCourses", fields: [termId], references: [id] , onDelete: Cascade)
 
   @@unique([courseId, termId])
 }
@@ -134,7 +134,7 @@ model Session {
   order           Int               @default(0)
   isActive        Boolean           @default(false)
   questions       Question[]
-  term            Term              @relation("TermToSessions", fields: [termId], references: [id])
+  term            Term              @relation("TermToSessions", fields: [termId], references: [id] , onDelete: Cascade)
   video           SessionVideo?     @relation("SessionToVideo", fields: [videoId], references: [id])
   sessionProgress SessionProgress[] @relation("SessionProgress")
 }
@@ -156,8 +156,8 @@ model SessionProgress {
   isCompleted Boolean  @default(false)
   createAt    DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  session     Session  @relation("SessionProgress", fields: [sessionId], references: [id])
-  user        User     @relation("SessionProgress", fields: [userId], references: [id])
+  session     Session  @relation("SessionProgress", fields: [sessionId], references: [id], onDelete: Cascade)
+  user        User     @relation("SessionProgress", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, sessionId])
 }
@@ -188,7 +188,7 @@ model Instructor {
   createAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
   courses   Course[]
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserTerm {
@@ -196,8 +196,8 @@ model UserTerm {
   userId      String
   termId      Int
   purchasedAt DateTime @default(now())
-  term        Term     @relation("UserTerms", fields: [termId], references: [id])
-  user        User     @relation("UserTerms", fields: [userId], references: [id])
+  term        Term     @relation("UserTerms", fields: [termId], references: [id], onDelete: Cascade)
+  user        User     @relation("UserTerms", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, termId])
 }
@@ -213,7 +213,7 @@ model Cart {
   createAt      DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
   discountAppliedAt DateTime?
-  user          User         @relation("UserCarts", fields: [userId], references: [id])
+  user          User         @relation("UserCarts", fields: [userId], references: [id], onDelete: Cascade)
   cartCourses   CartCourse[] @relation("CartToCourses")
   cartTerms     CartTerm[]   @relation("CartToCartTerms")
   payment       Payment?     @relation("CartToPayment")
@@ -223,8 +223,8 @@ model CartCourse {
   id       Int    @id @unique @default(autoincrement())
   cartId   Int
   courseId Int
-  cart     Cart   @relation("CartToCourses", fields: [cartId], references: [id])
-  course   Course @relation("CourseToCartCourses", fields: [courseId], references: [id])
+  cart     Cart   @relation("CartToCourses", fields: [cartId], references: [id], onDelete: Cascade)
+  course   Course @relation("CourseToCartCourses", fields: [courseId], references: [id], onDelete: Cascade)
 }
 
 model CartTerm {
@@ -236,7 +236,7 @@ model CartTerm {
   createAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
   cart      Cart     @relation("CartToCartTerms", fields: [cartId], references: [id])
-  term      Term     @relation("CartToTerms", fields: [termId], references: [id])
+  term      Term     @relation("CartToTerms", fields: [termId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, termId])
 }
@@ -253,7 +253,7 @@ model Payment {
   updatedAt     DateTime      @updatedAt
   transactionId BigInt?
   cart          Cart          @relation("CartToPayment", fields: [cartId], references: [id])
-  user          User          @relation("UserToPayments", fields: [userId], references: [id])
+  user          User          @relation("UserToPayments", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Comment {
@@ -266,11 +266,11 @@ model Comment {
   createAt  DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   status    CommentStatus @default(PENDING)
-  article   Article?      @relation(fields: [articleId], references: [id])
-  course    Course?       @relation(fields: [courseId], references: [id])
+  article   Article?      @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  course    Course?       @relation(fields: [courseId], references: [id], onDelete: Cascade)
   parent    Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
   replies   Comment[]     @relation("CommentReplies")
-  user      User          @relation(fields: [userId], references: [id])
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Article {
@@ -321,8 +321,8 @@ model Ticket {
   userId        String
   courseId      Int?
   id            Int           @id @default(autoincrement())
-  course        Course?       @relation(fields: [courseId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+  course        Course?       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   ticketReplies TicketReply[]
 }
 
@@ -336,7 +336,7 @@ model TicketReply {
   parent    TicketReply?  @relation("ParentReply", fields: [parentId], references: [id])
   children  TicketReply[] @relation("ParentReply")
   ticket    Ticket        @relation(fields: [ticketId], references: [id])
-  user      User          @relation(fields: [userId], references: [id])
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model VisitLog {
@@ -399,7 +399,7 @@ model DiscountCode {
   expiryDate        DateTime? // تاریخ انقضا (اختیاری)
   description       String?   // توضیحات کد تخفیف (اختیاری)
   courseId          Int?      // ارتباط با دوره خاص (اختیاری)
-  course            Course?   @relation(fields: [courseId], references: [id]) // رابطه با مدل Course
+  course            Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade) // رابطه با مدل Course
   isActive          Boolean   @default(true) // وضعیت فعال/غیرفعال بودن کد تخفیف
   createdAt         DateTime  @default(now()) // تاریخ ایجاد
   updatedAt         DateTime  @updatedAt      // تاریخ به‌روزرسانی
@@ -411,8 +411,8 @@ model UserDiscount {
   userId         String       // شناسه کاربر
   discountCodeId Int          // شناسه کد تخفیف
   usedAt         DateTime     @default(now()) // تاریخ استفاده
-  user           User         @relation(fields: [userId], references: [id])
-  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id])
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, discountCodeId]) // هر کاربر فقط یک بار می‌تواند از یک کد تخفیف استفاده کند
 }

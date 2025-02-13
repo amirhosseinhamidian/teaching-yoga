@@ -4,7 +4,11 @@ import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import AddEditDiscountCodeModal from '../../modules/AddEditDiscountCodeModal/AddEditDiscountCodeModal';
 
-const HeadAction = ({ addDiscountCodeSuccessfully, className }) => {
+const HeadAction = ({
+  addDiscountCodeSuccessfully,
+  courseOptions,
+  className,
+}) => {
   const [showAddDiscountCodeModal, setShowAddDiscountCodeModal] =
     useState(false);
   const handleAddDiscountCodeSuccessfully = (newDiscountCode) => {
@@ -30,6 +34,7 @@ const HeadAction = ({ addDiscountCodeSuccessfully, className }) => {
       {showAddDiscountCodeModal && (
         <AddEditDiscountCodeModal
           onClose={() => setShowAddDiscountCodeModal(false)}
+          courseOptions={courseOptions}
           onSuccess={(newDiscountCode) =>
             handleAddDiscountCodeSuccessfully(newDiscountCode)
           }
@@ -42,6 +47,7 @@ const HeadAction = ({ addDiscountCodeSuccessfully, className }) => {
 HeadAction.propTypes = {
   className: PropTypes.string,
   addDiscountCodeSuccessfully: PropTypes.func.isRequired,
+  courseOptions: PropTypes.array.isRequired,
 };
 
 export default HeadAction;
