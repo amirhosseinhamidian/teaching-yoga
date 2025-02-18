@@ -48,6 +48,7 @@
     "shamsi-date-converter": "^1.0.5",
     "swiper": "^11.1.15",
     "tippy.js": "^6.3.7",
+    "uuid": "^11.0.5",
     "video.js": "^8.19.1"
   },
   "devDependencies": {

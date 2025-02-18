@@ -162,20 +162,17 @@ const SessionTable = ({
   };
 
   const handleSessionVideoUpload = async (
-    outFiles,
+    file,
     isVertical,
     accessLevel,
     isUpdate = false,
   ) => {
-    if (!outFiles) {
+    if (!file) {
       toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
       return;
     }
-
     const formData = new FormData();
-    outFiles.forEach((file, index) => {
-      formData.append(`file_${index}`, new Blob([file.data]), file.name);
-    });
+    formData.append('video', file);
     formData.append('termId', termTempId);
     formData.append('sessionId', sessionTempId);
 
@@ -194,6 +191,7 @@ const SessionTable = ({
         console.error('خطا در آپلود:', errorData.error || 'خطایی رخ داده است.');
         return;
       }
+
       const { videoKey, message } = await response.json();
 
       const resSave = await fetch(

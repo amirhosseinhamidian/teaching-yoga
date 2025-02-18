@@ -8,7 +8,6 @@ import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
-import { processVideo } from '@/services/videoProcessor';
 
 const UploadSessionVideoModal = ({
   onClose,
@@ -111,26 +110,13 @@ const UploadSessionVideoModal = ({
       return;
     }
 
-    setCurrentStage('processing');
     setIsLoading(true);
+    setCurrentStage('uploading');
+    setProgress(0);
+    startPolling();
+
     try {
-      const outFiles = await processVideo(
-        file,
-        videoDirection === 'VERTICAL',
-        (progress) => {
-          setProgress(progress);
-        },
-      );
-
-      if (!outFiles || outFiles.length === 0) {
-        throw new Error('No output files generated.');
-      }
-
-      setCurrentStage('uploading');
-      setProgress(0);
-      startPolling();
-
-      await onUpload(outFiles, videoDirection === 'VERTICAL', accessLevel);
+      await onUpload(file, videoDirection === 'VERTICAL', accessLevel);
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Upload canceled.');
