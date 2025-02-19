@@ -352,6 +352,7 @@ model SiteInfo {
   id               Int      @id @default(autoincrement())
   shortDescription String
   fullDescription  String
+  rules            String?
   companyAddress   String?
   companyEmail     String
   socialLinks      Json?

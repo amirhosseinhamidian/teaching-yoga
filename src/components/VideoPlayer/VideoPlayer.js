@@ -68,29 +68,19 @@ const VideoPlayer = ({
   };
 
   const moveWatermark = () => {
-    if (watermarkRef.current && playerRef.current) {
-      // به‌دست آوردن ابعاد پلیر
-      const playerRect = playerRef.current.getBoundingClientRect();
-      const maxX = playerRect.width - watermarkRef.current.offsetWidth - 20; // فاصله از راست
-      const maxY = playerRect.height - watermarkRef.current.offsetHeight - 20; // فاصله از پایین
+    if (watermarkRef.current) {
+      const playerRect = document.fullscreenElement
+        ? document.fullscreenElement.getBoundingClientRect()
+        : playerRef.current.getBoundingClientRect();
 
-      // جلوگیری از موقعیت‌های منفی
-      const randomX = Math.max(200, Math.random() * maxX); // حداقل فاصله 20px از چپ
-      const randomY = Math.max(200, Math.random() * maxY); // حداقل فاصله 20px از بالا
+      const maxX = playerRect.width - watermarkRef.current.offsetWidth - 20;
+      const maxY = playerRect.height - watermarkRef.current.offsetHeight - 20;
 
-      // تنظیم موقعیت واترمارک
+      const randomX = Math.max(20, Math.random() * maxX);
+      const randomY = Math.max(20, Math.random() * maxY);
+
       watermarkRef.current.style.left = `${randomX}px`;
       watermarkRef.current.style.top = `${randomY}px`;
-    }
-  };
-
-  const onFullscreenChange = () => {
-    try {
-      if (document.fullscreenElement) {
-        playerRef.current.style.height = '100%';
-      }
-    } catch (error) {
-      console.error(error);
     }
   };
 
@@ -98,20 +88,47 @@ const VideoPlayer = ({
     if (!isAdmin && sessionId) fetchVideoCompletionStatus();
     const video = playerRef.current;
 
+    const onFullscreenChange = () => {
+      try {
+        if (document.fullscreenElement) {
+          playerRef.current.style.height = '100%';
+        } else {
+          updatePlayerSize();
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
     if (posterUrl) {
       video.poster = posterUrl;
     }
 
     if (!watermarkRef.current) {
-      // اضافه کردن واترمارک به پلیر
+      // ایجاد یک ظرف برای ویدیو و واترمارک
+      const videoContainer = document.createElement('div');
+      videoContainer.style.position = 'relative';
+      videoContainer.style.width = '100%';
+      videoContainer.style.height = '100%';
+
+      // انتقال ویدیو داخل این ظرف
+      video.parentElement.insertBefore(videoContainer, video);
+      videoContainer.appendChild(video);
+
+      // ایجاد و اضافه کردن واترمارک داخل ویدیو
       const watermarkElement = document.createElement('div');
-      watermarkElement.innerText = user.phone || 'سمانه یوگا'; // متن واترمارک
+      watermarkElement.innerText = user.phone || 'سمانه یوگا';
       watermarkElement.style.position = 'absolute';
-      watermarkElement.style.pointerEvents = 'none'; // برای عدم تداخل با تعاملات ویدیو
+      watermarkElement.style.pointerEvents = 'none';
       watermarkElement.style.color = 'rgba(255, 70, 70, 0.7)';
-      watermarkElement.style.zIndex = '999'; // قرار دادن روی ویدیو
-      watermarkElement.style.display = 'none';
-      document.body.appendChild(watermarkElement);
+      watermarkElement.style.fontSize = '16px';
+      watermarkElement.style.zIndex = '10000';
+      watermarkElement.style.opacity = '0.7';
+      watermarkElement.style.fontWeight = 'bold';
+      watermarkElement.style.padding = '5px 10px';
+      watermarkElement.style.display = 'hidden';
+
+      videoContainer.appendChild(watermarkElement);
       watermarkRef.current = watermarkElement;
     }
 
@@ -287,6 +304,7 @@ const VideoPlayer = ({
       style={{
         width: '100%',
         backgroundColor: 'black', // پس‌زمینه مشکی برای ویدیوهای عمودی
+        position: 'relative',
       }}
     >
       <video
@@ -297,6 +315,7 @@ const VideoPlayer = ({
           display: 'block', // از ایجاد فضای اضافی جلوگیری می‌کند
           maxWidth: isPortrait ? 'auto' : '100%', // ویدیوهای افقی کل عرض را بگیرند
           maxHeight: isPortrait ? '100%' : 'auto', // ویدیوهای عمودی ارتفاع را بگیرند
+          position: 'relative',
         }}
       />
     </div>

@@ -15,6 +15,7 @@ export async function POST(req) {
       articlesLinks,
       usefulLinks,
       heroImageUrl,
+      rules,
     } = await req.json();
 
     // اطلاعات را در پایگاه داده ذخیره می‌کنیم
@@ -30,6 +31,7 @@ export async function POST(req) {
         articlesLinks,
         usefulLinks,
         heroImageUrl,
+        rules,
       },
     });
 
@@ -58,6 +60,7 @@ export async function PUT(req) {
       articlesLinks,
       usefulLinks,
       heroImage,
+      rules,
     } = await req.json();
 
     // به‌روزرسانی اطلاعات سایت بر اساس id
@@ -74,6 +77,7 @@ export async function PUT(req) {
         articlesLinks,
         usefulLinks,
         heroImage,
+        rules,
       },
     });
 
@@ -88,9 +92,13 @@ export async function PUT(req) {
 }
 
 // دریافت اطلاعات موجود (GET)
-export async function GET() {
+export async function GET(req) {
   try {
-    // دریافت اطلاعات سایت از پایگاه داده
+    // بررسی پارامترهای جستجو
+    const { searchParams } = req.nextUrl;
+    const onlyRules = searchParams.get('rules');
+
+    // دریافت اطلاعات از دیتابیس
     const siteInfo = await prisma.siteInfo.findFirst();
 
     if (!siteInfo) {
@@ -100,7 +108,16 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(siteInfo, { status: 200 }); // ارسال اطلاعات سایت
+    // اگر درخواست فقط مقدار `rules` را بخواهد
+    if (onlyRules !== null) {
+      return NextResponse.json(
+        { rules: siteInfo.rules || '' },
+        { status: 200 },
+      );
+    }
+
+    // در غیر این صورت، کل اطلاعات سایت ارسال می‌شود
+    return NextResponse.json(siteInfo, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

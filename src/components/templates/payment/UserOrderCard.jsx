@@ -107,7 +107,7 @@ const UserOrderCard = ({ data, className }) => {
           label={
             <span className='text-[8px] text-subtext-light md:text-2xs dark:text-subtext-dark'>
               من{' '}
-              <Link href='/' className='text-blue'>
+              <Link href='/rules' className='text-blue'>
                 شرایط و مقررات
               </Link>{' '}
               سایت را خوانده ام و آن را می پذیرم.

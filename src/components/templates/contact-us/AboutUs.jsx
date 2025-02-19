@@ -11,9 +11,11 @@ const AboutUs = ({ data, className }) => {
       className={`rounded-xl bg-surface-light p-4 font-medium xs:p-6 dark:bg-surface-dark ${className}`}
     >
       <h1 className='text-xl xs:text-2xl md:text-3xl'>با من در ارتباط باش</h1>
-      <div className='mt-2 text-xs font-thin text-subtext-light sm:mt-4 sm:text-sm md:mt-6 dark:text-subtext-dark'>
-        {data.fullDescription}
-      </div>
+
+      <div
+        className='mt-2 text-xs font-thin text-subtext-light sm:mt-4 sm:text-sm md:mt-6 dark:text-subtext-dark'
+        dangerouslySetInnerHTML={{ __html: data.fullDescription }}
+      />
 
       {data?.companyEmail && (
         <>

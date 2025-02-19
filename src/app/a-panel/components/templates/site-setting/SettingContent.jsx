@@ -18,6 +18,7 @@ import Image from 'next/image';
 import { FiEdit2 } from 'react-icons/fi';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { MdOutlineAddAPhoto } from 'react-icons/md';
+import TextEditor from '@/components/Ui/TextEditor/TextEditor';
 
 function SettingContent() {
   const { isDark } = useTheme();
@@ -25,6 +26,7 @@ function SettingContent() {
   const [infos, setInfos] = useState({});
   const [descriptionFooter, setDescriptionFooter] = useState('');
   const [descriptionAboutUs, setDescriptionAboutUs] = useState('');
+  const [rules, setRules] = useState('');
   const [siteEmail, setSiteEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -45,6 +47,7 @@ function SettingContent() {
   const [imageUploadLoading, setImageUploadLoading] = useState(false);
   const [errorMessages, setErrorMessages] = useState({
     descriptionFooter: '',
+    rules: '',
     descriptionAboutUs: '',
     siteEmail: '',
     instagramLink: '',
@@ -62,6 +65,7 @@ function SettingContent() {
       const data = await response.json();
       setInfos(data);
       setDescriptionFooter(data?.shortDescription || '');
+      setRules(data?.rules || '');
       setDescriptionAboutUs(data?.fullDescription || '');
       setAddress(data?.companyAddress || '');
       setPhone(data?.companyPhone || '');
@@ -243,6 +247,10 @@ function SettingContent() {
       errors.descriptionAboutUs = 'توضیحات نمی‌تواند کمتر از ۵۰ کارکتر باشد.';
     }
 
+    if (!rules.trim()) {
+      errors.descriptionAboutUs = 'قوانین نمی‌تواند خالی باشد.';
+    }
+
     if (!heroImageUrl.trim()) {
       errors.heroImageUrl = 'تصویری برای قسمت هیرو انتخاب کنید.';
     }
@@ -315,6 +323,7 @@ function SettingContent() {
         articlesLinks: articlesFooterSelected,
         usefulLinks: usefulLinksSelected,
         heroImage: heroImageUrl,
+        rules,
       };
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`,
@@ -430,15 +439,26 @@ function SettingContent() {
         />
       </div>
       <div className='mt-8'>
-        <TextArea
+        <TextEditor
           fullWidth
           maxLength={4000}
           placeholder='توضیحات سایت برای قسمت درباره ما را اینجا بنویسید'
           label='توضحات قسمت درباره ما'
           value={descriptionAboutUs}
           onChange={setDescriptionAboutUs}
-          rows={6}
           errorMessage={errorMessages.descriptionAboutUs}
+          className='bg-surface-light text-xs sm:text-sm dark:bg-surface-dark'
+        />
+      </div>
+      <div className='mt-8'>
+        <TextEditor
+          fullWidth
+          maxLength={4000}
+          placeholder='قوانین سایت را اینجا بنویسید'
+          label='قوانین سایت'
+          value={rules}
+          onChange={setRules}
+          errorMessage={errorMessages.rules}
           className='bg-surface-light text-xs sm:text-sm dark:bg-surface-dark'
         />
       </div>

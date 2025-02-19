@@ -123,7 +123,7 @@ const LessonPage = async ({ params }) => {
       <Header isLogin={sessionAuth} />
       <div className='container'>
         <div className='lg:px-20 xl:px-36'>
-          <PageTitle>{course.title}</PageTitle>
+          <PageTitle className='font-faNa'>{course.title}</PageTitle>
           <VideoPlayer
             videoUrl={session.videoLink}
             posterUrl={course.cover}

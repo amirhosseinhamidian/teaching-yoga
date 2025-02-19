@@ -130,7 +130,7 @@ const SignupContent = () => {
         <p className='mt-6 text-center text-2xs text-subtext-light dark:text-subtext-dark'>
           ثبت نام شما به معنای پذیرش{' '}
           <Link
-            href='/signup'
+            href='/rules'
             className='text-primary hover:underline md:cursor-pointer'
           >
             قوانین و مقررات{' '}
