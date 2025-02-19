@@ -52,7 +52,7 @@ const CourseLessonsCard = async ({
             subtitle={term.term.subtitle}
             info1={`جلسات: ${term.term.sessions.length}`}
             info2={`زمان: ${formatTime(term.term.duration, 'hh:mm:ss')}`}
-            className='mb-4'
+            className='mb-4 font-faNa'
             isOpenDefault={term.term.sessions.find(
               (session) => session.id === activeSessionId,
             )}

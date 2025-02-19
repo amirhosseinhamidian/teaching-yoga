@@ -1,6 +1,6 @@
 'use client';
 /* eslint-disable no-undef */
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -20,6 +20,7 @@ const DiscountCodeTable = ({
   page,
   totalPages,
   isLoading,
+  courseOptions,
   onPageChange,
 }) => {
   const { isDark } = useTheme();
@@ -30,7 +31,6 @@ const DiscountCodeTable = ({
   const [showEditDiscountCodeModal, setShowEditDiscountCodeModal] =
     useState(null);
   const [discountCodeTemp, setDiscountCodeTemp] = useState({});
-  const [courseOptions, setCourseOptions] = useState(null);
 
   const handleDeleteDiscountCodeModal = (id) => {
     setDiscountCodeTempId(id);
@@ -127,23 +127,6 @@ const DiscountCodeTable = ({
     setShowEditDiscountCodeModal(false);
     setDiscountCodeTemp(null);
   };
-
-  const fetchCourseOptions = async () => {
-    try {
-      const response = await fetch(`/api/admin/courses/filter`);
-      if (!response.ok) {
-        throw new Error('Error to fetch courses options!');
-      }
-      const data = await response.json();
-      setCourseOptions(data.courseOptions);
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  useEffect(() => {
-    fetchCourseOptions();
-  }, []);
 
   const columns = [
     { key: 'number', label: 'شماره' },
@@ -300,6 +283,7 @@ DiscountCodeTable.propTypes = {
   page: PropTypes.number.isRequired,
   totalPages: PropTypes.number.isRequired,
   isLoading: PropTypes.bool.isRequired,
+  courseOptions: PropTypes.array.isRequired,
   onPageChange: PropTypes.func.isRequired,
 };
 

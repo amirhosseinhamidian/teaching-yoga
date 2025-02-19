@@ -9,6 +9,9 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import Button from '../Ui/Button/Button';
 import { GrYoga } from 'react-icons/gr';
+import IconButton from '../Ui/ButtonIcon/ButtonIcon';
+import Link from 'next/link';
+import { TiInfoLarge } from 'react-icons/ti';
 
 export default function CourseCard({ course, className }) {
   const router = useRouter();
@@ -64,14 +67,19 @@ export default function CourseCard({ course, className }) {
               <GrYoga className='min-h-6 min-w-6' />
               <p className='text-sm lg:text-base'>شما هنرجوی این دوره هستید.</p>
             </div>
-            <Button
-              shadow
-              className='w-full text-xs sm:text-sm md:text-base'
-              isLoading={isEnterCourseLoading}
-              onClick={courseClickHandler}
-            >
-              ورود به دوره
-            </Button>
+            <div className='flex w-full items-center gap-4'>
+              <Button
+                shadow
+                className='w-full text-xs sm:text-sm md:text-base'
+                isLoading={isEnterCourseLoading}
+                onClick={courseClickHandler}
+              >
+                ورود به دوره
+              </Button>
+              <Link href={`/courses/${course.shortAddress}`}>
+                <IconButton icon={TiInfoLarge} size={28} />
+              </Link>
+            </div>
           </div>
         ) : (
           <div>

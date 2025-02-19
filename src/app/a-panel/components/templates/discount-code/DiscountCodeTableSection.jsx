@@ -16,6 +16,7 @@ const DiscountCodeTableSection = () => {
   const [searchText, setSearchText] = useState('');
   const [searchDebounce, setSearchDebounce] = useState('');
   const [filter, setFilter] = useState(undefined);
+  const [courseOptions, setCourseOptions] = useState(null);
 
   const fetchDiscountCodes = async (page, search) => {
     setIsLoading(true);
@@ -38,6 +39,19 @@ const DiscountCodeTableSection = () => {
     }
   };
 
+  const fetchCourseOptions = async () => {
+    try {
+      const response = await fetch(`/api/admin/courses/filter`);
+      if (!response.ok) {
+        throw new Error('Error to fetch courses options!');
+      }
+      const data = await response.json();
+      setCourseOptions(data.courseOptions);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // اجرای جستجو با debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -53,6 +67,10 @@ const DiscountCodeTableSection = () => {
     fetchDiscountCodes(page, searchDebounce);
   }, [page, searchDebounce, filter]);
 
+  useEffect(() => {
+    fetchCourseOptions();
+  }, []);
+
   const addDiscountCodeSuccessfully = (newDiscountCode) => {
     setDiscountCodes((prev) => [newDiscountCode, ...prev]);
   };
@@ -63,6 +81,7 @@ const DiscountCodeTableSection = () => {
   return (
     <div>
       <HeadAction
+        courseOptions={courseOptions}
         addDiscountCodeSuccessfully={(newDiscountCode) =>
           addDiscountCodeSuccessfully(newDiscountCode)
         }
@@ -82,6 +101,7 @@ const DiscountCodeTableSection = () => {
           onPageChange={handlePageChange}
           page={page}
           totalPages={totalPages}
+          courseOptions={courseOptions}
           updateHandle={(updateDiscountCode) =>
             addDiscountCodeSuccessfully(updateDiscountCode)
           }

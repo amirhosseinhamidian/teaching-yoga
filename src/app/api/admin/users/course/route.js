@@ -8,9 +8,9 @@ export async function POST(request) {
     const { userId, courseId, amount, paymentMethod } = body;
 
     // بررسی ورودی‌ها
-    if (!userId || !courseId || !amount || !paymentMethod) {
+    if (!userId || !courseId || !paymentMethod) {
       return NextResponse.json(
-        { error: 'شناسه کاربر، شناسه دوره، مبلغ و روش پرداخت الزامی است' },
+        { error: ' دوره و روش پرداخت الزامی است' },
         { status: 400 },
       );
     }

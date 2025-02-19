@@ -197,7 +197,7 @@ async function page({ params }) {
         <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
           <div className='flex flex-col justify-between lg:col-span-1'>
             <div>
-              <PageTitle>{course.title}</PageTitle>
+              <PageTitle className='font-faNa'>{course.title}</PageTitle>
               <p className='mb-6 font-thin'>{course.shortDescription}</p>
             </div>
             <div className='flex w-full flex-col gap-4 sm:flex-row'>

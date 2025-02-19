@@ -9,6 +9,10 @@ const s3 = new S3({
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   endpoint: process.env.AWS_S3_ENDPOINT,
   s3ForcePathStyle: true,
+  httpOptions: {
+    timeout: 3000000,
+    connectTimeout: 1200000,
+  },
 });
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;

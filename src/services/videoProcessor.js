@@ -13,16 +13,14 @@ export const processVideo = async (file, isVertical, onProgress) => {
 
   const qualities = isVertical
     ? [
-        { resolution: '720x1280', bitrate: '3000k' },
-        { resolution: '480x854', bitrate: '1500k' },
-        { resolution: '360x640', bitrate: '800k' },
-        { resolution: '240x426', bitrate: '400k' },
+        { resolution: '1280x720', bitrate: '2000k' },
+        { resolution: '854x480', bitrate: '1000k' },
+        { resolution: '640x360', bitrate: '600k' },
       ]
     : [
-        { resolution: '1280x720', bitrate: '3000k' },
-        { resolution: '854x480', bitrate: '1500k' },
-        { resolution: '640x360', bitrate: '800k' },
-        { resolution: '426x240', bitrate: '400k' },
+        { resolution: '720x1280', bitrate: '2000k' },
+        { resolution: '480x854', bitrate: '1000k' },
+        { resolution: '360x640', bitrate: '600k' },
       ];
 
   const totalSteps = qualities.length;
@@ -50,23 +48,43 @@ export const processVideo = async (file, isVertical, onProgress) => {
   for (const { resolution, bitrate } of qualities) {
     const playlistName = `output_${resolution.replace('x', '_')}.m3u8`;
     const segmentPattern = `segment_${resolution.replace('x', '_')}_%03d.ts`;
-
     await ffmpeg.run(
       '-i',
       inputFileName,
+      '-preset',
+      'medium', // سرعت پردازش و کیفیت متعادل
+      '-crf',
+      '23', // فشرده‌سازی بهتر
+      '-r',
+      '24', // کاهش نرخ فریم
+      '-g',
+      '90', // افزایش فاصله بین keyframeها
+      '-keyint_min',
+      '90',
       '-s',
-      resolution,
+      resolution, // رزولوشن خروجی (داینامیک)
       '-b:v',
-      bitrate,
+      bitrate, // نرخ بیت ویدیو (داینامیک)
+      '-c:v',
+      'libx264', // استفاده از H.264
+      '-c:a',
+      'aac', // کدک صوتی
+      '-b:a',
+      '128k', // نرخ بیت صدا
+      '-ac',
+      '1', // کاهش کانال‌های صوتی
       '-hls_time',
-      '8',
+      '6', // کاهش مدت زمان قطعه‌های HLS
+      '-hls_list_size',
+      '0',
       '-hls_playlist_type',
       'vod',
       '-hls_segment_filename',
       segmentPattern,
+      '-f',
+      'hls',
       playlistName,
     );
-
     // اضافه کردن ورودی جدید به M3U8
     m3u8Entries.push(
       `#EXT-X-STREAM-INF:BANDWIDTH=${parseInt(bitrate)},RESOLUTION=${resolution}\n${playlistName}`,
