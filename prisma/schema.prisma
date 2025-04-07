@@ -418,6 +418,66 @@ model UserDiscount {
   @@unique([userId, discountCodeId]) // هر کاربر فقط یک بار می‌تواند از یک کد تخفیف استفاده کند
 }
 
+model Podcast {
+  id          String  @id @default(uuid())
+  title       String  @db.VarChar(255)  // عنوان پادکست
+  slug        String    @unique // برای URL
+  description String  // توضیحات کلی
+  logoUrl     String  // آیکون پادکست
+  bannerUrl   String  // لینک بنر پادکست
+  hostName    String  // نام میزبان پادکست
+  language    String  // زبان پادکست (مثلاً "fa" برای فارسی)
+  genre       String  // دسته‌بندی (مثلاً "آموزشی", "تکنولوژی", ...)
+  websiteUrl  String? // آدرس سایت اصلی پادکست
+  rssFeed     String? // لینک RSS برای پادگیرها
+  email       String? // ایمیل پشتیبانی
+  explicit    Boolean @default(false)  // آیا پادکست محتوای بزرگسال دارد؟
+
+  // لینک به پادگیرها
+  spotifyUrl   String?
+  appleUrl     String?
+  googleUrl    String?
+  castboxUrl   String?
+  otherLinks   Json?  // لینک‌های دیگر به‌صورت JSON
+
+  // اطلاعات سئو
+  metaTitle       String?
+  metaDescription String?
+  keywords        String?  // کلمات کلیدی جدا شده با کاما
+
+  episodes        PodcastEpisode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model PodcastEpisode {
+  id            String    @id @default(uuid())
+  podcastId     String
+  podcast       Podcast   @relation(fields: [podcastId], references: [id])
+
+  title         String                          // عنوان اپیزود
+  slug          String    @unique               // برای آدرس صفحه اپیزود
+  description   String                          // توضیح کامل اپیزود
+  audioUrl      String                          // لینک فایل صوتی (MP3, etc)
+  duration      Int                             // مدت به ثانیه
+  publishedAt   DateTime                        // تاریخ انتشار عمومی
+
+  seasonNumber  Int?                            // شماره فصل (در صورت وجود)
+  episodeNumber Int?                            // شماره اپیزود
+  explicit      Boolean    @default(false)      // محتوای بزرگسال؟
+
+  coverImageUrl String?                         // کاور مخصوص اپیزود (اختیاری)
+  keywords      String?                         // برای سئو و تگ‌های پادگیرها
+  metaTitle     String?                         // برای SEO
+  metaDescription String?                       // برای SEO
+
+  isDraft       Boolean    @default(false)      // برای پیش‌نویس نگه‌داشتن اپیزود
+  playCount     Int        @default(0)          // تعداد دفعات پخش
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
 
 enum Role {
   USER
