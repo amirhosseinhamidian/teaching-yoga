@@ -9,6 +9,7 @@ import { GrBlog } from 'react-icons/gr';
 import { BsCart } from 'react-icons/bs';
 import { FaRegComments, FaRegCircleQuestion } from 'react-icons/fa6';
 import { IoIosArrowBack } from 'react-icons/io';
+import { IoMicOutline } from 'react-icons/io5';
 import {
   MdOutlinePlayLesson,
   MdMailOutline,
@@ -80,6 +81,12 @@ function NavRoutes({ onLinkClick }) {
       label: ' مدیریت سوال ها',
       icon: FaRegCircleQuestion,
       statusNumber: notifications.details[4]?.count,
+    },
+    {
+      href: '/a-panel/podcast',
+      label: 'مدیریت پادکست',
+      icon: IoMicOutline,
+      statusNumber: 0,
     },
     {
       href: '/a-panel/discount-code',
