@@ -20,21 +20,20 @@ const nextConfig = {
   async headers() {
     return [
       {
-        source: '/(.*)', // اعمال تنظیمات روی تمام صفحات
+        source: '/(.*)',
         headers: [
           {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin',
+            key: 'Cross-Origin-Embedder-Policy',
+            value: 'unsafe-none',
           },
           {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp',
+            key: 'Cross-Origin-Opener-Policy',
+            value: 'same-origin-allow-popups',
           },
         ],
       },
     ];
   },
-
   async rewrites() {
     return [
       // مسیر برای فایل sitemap.xml
