@@ -2,7 +2,6 @@
   "app": "samaneyoga",
   "port": 3000,
   "build": {
-    "command": "NODE_OPTIONS='--max-old-space-size=2048' npm run build",
     "location": "iran"
   },
   "disks": []
