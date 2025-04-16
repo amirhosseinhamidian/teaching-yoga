@@ -5,16 +5,12 @@ const nextConfig = {
     domains: ['samane-yoga.storage.c2.liara.space', 'trustseal.enamad.ir'],
   },
   webpack(config) {
-    // اضافه کردن پشتیبانی از فایل‌های mjs
     config.resolve.extensions.push('.mjs');
-
-    // پیکربندی برای بارگذاری صحیح Hls.js
     config.module.rules.push({
       test: /\.mjs$/,
       include: /node_modules/,
       type: 'javascript/auto',
     });
-
     return config;
   },
   async headers() {
@@ -24,11 +20,11 @@ const nextConfig = {
         headers: [
           {
             key: 'Cross-Origin-Embedder-Policy',
-            value: 'unsafe-none',
+            value: 'require-corp',
           },
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups',
+            value: 'same-origin',
           },
         ],
       },
@@ -36,12 +32,10 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      // مسیر برای فایل sitemap.xml
       {
         source: '/sitemap.xml',
         destination: '/api/admin/seo/sitemap',
       },
-      // مسیر برای فایل robots.txt
       {
         source: '/robots.txt',
         destination: '/api/admin/seo/sitemap/robots',
