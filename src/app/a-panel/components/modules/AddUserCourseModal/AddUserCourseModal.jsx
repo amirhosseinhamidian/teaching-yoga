@@ -155,6 +155,7 @@ function AddUserCourseModal({ onClose, onSuccess, userId }) {
             value={courseId}
             onChange={setCourseId}
             errorMessage={errorMessages.course}
+            optionClassName='max-h-52 overflow-y-auto'
             className='mt-4 bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
           <div className='mt-4 grid grid-cols-1 gap-4 md:grid-cols-2'>
