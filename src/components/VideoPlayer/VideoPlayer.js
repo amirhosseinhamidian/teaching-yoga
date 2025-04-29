@@ -117,7 +117,7 @@ const VideoPlayer = ({
 
       // ایجاد و اضافه کردن واترمارک داخل ویدیو
       const watermarkElement = document.createElement('div');
-      watermarkElement.innerText = user.phone || 'سمانه یوگا';
+      watermarkElement.innerText = user?.phone || 'سمانه یوگا';
       watermarkElement.style.position = 'absolute';
       watermarkElement.style.pointerEvents = 'none';
       watermarkElement.style.color = 'rgba(255, 70, 70, 0.7)';
