@@ -55,7 +55,7 @@ export default function CourseHighCard({ course }) {
         alt={course.title}
         width={600}
         height={540}
-        className='w-full rounded-t-xl object-cover xs:h-40 sm:h-auto md:w-1/3 md:rounded-none md:rounded-e-xl'
+        className='max-h-48 w-full rounded-t-xl object-cover xs:max-h-72 sm:h-auto md:w-1/3 md:rounded-none md:rounded-e-xl'
       />
     </div>
   );

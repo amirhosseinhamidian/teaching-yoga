@@ -54,7 +54,7 @@ const QuestionBox = ({ className, courseId, sessionId }) => {
 
         <div className='flex items-center gap-2'>
           <Image
-            src={user.avatar}
+            src={user.avatar || '/images/default-profile.png'}
             alt='user profile'
             width={50}
             height={50}

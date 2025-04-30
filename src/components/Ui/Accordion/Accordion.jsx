@@ -43,18 +43,18 @@ const Accordion = ({
           <span className='text-start font-faNa text-sm font-medium sm:text-base'>
             {title}
           </span>
-          <span className='text-start font-faNa text-xs font-light text-subtext-light sm:text-sm dark:text-subtext-dark'>
+          <span className='text-start font-faNa text-2xs font-light text-subtext-light sm:text-xs lg:text-sm dark:text-subtext-dark'>
             {subtitle}
           </span>
           {(info1 || info2) && (
             <div className='mt-2 flex flex-wrap gap-2'>
               {info1 && (
-                <span className='rounded-full border border-gray-400 px-2 py-1 text-start font-faNa text-2xs text-subtext-light md:text-xs dark:text-subtext-dark'>
+                <span className='rounded-full bg-zinc-200 px-2 py-1 text-start font-faNa text-2xs text-subtext-light md:text-xs dark:bg-zinc-800 dark:text-subtext-dark'>
                   {info1}
                 </span>
               )}
               {info2 && (
-                <span className='rounded-full border border-gray-400 px-2 py-1 text-start font-faNa text-2xs text-subtext-light md:text-xs dark:text-subtext-dark'>
+                <span className='rounded-full bg-zinc-200 px-2 py-1 text-start font-faNa text-2xs text-subtext-light md:text-xs dark:bg-zinc-800 dark:text-subtext-dark'>
                   {info2}
                 </span>
               )}

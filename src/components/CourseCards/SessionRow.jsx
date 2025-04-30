@@ -108,7 +108,7 @@ const SessionRow = ({
             </span>
           </div>
           <h5
-            className={`text-xs font-medium transition-all duration-200 ease-in sm:text-sm md:text-base ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+            className={`text-xs font-medium transition-all duration-200 ease-in sm:text-sm lg:text-base ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
           >
             {session.name}
           </h5>
@@ -117,7 +117,7 @@ const SessionRow = ({
           <div>{renderComplete()}</div>
           <div className='flex items-center gap-2 md:gap-6'>
             <span
-              className={`font-faNa text-2xs transition-all duration-200 ease-in sm:text-xs md:text-sm ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+              className={`font-faNa text-2xs transition-all duration-200 ease-in sm:text-xs lg:text-sm ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
             >
               {formatTime(session.duration, 'mm:ss')}
             </span>
