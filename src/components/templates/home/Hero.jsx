@@ -80,7 +80,7 @@ const Hero = () => {
             alt='hero pic'
             width={1000}
             height={1000}
-            className='max-w-56 object-contain xs:max-w-72 sm:max-w-[340px] md:max-w-[440px] lg:max-w-[540px]'
+            className='h-56 w-56 rounded-full object-cover shadow-accent-custom xs:h-72 xs:w-72 sm:h-[340px] sm:w-[340px] md:h-[440px] md:w-[440px] lg:h-[540px] lg:w-[540px]'
             data-aos='fade-up'
             data-aos-duration='1500'
           />
