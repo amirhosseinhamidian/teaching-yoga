@@ -116,7 +116,7 @@ const UploadSessionVideoModal = ({
     try {
       const outFiles = await processVideo(
         file,
-        videoDirection === 'VERTICAL',
+        videoDirection === 'HORIZONTAL',
         (progress) => {
           setProgress(progress);
         },
@@ -130,7 +130,7 @@ const UploadSessionVideoModal = ({
       setProgress(0);
       startPolling();
 
-      await onUpload(outFiles, videoDirection === 'VERTICAL', accessLevel);
+      await onUpload(outFiles, videoDirection === 'HORIZONTAL', accessLevel);
     } catch (error) {
       if (error.name === 'AbortError') {
         console.log('Upload canceled.');

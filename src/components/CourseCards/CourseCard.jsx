@@ -47,7 +47,7 @@ export default function CourseCard({ course, className }) {
       <Image
         src={course.cover}
         alt={course.title}
-        className='max-h-48 w-full rounded-t-xl object-cover xs:max-h-72'
+        className='h-48 w-full rounded-t-xl object-cover xs:h-64 lg:h-72'
         width={600}
         height={540}
       />

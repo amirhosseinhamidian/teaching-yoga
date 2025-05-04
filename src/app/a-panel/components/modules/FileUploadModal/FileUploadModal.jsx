@@ -93,7 +93,7 @@ const FileUploadModal = ({
     try {
       if (isVideo) {
         // پردازش ویدیو
-        const outFiles = await processVideo(file, false, (progress) => {
+        const outFiles = await processVideo(file, true, (progress) => {
           setProgress(progress);
         });
         if (!outFiles || outFiles.length === 0) {

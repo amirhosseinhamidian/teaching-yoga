@@ -30,14 +30,14 @@ export default function CourseHighCard({ course }) {
         <p className='mt-2 text-xs text-subtext-light md:mt-4 md:text-sm dark:text-subtext-dark'>
           {course.subtitle}
         </p>
-        <div className='mt-4 flex w-fit items-baseline justify-between gap-2 self-end rounded-full bg-slate-700 bg-opacity-70 px-4 py-2 xl:mt-10'>
+        {/* <div className='mt-4 flex w-fit items-baseline justify-between gap-2 self-end rounded-full bg-slate-700 bg-opacity-70 px-4 py-2 xl:mt-10'>
           <span className='font-fancy text-sm text-white sm:text-lg'>
             پیشنهاد ویژه:
           </span>
           <span className='pt-1 font-fancy text-sm text-white sm:text-lg'>
             {countdown}
           </span>
-        </div>
+        </div> */}
         <div className='mt-5 flex flex-col-reverse gap-5 md:flex-row md:justify-between'>
           <CardActions
             mainBtnClick={detailCourseClickHandler}

@@ -1,6 +1,6 @@
 import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
 
-export const processVideo = async (file, isVertical, onProgress) => {
+export const processVideo = async (file, isLandscape, onProgress) => {
   const ffmpeg = createFFmpeg({
     log: true,
     corePath:
@@ -11,7 +11,7 @@ export const processVideo = async (file, isVertical, onProgress) => {
   let totalProgress = 0;
   let completedSteps = 0;
 
-  const qualities = isVertical
+  const qualities = isLandscape
     ? [
         { resolution: '1280x720', bitrate: '2000k' },
         { resolution: '854x480', bitrate: '1000k' },
