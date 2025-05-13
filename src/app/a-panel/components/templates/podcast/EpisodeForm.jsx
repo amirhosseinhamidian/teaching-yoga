@@ -193,7 +193,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('folderPath', `podcast/${title}`); // مسیر دلخواه
+    formData.append('folderPath', `podcast/${slugifyTitle(title)}`); // مسیر دلخواه
     formData.append('fileName', 'audio'); // بدون پسوند
 
     setUploading(true);
@@ -209,7 +209,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
       if (!res.ok) {
         throw new Error(data.error || 'خطا در آپلود فایل صوتی');
       }
-
+      console.log('voice data =>>> ', data.fileUrl);
       setAudioUrl(data.fileUrl); // فایل با موفقیت آپلود شده
     } catch (err) {
       toast.showErrorToast(err.message);
@@ -291,6 +291,14 @@ const EpisodeForm = ({ id, podcastId, className }) => {
     setKeywords((prev) => prev.filter((tag) => tag !== tagRemoved));
   };
 
+  const slugifyTitle = (title) => {
+    return title
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, '-')
+      .replace(/[^\u0600-\u06FFa-z0-9\\-]+/gi, '');
+  };
+
   return (
     <div className={className}>
       <div className='flex items-center justify-between'>
@@ -352,7 +360,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
 
           <label
             htmlFor='audio-upload'
-            className='hover:bg-accent-dark mt-1 inline-flex w-full cursor-pointer items-center gap-2 rounded-xl border border-accent bg-surface-light px-4 py-2 text-sm text-white transition dark:bg-surface-dark'
+            className='hover:bg-accent-dark mt-1 inline-flex w-full cursor-pointer items-center gap-2 rounded-xl border border-accent bg-surface-light px-4 py-2 text-sm transition dark:bg-surface-dark'
           >
             <FiPlus />
             انتخاب فایل صوتی
@@ -365,8 +373,14 @@ const EpisodeForm = ({ id, podcastId, className }) => {
           )}
 
           {audioUrl && (
-            <audio controls className='mt-4 w-full'>
-              <source src={audioUrl} type='audio/mpeg' />
+            <audio
+              controls
+              className='mt-4 w-full rounded-full border border-accent'
+            >
+              <source
+                src={`/api/audio-proxy?url=${encodeURIComponent(audioUrl)}`}
+                type='audio/mpeg'
+              />
               مرورگر شما از پخش صوت پشتیبانی نمی‌کند.
             </audio>
           )}
