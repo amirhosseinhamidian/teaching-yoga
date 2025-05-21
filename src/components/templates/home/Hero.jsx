@@ -76,7 +76,7 @@ const Hero = () => {
         <div className='col-span-1 flex items-end justify-center sm:mt-0 xl:col-span-2'>
           {/* Hero Image */}
           <Image
-            src={siteInfoData?.heroImage || '/images/hero.png'}
+            src={siteInfoData?.heroImage}
             alt='hero pic'
             width={1000}
             height={1000}

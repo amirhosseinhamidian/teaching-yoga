@@ -55,7 +55,7 @@ const Newsletter = () => {
           خبردار شو
         </h2>
         <p className='mt-4 text-sm text-subtext-light sm:text-base dark:text-subtext-dark'>
-          برای دریافت اخرین اطلاعات از دوره ها و اطلاعات جدید، ایمیل تون رو وارد
+          برای دریافت آخرین اطلاعات از دوره ها و اطلاعات جدید، ایمیل تون رو وارد
           کنید.
         </p>
         <div className='my-10 flex w-full flex-wrap items-center justify-center gap-4'>
