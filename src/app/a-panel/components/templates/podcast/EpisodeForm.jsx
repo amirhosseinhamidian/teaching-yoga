@@ -209,7 +209,6 @@ const EpisodeForm = ({ id, podcastId, className }) => {
       if (!res.ok) {
         throw new Error(data.error || 'خطا در آپلود فایل صوتی');
       }
-      console.log('voice data =>>> ', data.fileUrl);
       setAudioUrl(data.fileUrl); // فایل با موفقیت آپلود شده
     } catch (err) {
       toast.showErrorToast(err.message);
@@ -353,7 +352,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
           <input
             id='audio-upload'
             type='file'
-            accept='audio/*'
+            accept='.mp3,.m4a,.wav,.aac,.ogg,audio/*'
             onChange={handleUploadAudio}
             className='hidden'
           />

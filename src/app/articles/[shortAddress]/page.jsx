@@ -1,8 +1,7 @@
 /* eslint-disable react/prop-types */
 /* eslint-disable no-undef */
 import React from 'react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+
 import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
 import Image from 'next/image';
@@ -85,13 +84,12 @@ const fetchArticleData = async (shortAddress) => {
 };
 
 async function ArticleDetailPage({ params }) {
-  const session = await getServerSession(authOptions);
   const { shortAddress } = params;
 
   const article = await fetchArticleData(shortAddress);
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <div className='container relative grid grid-cols-1 md:grid-cols-3 md:gap-6 xl:grid-cols-4'>
         <main className='col-span-1 md:col-span-2 xl:col-span-3'>
           <div className='my-8 flex w-full justify-center'>

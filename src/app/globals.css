@@ -60,7 +60,7 @@
 
 @font-face {
   font-family: 'FancyFont';
-  src: url('./fonts/Nic.ttf') format('truetype');
+  src: url('./fonts/Digi Sarvenaz.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
 }
@@ -96,5 +96,18 @@
 
   .custom-input-datepicker:focus {
     outline: none;
+  }
+
+  .clip-wave {
+    clip-path: path(
+      'M0,64L48,80C96,96,192,128,288,133.3C384,139,480,117,576,96C672,75,768,53,864,64C960,75,1056,117,1152,117.3C1248,117,1344,75,1392,53.3L1440,32V0H0Z'
+    );
+  }
+
+  .clip-wave-bottom {
+    clip-path: path(
+      'M0,64L48,80C96,96,192,128,288,133.3C384,139,480,117,576,96C672,75,768,53,864,64C960,75,1056,117,1152,117.3C1248,117,1344,75,1392,53.3L1440,32V0H0Z'
+    );
+    transform: rotate(180deg);
   }
 }

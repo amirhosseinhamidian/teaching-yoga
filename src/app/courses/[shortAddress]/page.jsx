@@ -192,7 +192,7 @@ async function page({ params }) {
 
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <div className='container'>
         <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
           <div className='flex flex-col justify-between lg:col-span-1'>

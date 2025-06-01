@@ -21,8 +21,10 @@ import Modal from '../modules/Modal/Modal';
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import CartModal from '../modules/CartModal/CartModal';
+import { useSession } from 'next-auth/react';
 
-export default function Header({ isLogin }) {
+export default function Header() {
+  const { data: session } = useSession();
   const { isDark, toggleTheme } = useTheme();
   const [isShowProfileModal, setShowProfileModal] = useState(false);
   const [isShowCartModal, setIsShowCartModal] = useState(false);
@@ -79,7 +81,7 @@ export default function Header({ isLogin }) {
               </span>
             </div>
           </div>
-          {isLogin && user ? (
+          {session?.user && user ? (
             <IconButton
               icon={MdOutlinePerson}
               onClick={() => setShowProfileModal(true)}
@@ -107,7 +109,6 @@ export default function Header({ isLogin }) {
           <NavbarMobileMenu
             isDark={isDark}
             handelDarkMode={toggleTheme}
-            isLogin={isLogin}
             user={user}
             signOutModal={setShowSignOutModal}
           />

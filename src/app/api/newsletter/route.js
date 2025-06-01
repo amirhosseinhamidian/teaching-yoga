@@ -5,75 +5,96 @@ import { authOptions } from '../auth/[...nextauth]/route';
 
 export async function POST(req) {
   try {
-    const { email } = await req.json();
+    const { phone } = await req.json();
+    const isValidPhone = /^09\d{9}$/.test(phone);
 
-    // بررسی اعتبار ایمیل
-    if (!email || !email.includes('@')) {
-      return new Response(JSON.stringify({ error: 'ایمیل معتبر وارد کنید.' }), {
-        status: 400,
-      });
-    }
-
-    // بررسی وضعیت لاگین کاربر
-    const session = await getServerSession(authOptions);
-
-    // بررسی اینکه آیا کاربر لاگین دارد
-    if (session?.user?.userId) {
-      // بررسی وجود رکوردی برای این کاربر در جدول newsletter
-      const existingUserNewsletterEntry = await prismadb.newsletter.findFirst({
-        where: { userId: session.user.userId },
-      });
-
-      if (existingUserNewsletterEntry) {
-        // اگر رکوردی برای کاربر وجود دارد، آن را آپدیت کن
-        await prismadb.newsletter.update({
-          where: { id: existingUserNewsletterEntry.id },
-          data: { email },
-        });
-
-        // به‌روزرسانی ایمیل در جدول user
-        await prismadb.user.update({
-          where: { id: session.user.userId },
-          data: { email },
-        });
-
-        return NextResponse.json(
-          { success: true, message: 'ایمیل شما با موفقیت به‌روزرسانی شد.' },
-          { status: 200 },
-        );
-      }
-    }
-
-    // بررسی تکراری بودن ایمیل در جدول newsletter
-    const existingNewsletterEntry = await prismadb.newsletter.findUnique({
-      where: { email },
-    });
-
-    if (existingNewsletterEntry) {
-      return NextResponse.json(
-        { success: false, message: 'این ایمیل قبلاً ثبت شده است.' },
+    if (!phone || !isValidPhone) {
+      return new Response(
+        JSON.stringify({
+          error: 'شماره موبایل معتبر وارد کنید (با 09 شروع و 11 رقم).',
+        }),
         { status: 400 },
       );
     }
 
-    // اگر رکوردی برای کاربر لاگین وجود نداشت، ایمیل را ثبت کن
+    const session = await getServerSession(authOptions);
+    const userId = session?.user?.userId || null;
+
+    // اگر لاگین کرده:
+    if (userId) {
+      const existingNewsletterEntry = await prismadb.newsletter.findFirst({
+        where: { userId },
+      });
+
+      // اگر شماره متعلق به کاربر دیگری است، خطا بده
+      const phoneUsedByAnother = await prismadb.newsletter.findFirst({
+        where: {
+          phone,
+          NOT: { userId },
+        },
+      });
+
+      if (phoneUsedByAnother) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'این شماره موبایل قبلاً توسط کاربر دیگری ثبت شده است.',
+          },
+          { status: 400 },
+        );
+      }
+
+      // اگر کاربر قبلاً رکورد newsletter دارد → آپدیت کن
+      if (existingNewsletterEntry) {
+        await prismadb.newsletter.update({
+          where: { id: existingNewsletterEntry.id },
+          data: { phone },
+        });
+
+        return NextResponse.json(
+          {
+            success: true,
+            message: 'شماره موبایل شما با موفقیت به‌روزرسانی شد.',
+          },
+          { status: 200 },
+        );
+      }
+
+      // اگر لاگین کرده ولی هنوز رکورد newsletter ندارد
+      await prismadb.newsletter.create({
+        data: {
+          phone,
+          userId,
+        },
+      });
+
+      return NextResponse.json(
+        { success: true, message: 'شماره موبایل با موفقیت ثبت شد.' },
+        { status: 201 },
+      );
+    }
+
+    // اگر لاگین نکرده بود:
+    const existingPhone = await prismadb.newsletter.findUnique({
+      where: { phone },
+    });
+
+    if (existingPhone) {
+      return NextResponse.json(
+        { success: false, message: 'این شماره موبایل قبلاً ثبت شده است.' },
+        { status: 400 },
+      );
+    }
+
     await prismadb.newsletter.create({
       data: {
-        email,
-        userId: session?.user?.userId || null,
+        phone,
+        userId: null,
       },
     });
 
-    // به‌روزرسانی ایمیل در جدول user (در صورت وجود)
-    if (session?.user?.userId) {
-      await prismadb.user.update({
-        where: { id: session.user.userId },
-        data: { email },
-      });
-    }
-
     return NextResponse.json(
-      { success: true, message: 'ایمیل با موفقیت ثبت شد.' },
+      { success: true, message: 'شماره موبایل با موفقیت ثبت شد.' },
       { status: 201 },
     );
   } catch (error) {

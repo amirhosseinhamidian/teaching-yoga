@@ -10,6 +10,7 @@ import prismadb from '@/libs/prismadb';
 import { Toaster } from 'react-hot-toast';
 import dynamic from 'next/dynamic';
 import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
+import SessionWrapper from '@/components/Providers/SessionWrapper';
 
 export async function generateMetadata() {
   const seoSettings = await prismadb.seoSetting.findMany({
@@ -121,19 +122,19 @@ export default async function RootLayout({ children }) {
   }
 
   return (
-    <ThemeProvider>
-      <AuthProvider initialUser={user}>
-        <html lang='fa' dir='rtl'>
-          <body
-            className={`flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark`}
-          >
-            <VisitLogger />
-            <ClientSideAOS />
-            <ClientWrapper>{children}</ClientWrapper>
-            <Toaster />
-          </body>
-        </html>
-      </AuthProvider>
-    </ThemeProvider>
+    <SessionWrapper session={session}>
+      <ThemeProvider>
+        <AuthProvider initialUser={user}>
+          <html lang='fa' dir='rtl'>
+            <body className='flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark'>
+              <VisitLogger />
+              <ClientSideAOS />
+              <ClientWrapper>{children}</ClientWrapper>
+              <Toaster />
+            </body>
+          </html>
+        </AuthProvider>
+      </ThemeProvider>
+    </SessionWrapper>
   );
 }
