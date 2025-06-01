@@ -120,7 +120,7 @@ const LessonPage = async ({ params }) => {
 
   return (
     <>
-      <Header isLogin={sessionAuth} />
+      <Header />
       <div className='container'>
         <div className='lg:px-20 xl:px-36'>
           <PageTitle className='font-faNa'>{course.title}</PageTitle>

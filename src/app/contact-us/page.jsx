@@ -1,9 +1,7 @@
 /* eslint-disable no-undef */
 import Header from '@/components/Header/Header';
 import AboutUs from '@/components/templates/contact-us/AboutUs';
-import { getServerSession } from 'next-auth';
 import React from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import Footer from '@/components/Footer/Footer';
 import FAQs from '@/components/templates/contact-us/FAQs';
 import { headers } from 'next/headers';
@@ -105,13 +103,12 @@ const fetchAboutUsData = async () => {
 };
 
 const page = async () => {
-  const session = await getServerSession(authOptions);
   const faqs = await fetchFAQs();
   const aboutUs = await fetchAboutUsData();
 
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <div className='container py-10'>
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-8'>
           <AboutUs data={aboutUs} className='self-start' />

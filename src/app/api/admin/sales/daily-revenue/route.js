@@ -23,6 +23,7 @@ export async function GET() {
           gte: days[0].dayStart,
           lt: days[days.length - 1].dayEnd,
         },
+        status: 'SUCCESSFUL',
       },
     });
 

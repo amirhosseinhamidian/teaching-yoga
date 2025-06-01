@@ -1,8 +1,6 @@
 import React from 'react';
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
-import { authOptions } from './api/auth/[...nextauth]/route';
 import Image from 'next/image';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import Link from 'next/link';
@@ -15,11 +13,9 @@ export async function generateMetadata() {
 }
 
 async function NotFound() {
-  const session = await getServerSession(authOptions);
-
   return (
     <div>
-      <Header isLogin={session} />
+      <Header />
       <div className='flex flex-col gap-6 py-16'>
         <div className='flex flex-wrap items-center justify-center gap-4'>
           <h1 className='font-faNa text-4xl font-bold opacity-30 xs:text-6xl sm:text-7xl'>

@@ -1,7 +1,5 @@
 /* eslint-disable no-undef */
-import { getServerSession } from 'next-auth';
 import React from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
 import { headers } from 'next/headers';
@@ -21,8 +19,6 @@ export async function generateMetadata() {
 }
 
 async function RulePage() {
-  const session = await getServerSession(authOptions);
-
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info?rules`,
     {
@@ -40,7 +36,7 @@ async function RulePage() {
 
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <RulesContent rules={result.rules} />
       <Footer />
     </>

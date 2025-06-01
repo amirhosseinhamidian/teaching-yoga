@@ -3,10 +3,8 @@ import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
 import ArticleItem from '@/components/templates/articles/ArticleItem';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
-import { getServerSession } from 'next-auth';
 import { headers } from 'next/headers';
 import React from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -60,7 +58,6 @@ export async function generateMetadata() {
 }
 
 async function ArticlePage() {
-  const session = await getServerSession(authOptions);
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/articles`,
     {
@@ -76,7 +73,7 @@ async function ArticlePage() {
 
   return (
     <div>
-      <Header isLogin={session} />
+      <Header />
       <div className='container'>
         <PageTitle>مقالات</PageTitle>
         <div className='my-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>

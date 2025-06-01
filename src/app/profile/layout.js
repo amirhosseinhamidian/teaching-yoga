@@ -2,8 +2,6 @@
 import React from 'react';
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
 
 export async function generateMetadata() {
@@ -23,10 +21,9 @@ export async function generateMetadata() {
 }
 
 async function ProfileLayout({ children }) {
-  const session = await getServerSession(authOptions);
   return (
     <div>
-      <Header isLogin={session} />
+      <Header />
       {children}
       <Footer />
     </div>

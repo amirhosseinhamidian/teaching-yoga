@@ -2,7 +2,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import PodcastInfo from '../components/templates/podcast/PodcastInfo';
-import PodcastSummarySection from '../components/templates/podcast/PodcastSummarySection';
+// import PodcastSummarySection from '../components/templates/podcast/PodcastSummarySection';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import PodcastTable from '../components/templates/podcast/PodcastTable';
@@ -74,7 +74,7 @@ const PodcastPage = () => {
   return (
     <div>
       <PodcastInfo podcast={podcast} loading={podcastLoading} />
-      <PodcastSummarySection isLoading={false} className='my-6' />
+      {/* <PodcastSummarySection isLoading={false} className='my-6' /> */}
       <PodcastTable
         loading={isLoading}
         episodes={episodes}

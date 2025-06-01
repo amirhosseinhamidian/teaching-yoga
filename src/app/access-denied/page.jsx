@@ -1,9 +1,7 @@
 /* eslint-disable no-undef */
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
 import React from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import AccessDeniedView from '@/components/templates/access-denied/AccessDeniedView';
 import { headers } from 'next/headers';
 
@@ -37,11 +35,9 @@ export async function generateMetadata() {
 }
 
 async function AccessDeniedPage() {
-  const session = await getServerSession(authOptions);
-
   return (
     <div>
-      <Header isLogin={session} />
+      <Header />
       <AccessDeniedView />
       <Footer />
     </div>

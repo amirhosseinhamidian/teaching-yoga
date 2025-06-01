@@ -5,8 +5,6 @@ import React from 'react';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
@@ -62,8 +60,6 @@ export async function generateMetadata() {
 }
 
 async function CoursesPage() {
-  const session = await getServerSession(authOptions);
-
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
     {
@@ -89,7 +85,7 @@ async function CoursesPage() {
 
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <div className='container'>
         <PageTitle>دوره‌ها</PageTitle>
         <div className='my-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3'>

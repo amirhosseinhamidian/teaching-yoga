@@ -14,14 +14,16 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MdOutlineAdminPanelSettings } from 'react-icons/md';
 import { LuLogOut } from 'react-icons/lu';
+import { useSession } from 'next-auth/react';
 
 export default function NavbarMobileMenu({
   isDark,
   handelDarkMode,
-  isLogin,
   user,
   signOutModal,
 }) {
+  const { data: session } = useSession();
+  const isLoggedIn = !!session?.user;
   const [isOpen, setIsOpen] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
@@ -78,7 +80,7 @@ export default function NavbarMobileMenu({
                   />
                 </div>
 
-                {isLogin ? (
+                {isLoggedIn ? (
                   <div>
                     <Link href='/profile' onClick={toggleOpen}>
                       <div className='m-2 flex items-center gap-3'>

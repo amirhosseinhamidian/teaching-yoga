@@ -41,8 +41,8 @@ const Hero = () => {
             data-aos-delay='200'
             data-aos-duration='1000'
           >
-            درود و نور بر {'  '} قلبتون؛ <br /> سمانه هستم مدرس بین المللی یوگا
-            و مدیتیشن
+            درود و نور بر {'  '} قلبتون؛ <br /> {'  '} سمانه هستم مدرس بین
+            المللی یوگا و مدیتیشن
           </h1>
           <p
             className='mt-2 text-xs text-subtext-light xs:text-sm sm:text-base dark:text-subtext-dark'

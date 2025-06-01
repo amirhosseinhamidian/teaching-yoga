@@ -1,9 +1,7 @@
 /* eslint-disable no-undef */
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
 import React from 'react';
-import { authOptions } from '../api/auth/[...nextauth]/route';
 import { GoCreditCard } from 'react-icons/go';
 import PageCheckoutTitle from '@/components/Ui/PageCheckoutTitle/PageCheckoutTitle';
 import UserInformationCard from '@/components/templates/payment/UserInformationCard';
@@ -61,12 +59,11 @@ async function fetchCartData() {
 }
 
 const PaymentPage = async () => {
-  const session = await getServerSession(authOptions);
   const cartData = await fetchCartData();
 
   return (
     <>
-      <Header isLogin={session} />
+      <Header />
       <div className='container'>
         <PageCheckoutTitle isSuccess={true} icon={GoCreditCard}>
           پرداخت
