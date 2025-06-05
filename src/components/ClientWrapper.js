@@ -3,9 +3,11 @@
 import React from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+import FloatingMessageButton from './Ui/FloatingMessageButton/FloatingMessageButton';
 
 const ClientWrapper = ({ children }) => {
   const pathname = usePathname(); // دریافت مسیر فعلی
+  const isAdmin = pathname.startsWith('/a-panel');
 
   return (
     <AnimatePresence mode='wait'>
@@ -17,6 +19,7 @@ const ClientWrapper = ({ children }) => {
         transition={{ duration: 0.5, ease: 'easeInOut' }} // تنظیم سرعت انیمیشن
       >
         {children}
+        {!isAdmin && <FloatingMessageButton />}
       </motion.div>
     </AnimatePresence>
   );

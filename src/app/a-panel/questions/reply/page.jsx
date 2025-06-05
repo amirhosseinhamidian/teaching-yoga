@@ -30,14 +30,14 @@ function QuestionPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getTicket = async () => {
+    const getQuestion = async () => {
       const data = await fetchQuestion(questionId);
       setQuestion(data);
       setIsLoading(false);
     };
 
     if (questionId) {
-      getTicket();
+      getQuestion();
     }
   }, [questionId]);
 
@@ -48,7 +48,7 @@ function QuestionPage() {
   if (!question) {
     return (
       <div className='font-faNa'>
-        اطلاعات برای تیکت با ایدی {ticketId} یافت نشد!
+        اطلاعات برای سوال با ایدی {questionId} یافت نشد!
       </div>
     );
   }

@@ -1,10 +1,7 @@
-/* eslint-disable no-undef */
-import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
-import { authOptions } from '../auth/[...nextauth]/route';
+import prismadb from '@/libs/prismadb';
 import { getServerSession } from 'next-auth';
-
-export const dynamic = 'force-dynamic';
+import { authOptions } from '../auth/[...nextauth]/route';
 
 export const GET = async (request) => {
   try {
@@ -27,7 +24,7 @@ export const GET = async (request) => {
     }
 
     const paymentRecord = await prismadb.payment.findUnique({
-      where: { id: 3 },
+      where: { id: tokenNumber },
       include: {
         cart: {
           select: {
@@ -56,16 +53,31 @@ export const GET = async (request) => {
       );
     }
 
+    // اگر کد تخفیف وجود نداشته باشد، خرید ادامه پیدا می‌کند و مشکلی ایجاد نمی‌شود.
+    console.log('payment record ===========> ', paymentRecord);
     if (
       paymentRecord.status === 'SUCCESSFUL' &&
       paymentRecord.cart.discountCodeId
     ) {
+      const discountCode = await prismadb.discountCode.findUnique({
+        where: { id: paymentRecord.cart.discountCodeId },
+      });
+
+      if (!discountCode) {
+        return NextResponse.json(
+          { error: 'Discount code not found.' },
+          { status: 404 },
+        );
+      }
+
       const session = await getServerSession(authOptions);
       if (!session) {
-        return NextResponse.json({ message: 'unauthorized' }, { status: 401 });
+        return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
       }
 
       const userId = session.user.userId;
+
+      // ثبت تخفیف برای کاربر
       await prismadb.userDiscount.create({
         data: {
           userId,
@@ -73,6 +85,7 @@ export const GET = async (request) => {
         },
       });
 
+      // به روز رسانی usageCount کد تخفیف
       await prismadb.discountCode.update({
         where: { id: paymentRecord.cart.discountCodeId },
         data: { usageCount: { increment: 1 } },

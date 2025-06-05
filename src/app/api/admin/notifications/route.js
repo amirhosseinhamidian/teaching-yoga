@@ -34,13 +34,22 @@ export async function GET() {
       where: { isAnswered: false },
     });
 
+    // تعداد پیام‌های پشتیبانی خوانده‌نشده
+    const unreadSupportMessagesCount = await prismadb.supportMessage.count({
+      where: {
+        sender: 'USER',
+        isSeen: false,
+      },
+    });
+
     // مجموع همه نوتیفیکیشن‌ها
     const totalNotifications =
       articleCommentsCount +
       courseCommentsCount +
       pendingTicketsCount +
       inProgressTicketsCount +
-      unansweredQuestionsCount;
+      unansweredQuestionsCount +
+      unreadSupportMessagesCount;
 
     // آماده‌سازی پاسخ
     const notifications = [
@@ -68,6 +77,11 @@ export async function GET() {
         count: unansweredQuestionsCount,
         text: 'سوال جدید بدون پاسخ باقی مانده‌',
         actionPath: '/a-panel/questions',
+      },
+      {
+        count: unreadSupportMessagesCount,
+        text: 'پیام‌ جدید پشتیبانی خوانده‌نشده',
+        actionPath: '/a-panel/message',
       },
     ];
 

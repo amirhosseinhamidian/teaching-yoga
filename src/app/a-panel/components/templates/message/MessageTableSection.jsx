@@ -1,35 +1,35 @@
 'use client';
 /* eslint-disable no-undef */
-import React, { useEffect, useState } from 'react';
-import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import SearchFilterQuestions from './SearchFilterQuestions';
-import QuestionTable from './QuestionTable';
+import { createToastHandler } from '@/utils/toastHandler';
+import React, { useEffect, useState } from 'react';
+import SearchFilterMessages from './SearchFilterMessages';
+import MessageTable from './MessageTable';
 
-const QuestionTableSection = () => {
+const MessageTableSection = () => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const [isLoading, setIsLoading] = useState(true);
-  const [questions, setQuestions] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchText, setSearchText] = useState('');
   const [searchDebounce, setSearchDebounce] = useState('');
-  const [isAnswered, setIsAnswered] = useState('all');
+  const [isSeen, setIsSeen] = useState('all');
 
-  const fetchQuestion = async (page, search) => {
+  const fetchMessages = async (page, search) => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/question?&page=${page}&perPage=10&isAnswered=${isAnswered}&search=${search || ''}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/message?&page=${page}&perPage=10&isSeen=${isSeen}&search=${search || ''}`,
       );
 
       if (response.ok) {
         const data = await response.json();
-        setQuestions(data.data.questions);
+        setMessages(data.data.sessions);
         setTotalPages(data.data.pagination.totalPages);
       } else {
-        toast.showErrorToast(data.error || 'خطایی رخ داده است');
+        toast.showErrorToast('خطایی رخ داده است');
       }
     } catch (err) {
       toast.showErrorToast('خطای غیرمنتظره');
@@ -50,25 +50,24 @@ const QuestionTableSection = () => {
 
   // فراخوانی API هنگام تغییر صفحه یا جستجو
   useEffect(() => {
-    fetchQuestion(page, searchDebounce);
-  }, [page, searchDebounce, isAnswered]);
+    fetchMessages(page, searchDebounce);
+  }, [page, searchDebounce, isSeen]);
 
   const handlePageChange = (newPage) => {
     setPage(newPage);
   };
-
   return (
     <div className='mt-6 sm:mt-10'>
-      <SearchFilterQuestions
+      <SearchFilterMessages
         className='mb-3 sm:mb-6'
         searchText={searchText}
         setSearchText={setSearchText}
-        isAnswered={isAnswered}
-        setIsAnswered={setIsAnswered}
+        isSeen={isSeen}
+        setIsSeen={setIsSeen}
       />
-      <QuestionTable
-        questions={questions}
-        setQuestions={setQuestions}
+      <MessageTable
+        sessions={messages}
+        setSessions={setMessages}
         isLoading={isLoading}
         onPageChange={handlePageChange}
         page={page}
@@ -78,4 +77,4 @@ const QuestionTableSection = () => {
   );
 };
 
-export default QuestionTableSection;
+export default MessageTableSection;
