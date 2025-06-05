@@ -30,14 +30,14 @@ function QuestionReplyPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getTicket = async () => {
+    const getQuestion = async () => {
       const data = await fetchQuestion(questionId);
       setQuestion(data);
       setIsLoading(false);
     };
 
     if (questionId) {
-      getTicket();
+      getQuestion();
     }
   }, [questionId]);
 
@@ -47,6 +47,11 @@ function QuestionReplyPage() {
 
   if (!question) {
     return <div className='font-faNa'>اطلاعات برای سوال یافت نشد!</div>;
+    return (
+      <div className='font-faNa'>
+        اطلاعات برای سوال با ایدی {questionId} یافت نشد!
+      </div>
+    );
   }
 
   return (

@@ -36,3 +36,14 @@ const isLocalStorageAvailable = () => {
     return false;
   }
 };
+
+export const getAnonymousId = () => {
+  if (typeof window === 'undefined' || !isLocalStorageAvailable()) return null;
+
+  let id = localStorage.getItem('anonymous_id');
+  if (!id) {
+    id = crypto.randomUUID(); // یا از uuid v4 استفاده کن
+    localStorage.setItem('anonymous_id', id);
+  }
+  return id;
+};

@@ -48,7 +48,9 @@ model User {
   ticketReplies   TicketReply[]
   courses         UserCourse[]      @relation("UserCourses")
   terms           UserTerm[]        @relation("UserTerms")
-  userDiscount      UserDiscount[]
+  userDiscount    UserDiscount[]
+  supportMessages SupportMessage[]
+  SupportSession SupportSession[]
 }
 
 model Course {
@@ -477,6 +479,37 @@ model PodcastEpisode {
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+}
+
+model SupportSession {
+  id           String           @id @default(cuid())
+  userId       String?          // در صورت لاگین بودن
+  anonymousId  String?          // اگر ناشناس بود
+  createdAt    DateTime         @default(now())
+  user         User?            @relation(fields: [userId], references: [id])
+  messages     SupportMessage[] // ارتباط یک به چند
+}
+
+model SupportMessage {
+  id           Int       @id @default(autoincrement())
+  sender       Sender    @default(USER)
+  content      String 
+  userId       String?
+  anonymousId  String?
+  isSeen       Boolean   @default(false)
+  replyToId    Int?
+  createdAt    DateTime  @default(now())
+
+  sessionId     String?
+  session       SupportSession?   @relation(fields: [sessionId], references: [id])
+  user         User?     @relation(fields: [userId], references: [id])
+  replyTo      SupportMessage? @relation("ReplyRelation", fields: [replyToId], references: [id])
+  replies      SupportMessage[] @relation("ReplyRelation")
+}
+
+enum Sender {
+  USER
+  SUPPORT
 }
 
 enum Role {

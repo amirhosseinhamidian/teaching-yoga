@@ -12,11 +12,12 @@ const IconButton = ({
   color = '#FFAF29',
   className,
   loading = false,
+  disabled = false,
 }) => {
   return (
     <button
       onClick={onClick}
-      disabled={loading}
+      disabled={loading || disabled}
       className={`group rounded-xl bg-background-light p-2 transition duration-300 ease-in ${loading ? '' : 'hover:bg-secondary'} dark:bg-background-dark ${className}`}
     >
       {loading ? (
@@ -46,6 +47,7 @@ IconButton.propTypes = {
   className: PropTypes.string,
   hoverIconColor: PropTypes.string,
   loading: PropTypes.bool,
+  disabled: PropTypes.bool,
 };
 
 export default IconButton;
