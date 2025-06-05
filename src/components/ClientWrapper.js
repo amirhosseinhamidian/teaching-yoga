@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import FloatingMessageButton from './Ui/FloatingMessageButton/FloatingMessageButton';
-
+import React from 'react';
 const ClientWrapper = ({ children }) => {
   const pathname = usePathname(); // دریافت مسیر فعلی
   const isAdmin = pathname.startsWith('/a-panel');
