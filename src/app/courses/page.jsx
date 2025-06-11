@@ -77,8 +77,6 @@ async function CoursesPage() {
   }
 
   const courses = result.data;
-  console.log('course =======> ', courses);
-
   if (courses === 0) {
     redirect('/not-found');
   }

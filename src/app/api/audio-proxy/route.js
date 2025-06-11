@@ -16,9 +16,19 @@ export async function GET(request) {
     });
 
     const headers = new Headers();
+
+    // انتقال هدرهای فایل اصلی
     externalRes.headers.forEach((value, key) => {
       headers.set(key, value);
     });
+
+    // ✅ هدرهای ضد کش
+    headers.set(
+      'Cache-Control',
+      'no-store, no-cache, must-revalidate, proxy-revalidate',
+    );
+    headers.set('Pragma', 'no-cache');
+    headers.set('Expires', '0');
 
     return new NextResponse(externalRes.body, {
       status: externalRes.status,

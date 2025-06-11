@@ -16,7 +16,7 @@ export async function generateMetadata() {
 
   // اطلاعات پیش‌فرض
   const defaultSeoData = {
-    title: 'نتیجه خرید',
+    title: 'کد تایید',
     robots: 'noindex, nofollow',
   };
 

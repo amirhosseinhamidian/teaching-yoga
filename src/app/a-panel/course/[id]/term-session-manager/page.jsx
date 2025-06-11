@@ -16,12 +16,13 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { FiUpload } from 'react-icons/fi';
 import { IoPlay } from 'react-icons/io5';
 import { MdAddToQueue } from 'react-icons/md';
-import UploadSessionVideoModal from '@/app/a-panel/components/modules/UploadSessionVideoModal/UploadSessionVideoModal';
 import EditSessionModal from '@/app/a-panel/components/modules/EditSessionModal/EditSessionModal';
 import VideoModal from '@/app/a-panel/components/modules/VideoModal/VideoModal';
 import Switch from '@/components/Ui/Switch/Switch';
 import { createFFmpeg } from '@ffmpeg/ffmpeg';
 import SimpleDropdown from '@/components/Ui/SimpleDropDown/SimpleDropDown';
+import UploadSessionMediaModal from '@/app/a-panel/components/modules/UploadSessionVideoModal/UploadSessionVideoModal';
+import AudioModal from '@/app/a-panel/components/modules/AudioModal/AudioModal';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -41,11 +42,15 @@ const AddTermSessionPage = () => {
   const [tempVideoUrl, setTempVideoUrl] = useState('');
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoLoadingId, setVideoLoadingId] = useState(null);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const [tempAudioUrl, setTempAudioUrl] = useState('');
 
   const [showDeleteSessionModal, setShowDeleteSessionModal] = useState(false);
   const [showEditSessionModal, setShowEditSessionModal] = useState(false);
   const [showDeleteTermModal, setShowDeleteTermModal] = useState(false);
   const [showUploadVideoSessionModal, setShowUploadVideoSessionModal] =
+    useState(false);
+  const [showUploadAudioSessionModal, setShowUploadAudioSessionModal] =
     useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -205,6 +210,12 @@ const AddTermSessionPage = () => {
     setShowUploadVideoSessionModal(true);
   };
 
+  const uploadAudioSession = (termId, sessionId) => {
+    setTermTempId(termId);
+    setSessionTempId(sessionId);
+    setShowUploadAudioSessionModal(true);
+  };
+
   const handleSessionVideoUpload = async (
     outFiles,
     isVertical,
@@ -272,6 +283,79 @@ const AddTermSessionPage = () => {
     }
   };
 
+  const handleSessionAudioUpload = async (
+    outFiles,
+    isVertical,
+    accessLevel,
+  ) => {
+    if (!outFiles) {
+      toast.showErrorToast('لطفاً یک فایل صوتی انتخاب کنید.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', outFiles[0]);
+    formData.append('folderPath', `audio/${termTempId}/${sessionTempId}`); // مسیر دلخواه
+    formData.append('fileName', 'audio'); // بدون پسوند
+
+    try {
+      const res = await fetch('/api/upload/audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'خطا در آپلود فایل صوتی');
+      }
+
+      const resSave = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-audio`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            audioKey: data.fileUrl,
+            accessLevel,
+            sessionId: sessionTempId,
+            audioId: sessionTemp?.audioId,
+          }),
+        },
+      );
+
+      if (resSave.ok) {
+        const audioData = await resSave.json();
+        toast.showSuccessToast(data.message);
+        setSessions((prev) => ({
+          ...prev,
+          [termTempId]: prev[termTempId].map((session) =>
+            session.id === sessionTempId
+              ? {
+                  ...session,
+                  audio: {
+                    id: audioData.data.id,
+                    audioKey: audioData.data.audioKey,
+                    accessLevel: audioData.data.accessLevel,
+                  },
+                  isActive: true,
+                }
+              : session,
+          ),
+        }));
+      } else {
+        toast.showErrorToast('خطا در ذخیره سازی.');
+      }
+    } catch (err) {
+      toast.showErrorToast(err.message);
+    } finally {
+      setTermTempId(null);
+      setSessionTempId('');
+      setShowUploadAudioSessionModal(false);
+    }
+  };
+
   const handleUpdateSessionSuccessfully = (updatedSession) => {
     const termId = updatedSession.termId;
 
@@ -323,8 +407,13 @@ const AddTermSessionPage = () => {
     }
   };
 
+  const openAudioModal = async (audioKey) => {
+    setShowAudioModal(true);
+    setTempAudioUrl(audioKey);
+  };
+
   const toggleActiveStatus = async (row, currentStatus) => {
-    if (!row.video.videoKey) {
+    if (!(row?.video?.videoKey || row?.audio?.audioKey)) {
       toast.showErrorToast('امکان فعال سازی جلسه بدون ویدیو وجود ندارد!');
       return;
     }
@@ -432,49 +521,79 @@ const AddTermSessionPage = () => {
       },
     },
     { key: 'name', label: 'نام جلسه', minWidth: '150px' },
+
     {
-      key: 'videoUpload', // تغییر کلید به videoUpload
-      label: 'ویدیو',
+      key: 'mediaUpload',
+      label: 'محتوا',
       minWidth: '90px',
       maxWidth: '100px',
-      render: (_, row) =>
-        row?.video?.videoKey ? (
-          <div
-            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-            onClick={() => openVideoModal(row.video.videoKey, row.video.id)}
-          >
-            {videoLoadingId === row.video.id ? (
-              <ImSpinner2 size={32} className='animate-spin text-white' />
-            ) : (
+      render: (_, row) => {
+        if (row.video?.videoKey) {
+          return (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => openVideoModal(row.video.videoKey, row.video.id)}
+            >
+              {videoLoadingId === row.video.id ? (
+                <ImSpinner2 size={32} className='animate-spin text-white' />
+              ) : (
+                <IoPlay size={32} className='text-white' />
+              )}
+            </div>
+          );
+        } else if (row.audio?.audioKey) {
+          return (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => openAudioModal(row.audio.audioKey)}
+            >
               <IoPlay size={32} className='text-white' />
-            )}
-          </div>
-        ) : (
-          <div
-            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-            onClick={() => uploadVideoSession(row.termId, row.id)}
-          >
-            <FiUpload size={32} className='text-white' />
-            <span className='text-xs'>آپلود ویدیو جلسه</span>
-          </div>
-        ),
+            </div>
+          );
+        } else {
+          return (
+            <div className='mx-auto flex h-16 w-full flex-col items-center justify-center gap-1 rounded-xl bg-black opacity-85 md:cursor-pointer'>
+              {row.type === 'VIDEO' ? (
+                <div
+                  onClick={() => uploadVideoSession(row.termId, row.id)}
+                  className='flex flex-col items-center'
+                >
+                  <FiUpload size={20} className='text-white' />
+                  <span className='text-[10px]'>آپلود ویدیو</span>
+                </div>
+              ) : (
+                <div
+                  onClick={() => uploadAudioSession(row.termId, row.id)}
+                  className='flex flex-col items-center'
+                >
+                  <FiUpload size={20} className='text-white' />
+                  <span className='text-[10px]'>آپلود صدا</span>
+                </div>
+              )}
+            </div>
+          );
+        }
+      },
     },
+
     {
-      key: 'accessLevel', // تغییر کلید به accessLevel
+      key: 'accessLevel',
       label: 'سطح دسترسی',
-      render: (value, row) => {
-        switch (row?.video?.accessLevel) {
+      render: (_, row) => {
+        const level = row.video?.accessLevel || row.audio?.accessLevel;
+        switch (level) {
           case 'PUBLIC':
             return <span>عمومی</span>;
           case 'REGISTERED':
-            return <span>ثبت‌نام </span>;
+            return <span>ثبت‌نام</span>;
           case 'PURCHASED':
-            return <span>خریداری </span>;
+            return <span>خریداری</span>;
           default:
             return <span>نامشخص</span>;
         }
       },
     },
+
     {
       key: 'actions',
       label: 'عملیات',
@@ -493,9 +612,10 @@ const AddTermSessionPage = () => {
         </div>
       ),
     },
+
     {
       key: 'active',
-      label: 'فعال/غیر فعال',
+      label: 'فعال/غیرفعال',
       render: (_, row) => (
         <Switch
           className='mt-3 justify-center'
@@ -593,13 +713,25 @@ const AddTermSessionPage = () => {
         />
       )}
       {showUploadVideoSessionModal && (
-        <UploadSessionVideoModal
+        <UploadSessionMediaModal
+          mediaType='VIDEO'
           onClose={() => {
             setTermTempId(null);
             setSessionTempId(null);
             setShowUploadVideoSessionModal(false);
           }}
           onUpload={handleSessionVideoUpload}
+        />
+      )}
+      {showUploadAudioSessionModal && (
+        <UploadSessionMediaModal
+          mediaType='AUDIO'
+          onClose={() => {
+            setTermTempId(null);
+            setSessionTempId(null);
+            setShowUploadAudioSessionModal(false);
+          }}
+          onUpload={handleSessionAudioUpload}
         />
       )}
       {showEditSessionModal && (
@@ -621,6 +753,15 @@ const AddTermSessionPage = () => {
             setTempVideoUrl('');
           }}
           videoKey={tempVideoUrl}
+        />
+      )}
+      {showAudioModal && (
+        <AudioModal
+          onClose={() => {
+            setShowAudioModal(false);
+            setTempAudioUrl('');
+          }}
+          audioKey={tempAudioUrl}
         />
       )}
     </div>

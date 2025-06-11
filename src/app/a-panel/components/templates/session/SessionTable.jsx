@@ -4,11 +4,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Table from '@/components/Ui/Table/Table';
 import Pagination from '@/components/Ui/Pagination/Pagination';
-import {
-  formatTime,
-  getShamsiDate,
-  getTimeFromDate,
-} from '@/utils/dateTimeHelper';
+import { formatTime, getShamsiDate } from '@/utils/dateTimeHelper';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
 import { LuTrash, LuPencil } from 'react-icons/lu';
 import { createToastHandler } from '@/utils/toastHandler';
@@ -20,8 +16,9 @@ import { FiUpload } from 'react-icons/fi';
 import { MdAddToQueue } from 'react-icons/md';
 import Switch from '@/components/Ui/Switch/Switch';
 import VideoModal from '../../modules/VideoModal/VideoModal';
-import UploadSessionVideoModal from '../../modules/UploadSessionVideoModal/UploadSessionVideoModal';
 import EditSessionModal from '../../modules/EditSessionModal/EditSessionModal';
+import AudioModal from '../../modules/AudioModal/AudioModal';
+import UploadSessionMediaModal from '../../modules/UploadSessionVideoModal/UploadSessionVideoModal';
 
 const SessionTable = ({
   className,
@@ -39,12 +36,19 @@ const SessionTable = ({
   const [showSessionDeleteModal, setShowSessionDeleteModal] = useState(false);
   const [showEditSessionModal, setShowEditSessionModal] = useState(null);
   const [videoLoadingId, setVideoLoadingId] = useState(null);
+  const [showAudioModal, setShowAudioModal] = useState(false);
+  const [tempAudioUrl, setTempAudioUrl] = useState('');
   const [sessionTemp, setSessionTemp] = useState({});
   const [tempVideoUrl, setTempVideoUrl] = useState('');
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [showUpdateVideoSessionModal, setShowUpdateVideoSessionModal] =
     useState(false);
+  const [showUpdateAudioSessionModal, setShowUpdateAudioSessionModal] =
+    useState(false);
   const [showUploadVideoSessionModal, setShowUploadVideoSessionModal] =
+    useState(false);
+
+  const [showUploadAudioSessionModal, setShowUploadAudioSessionModal] =
     useState(false);
 
   const handleDeleteSessionModal = (sessionId, termId) => {
@@ -84,8 +88,10 @@ const SessionTable = ({
   };
 
   const toggleActiveStatus = async (row, currentStatus) => {
-    if (!row.videoKey) {
-      toast.showErrorToast('امکان فعال سازی جلسه بدون ویدیو وجود ندارد!');
+    if (!(row.videoKey || row.audioKey)) {
+      toast.showErrorToast(
+        'امکان فعال سازی جلسه بدون ویدیو یا صدا وجود ندارد!',
+      );
       return;
     }
     // تغییر مقدار در ردیف انتخاب‌شده
@@ -155,10 +161,21 @@ const SessionTable = ({
     }
   };
 
+  const openAudioModal = async (audioKey) => {
+    setShowAudioModal(true);
+    setTempAudioUrl(audioKey);
+  };
+
   const uploadVideoSession = (termId, sessionId) => {
     setTermTempId(termId);
     setSessionTempId(sessionId);
     setShowUploadVideoSessionModal(true);
+  };
+
+  const uploadAudioSession = (termId, sessionId) => {
+    setTermTempId(termId);
+    setSessionTempId(sessionId);
+    setShowUploadAudioSessionModal(true);
   };
 
   const handleSessionVideoUpload = async (
@@ -247,7 +264,85 @@ const SessionTable = ({
     }
   };
 
+  const handleSessionAudioUpload = async (
+    outFiles,
+    isVertical,
+    accessLevel,
+    isUpdate = false,
+  ) => {
+    if (!outFiles) {
+      toast.showErrorToast('لطفاً یک فایل صوتی انتخاب کنید.');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', outFiles[0]);
+    formData.append('folderPath', `audio/${termTempId}/${sessionTempId}`); // مسیر دلخواه
+    formData.append('fileName', 'audio'); // بدون پسوند
+
+    try {
+      const res = await fetch('/api/upload/audio', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'خطا در آپلود فایل صوتی');
+      }
+
+      const resSave = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-audio`,
+        {
+          method: isUpdate ? 'PUT' : 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            audioKey: data.fileUrl,
+            accessLevel,
+            sessionId: sessionTempId,
+            audioId: sessionTemp?.audioId,
+          }),
+        },
+      );
+
+      if (resSave.ok) {
+        const audioData = await resSave.json();
+        toast.showSuccessToast(data.message);
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.sessionId === sessionTempId
+              ? {
+                  ...session,
+                  audioKey: audioData.data.audioKey,
+                  audioId: audioData.data.id,
+                  audioAccessLevel: audioData.data.accessLevel,
+                  sessionIsActive: isUpdate ? session.sessionIsActive : true,
+                }
+              : session,
+          ),
+        );
+      } else {
+        toast.showErrorToast('خطا در ذخیره سازی.');
+      }
+
+      if (isUpdate) {
+        setShowUpdateAudioSessionModal(false);
+      } else {
+        setShowUploadAudioSessionModal(false);
+      }
+    } catch (err) {
+      toast.showErrorToast(err.message);
+    } finally {
+      setTermTempId(null);
+      setSessionTempId('');
+      setSessionTemp(null);
+    }
+  };
+
   const handleUpdateSession = (updatedSession) => {
+    console.log(updatedSession);
     setSessions((prev) =>
       prev.map((session) =>
         session.sessionId === updatedSession.id
@@ -257,7 +352,8 @@ const SessionTable = ({
               sessionDuration: updatedSession.duration,
               termId: updatedSession.termId,
               termName: updatedSession.term.name,
-              videoAccessLevel: updatedSession.video.accessLevel,
+              videoAccessLevel: updatedSession.video?.accessLevel,
+              audioAccessLevel: updatedSession.audio?.accessLevel,
             }
           : session,
       ),
@@ -270,30 +366,51 @@ const SessionTable = ({
     { key: 'number', label: 'شماره' },
     {
       key: 'videoUpload', // تغییر کلید به videoUpload
-      label: 'ویدیو',
+      label: 'محتوا',
       minWidth: '90px',
       maxWidth: '100px',
-      render: (value, row) =>
-        row?.videoKey ? (
-          <div
-            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-            onClick={() => openVideoModal(row.videoKey, row.videoId)}
-          >
-            {videoLoadingId === row.videoId ? (
-              <ImSpinner2 size={32} className='animate-spin text-white' />
-            ) : (
+      render: (value, row) => {
+        if (row?.type === 'VIDEO') {
+          return row?.videoKey ? (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => openVideoModal(row.videoKey, row.videoId)}
+            >
+              {videoLoadingId === row.videoId ? (
+                <ImSpinner2 size={32} className='animate-spin text-white' />
+              ) : (
+                <IoPlay size={32} className='text-white' />
+              )}
+            </div>
+          ) : (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => uploadVideoSession(row.termId, row.sessionId)}
+            >
+              <FiUpload size={32} className='text-white' />
+              <span className='text-xs'>آپلود ویدیو</span>
+            </div>
+          );
+        } else if (row?.type === 'AUDIO') {
+          return row?.audioKey ? (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => openAudioModal(row.audioKey)}
+            >
               <IoPlay size={32} className='text-white' />
-            )}
-          </div>
-        ) : (
-          <div
-            className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-            onClick={() => uploadVideoSession(row.termId, row.sessionId)}
-          >
-            <FiUpload size={32} className='text-white' />
-            <span className='text-xs'>آپلود</span>
-          </div>
-        ),
+            </div>
+          ) : (
+            <div
+              className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
+              onClick={() => uploadAudioSession(row.termId, row.sessionId)}
+            >
+              <FiUpload size={32} className='text-white' />
+              <span className='text-xs'>آپلود صدا</span>
+            </div>
+          );
+        }
+        return null;
+      },
     },
     {
       key: 'courseTitles',
@@ -324,7 +441,7 @@ const SessionTable = ({
       key: 'createAt',
       label: 'تاریخ ایجاد',
       render: (_, row) => (
-        <p className='whitespace-nowrap'>{`${getTimeFromDate(row.videoCreatedAt)} - ${getShamsiDate(row.videoCreatedAt)}`}</p>
+        <p className='whitespace-nowrap'>{`${getShamsiDate(row.type === 'VIDEO' ? row.videoCreatedAt : row.audioCreatedAt)}`}</p>
       ),
     },
 
@@ -360,6 +477,18 @@ const SessionTable = ({
               }}
             />
           )}
+          {row.audioId && (
+            <ActionButtonIcon
+              color='secondary'
+              icon={MdAddToQueue}
+              onClick={() => {
+                setShowUpdateAudioSessionModal(true);
+                setTermTempId(row.termId);
+                setSessionTempId(row.sessionId);
+                setSessionTemp(row);
+              }}
+            />
+          )}
         </div>
       ),
     },
@@ -381,14 +510,19 @@ const SessionTable = ({
 
   const data = sessions?.map((session, index) => ({
     number: index + 1 + (page - 1) * 10,
+    type: session.type,
     sessionId: session.sessionId,
     sessionName: session.sessionName,
     sessionDuration: session.sessionDuration,
     sessionIsActive: session.sessionIsActive,
     videoKey: session.videoKey,
     videoId: session.videoId,
-    videoCreatedAt: session.videoCreatedAt,
-    videoAccessLevel: session.videoAccessLevel,
+    videoCreatedAt: session?.videoCreatedAt,
+    videoAccessLevel: session?.videoAccessLevel,
+    audioKey: session?.audioKey,
+    audioId: session?.audioId,
+    audioAccessLevel: session?.audioAccessLevel,
+    audioCreatedAt: session?.audioCreatedAt,
     termId: session.termId,
     termName: session.termName,
     courseTitles: session.courseTitles,
@@ -414,7 +548,7 @@ const SessionTable = ({
       {showSessionDeleteModal && (
         <Modal
           title='حذف جلسه'
-          desc='در صورت حذف جلسه دیگر به اطلاعات آن دسترسی ندارید. همینطور ویدیو جلسه نیز پاک خواهد شد. آیا از حذف این جلسه مطمئن هستید؟'
+          desc='در صورت حذف جلسه دیگر به اطلاعات آن دسترسی ندارید. همینطور مدیا جلسه نیز پاک خواهد شد. آیا از حذف این جلسه مطمئن هستید؟'
           icon={LuTrash}
           primaryButtonText='خیر'
           secondaryButtonText='بله'
@@ -434,14 +568,35 @@ const SessionTable = ({
           videoKey={tempVideoUrl}
         />
       )}
+      {showAudioModal && (
+        <AudioModal
+          onClose={() => {
+            setShowAudioModal(false);
+            setTempAudioUrl('');
+          }}
+          audioKey={tempAudioUrl}
+        />
+      )}
       {showUploadVideoSessionModal && (
-        <UploadSessionVideoModal
+        <UploadSessionMediaModal
+          mediaType='VIDEO'
           onClose={() => {
             setTermTempId(null);
             setSessionTempId(null);
             setShowUploadVideoSessionModal(false);
           }}
           onUpload={handleSessionVideoUpload}
+        />
+      )}
+      {showUploadAudioSessionModal && (
+        <UploadSessionMediaModal
+          mediaType='AUDIO'
+          onClose={() => {
+            setTermTempId(null);
+            setSessionTempId(null);
+            setShowUploadAudioSessionModal(false);
+          }}
+          onUpload={handleSessionAudioUpload}
         />
       )}
       {showEditSessionModal && (
@@ -456,7 +611,8 @@ const SessionTable = ({
         />
       )}
       {showUpdateVideoSessionModal && (
-        <UploadSessionVideoModal
+        <UploadSessionMediaModal
+          mediaType='VIDEO'
           onClose={() => {
             setTermTempId(null);
             setSessionTempId(null);
@@ -467,6 +623,22 @@ const SessionTable = ({
           videoAccessLevel={sessionTemp?.videoAccessLevel}
           onUpload={(outFiles, isVertical, accessLevel) =>
             handleSessionVideoUpload(outFiles, isVertical, accessLevel, true)
+          }
+        />
+      )}
+      {showUpdateAudioSessionModal && (
+        <UploadSessionMediaModal
+          onClose={() => {
+            setTermTempId(null);
+            setSessionTempId(null);
+            setSessionTemp(null);
+            setShowUpdateAudioSessionModal(false);
+          }}
+          mediaType='AUDIO'
+          isUpdate
+          mediaAccessLevel={sessionTemp?.audioAccessLevel}
+          onUpload={(outFiles, isVertical, accessLevel) =>
+            handleSessionAudioUpload(outFiles, isVertical, accessLevel, true)
           }
         />
       )}

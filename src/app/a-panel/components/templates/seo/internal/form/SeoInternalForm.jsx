@@ -85,7 +85,6 @@ const SeoInternalForm = ({ page }) => {
         throw new Error('Error to fetch edit data!');
       }
       const data = await response.json();
-      console.log(data);
       setSeoData(data.data);
       setTitle(data.data.siteTitle || '');
       setOpenGraphUrl(data.data.ogUrl || '');
@@ -178,7 +177,6 @@ const SeoInternalForm = ({ page }) => {
         throw new Error('Filed to send data!');
       }
       const data = await response.json();
-      console.log(data);
       setSeoData(data.data);
       toast.showSuccessToast(
         seoData

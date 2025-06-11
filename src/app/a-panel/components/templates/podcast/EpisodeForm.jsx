@@ -122,7 +122,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
         errors.duration = 'زمان اپیزود را بر حسب ثانیه وارد کنید';
       }
     } catch (err) {
-      console.log(err);
+      console.error(err);
     }
 
     setErrorMessages(errors);

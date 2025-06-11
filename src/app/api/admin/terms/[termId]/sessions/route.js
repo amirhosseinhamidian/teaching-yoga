@@ -10,11 +10,11 @@ export async function POST(request, { params }) {
 
   try {
     const body = await request.json();
-    const { name, duration } = body;
+    const { name, duration, type } = body;
 
-    if (!name || !duration) {
+    if (!name || !duration || !type) {
       return NextResponse.json(
-        { error: 'Name and duration are required' },
+        { error: 'Name, duration and type are required' },
         { status: 400 },
       );
     }
@@ -36,6 +36,7 @@ export async function POST(request, { params }) {
       data: {
         name,
         duration,
+        type,
         termId: parseInt(termId),
         order: nextOrder,
       },
@@ -62,14 +63,14 @@ export async function GET(req, { params }) {
   const { termId } = params;
 
   try {
-    // دریافت اطلاعات جلسات مرتبط با یک ترم
     const sessions = await prismadb.session.findMany({
       where: { termId: parseInt(termId) },
       include: {
-        video: true, // اطلاعات ویدیو
+        video: true,
+        audio: true,
       },
       orderBy: {
-        order: 'asc', // مرتب‌سازی بر اساس شماره جلسه
+        order: 'asc',
       },
     });
 

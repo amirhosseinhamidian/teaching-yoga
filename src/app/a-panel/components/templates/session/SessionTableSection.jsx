@@ -89,6 +89,8 @@ const SessionTableSection = () => {
         sessionIsFree: newSession.isFree,
         sessionIsActive: newSession.isActive,
         videoCreatedAt: newSession.createAt,
+        audioCreatedAt: newSession.createAt,
+        type: newSession.type,
         termId: newSession.termId,
         termName: newSession.term.name, // فرض بر این است که نام ترم به این شکل ایجاد می‌شود
         courseTitles: '', // اگر نیاز به مقدار خاصی برای عنوان دوره‌ها دارید، اینجا اضافه کنید

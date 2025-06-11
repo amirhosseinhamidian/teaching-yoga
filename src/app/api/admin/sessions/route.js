@@ -49,6 +49,7 @@ export async function GET(request) {
       take: perPage, // تعداد آیتم‌ها در هر صفحه
       include: {
         video: true, // اطلاعات ویدیو
+        audio: true,
         term: {
           include: {
             courseTerms: {
@@ -73,14 +74,19 @@ export async function GET(request) {
     // فلت کردن داده‌ها
     const flattenedData = sessions.map((session) => ({
       sessionId: session.id,
+      type: session.type,
       sessionName: session.name,
       sessionDuration: session.duration,
       sessionIsFree: session.isFree,
       sessionIsActive: session.isActive,
-      videoKey: session.video?.videoKey || null, // کلید ویدیو
-      videoId: session.video?.id || null,
-      videoAccessLevel: session.video?.accessLevel || null,
-      videoCreatedAt: session.video?.createAt || null, // تاریخ ایجاد ویدیو
+      videoKey: session?.video?.videoKey || null,
+      videoId: session?.video?.id || null,
+      videoAccessLevel: session?.video?.accessLevel || null,
+      videoCreatedAt: session?.video?.createAt || null,
+      audioKey: session?.audio?.audioKey || null,
+      audioId: session?.audio?.id || null,
+      audioAccessLevel: session?.audio?.accessLevel || null,
+      audioCreatedAt: session?.audio?.createAt || null,
       termId: session.term.id,
       termName: session.term.name,
       courseTitles: session.term.courseTerms
@@ -112,7 +118,6 @@ export async function PUT(req) {
   try {
     const { sessionId, termId, name, duration, accessLevel } = await req.json();
 
-    // اعتبارسنجی داده‌های ورودی
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json(
         { error: 'شناسه جلسه معتبر نیست.' },
@@ -146,37 +151,58 @@ export async function PUT(req) {
       !['PUBLIC', 'REGISTERED', 'PURCHASED'].includes(accessLevel)
     ) {
       return NextResponse.json(
-        { error: 'سطح دسترسی ویدیو معتبر نیست.' },
+        { error: 'سطح دسترسی معتبر نیست.' },
         { status: 400 },
       );
     }
 
-    // بروزرسانی جلسه در دیتابیس
-    const updatedSession = await prismadb.session.update({
-      where: {
-        id: sessionId, // شناسه جلسه
-      },
-      data: {
-        name,
-        duration,
-        term: {
-          connect: { id: termId }, // آپدیت ترم مرتبط
-        },
-        video: {
-          update: {
-            accessLevel,
-          },
-        },
-      },
+    // ابتدا جلسه را دریافت می‌کنیم تا بفهمیم صدا دارد یا ویدیو
+    const session = await prismadb.session.findUnique({
+      where: { id: sessionId },
       include: {
         video: true,
+        audio: true,
+      },
+    });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'جلسه‌ای با این شناسه یافت نشد.' },
+        { status: 404 },
+      );
+    }
+
+    // ساختن ساختار dynamic برای update
+    const updateData = {
+      name,
+      duration,
+      term: {
+        connect: { id: termId },
+      },
+    };
+
+    if (session.video) {
+      updateData.video = {
+        update: { accessLevel },
+      };
+    } else if (session.audio) {
+      updateData.audio = {
+        update: { accessLevel },
+      };
+    }
+
+    const updatedSession = await prismadb.session.update({
+      where: { id: sessionId },
+      data: updateData,
+      include: {
+        video: true,
+        audio: true,
         term: {
-          select: {
-            name: true, // بازگرداندن فقط نام ترم
-          },
+          select: { name: true },
         },
       },
     });
+
     return NextResponse.json(
       { message: 'جلسه با موفقیت بروزرسانی شد.', updatedSession },
       { status: 200 },
