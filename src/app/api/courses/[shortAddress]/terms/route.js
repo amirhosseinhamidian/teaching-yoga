@@ -7,7 +7,7 @@ export async function GET(req, { params }) {
     const requestHeaders = new Headers(req.headers);
     const userId = requestHeaders.get('userid');
 
-    // دریافت اطلاعات دوره به همراه ترم‌ها و جلسات فعال
+    // دریافت اطلاعات دوره با ترم‌ها و جلسات فعال به همراه ویدیو و صوت
     const course = await prismadb.course.findUnique({
       where: { shortAddress },
       include: {
@@ -20,6 +20,7 @@ export async function GET(req, { params }) {
                   orderBy: { order: 'asc' },
                   include: {
                     video: true,
+                    audio: true,
                     sessionProgress: {
                       where: { userId },
                       select: { isCompleted: true },
@@ -49,25 +50,28 @@ export async function GET(req, { params }) {
       },
     });
 
-    // افزودن سطح دسترسی برای هر جلسه
+    // تعیین سطح دسترسی برای هر جلسه
     course.courseTerms.forEach((courseTerm) => {
       courseTerm.term.sessions.forEach((session) => {
-        const { video } = session;
-        if (video) {
-          if (video.accessLevel === 'PUBLIC') {
+        const media = session.video || session.audio;
+
+        if (media) {
+          if (media.accessLevel === 'PUBLIC') {
             session.access = 'PUBLIC';
-          } else if (video.accessLevel === 'REGISTERED') {
+          } else if (media.accessLevel === 'REGISTERED') {
             session.access = userId ? 'REGISTERED' : 'NO_ACCESS';
-          } else if (video.accessLevel === 'PURCHASED') {
+          } else if (media.accessLevel === 'PURCHASED') {
             session.access = userCourse ? 'PURCHASED' : 'NO_ACCESS';
           }
+        } else {
+          session.access = 'NO_ACCESS';
         }
       });
     });
 
     return NextResponse.json(course, { status: 200 });
   } catch (error) {
-    console.error(error);
+    console.error('Error in course detail API:', error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 },

@@ -5,9 +5,10 @@ import { NextResponse } from 'next/server';
 
 export async function GET(req, { params }) {
   const { shortAddress } = params;
-  // Get the session and extract the userId
+
   const session = await getServerSession(authOptions);
   const userId = session?.user?.userId || null;
+
   if (!userId) {
     return NextResponse.json(
       { error: 'User not authenticated.' },
@@ -16,22 +17,43 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // بررسی اینکه آیا کاربر دوره را خریداری کرده است
+    // بررسی مالکیت دوره
     const userCourse = await prismadb.userCourse.findFirst({
       where: {
-        userId: userId,
-        course: { shortAddress },
+        userId,
+        course: {
+          shortAddress,
+        },
+        status: 'ACTIVE',
       },
       include: {
         course: {
           include: {
             courseTerms: {
-              orderBy: { termId: 'asc' }, // Order by termId or another field based on your requirement
+              orderBy: { termId: 'asc' },
               include: {
                 term: {
                   include: {
                     sessions: {
-                      orderBy: { order: 'asc' }, // Order sessions by their order field
+                      where: {
+                        isActive: true,
+                        OR: [
+                          {
+                            type: 'VIDEO',
+                            video: {
+                              isNot: null,
+                            },
+                          },
+                          {
+                            type: 'AUDIO',
+                            audio: {
+                              isNot: null,
+                            },
+                          },
+                        ],
+                      },
+                      orderBy: { order: 'asc' },
+                      take: 1, // فقط اولین جلسه فعال با مدیا معتبر
                     },
                   },
                 },
@@ -48,21 +70,24 @@ export async function GET(req, { params }) {
         { status: 403 },
       );
     }
-    // پیدا کردن اولین جلسه اولین ترم
-    const firstTerm = userCourse.course.courseTerms[0].term; // اولین ترم
+
+    const firstTerm = userCourse.course.courseTerms[0]?.term;
+
     if (!firstTerm || firstTerm.sessions.length === 0) {
       return NextResponse.json(
-        { error: 'No sessions found in the course.' },
+        { error: 'No valid session found for this course.' },
         { status: 404 },
       );
     }
-    const firstSession = firstTerm.sessions[0]; // اولین جلسه اولین ترم
+
+    const firstSession = firstTerm.sessions[0];
 
     return NextResponse.json({
       sessionId: firstSession.id,
+      sessionType: firstSession.type,
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching first session:', error);
     return NextResponse.json(
       { error: 'Internal server error.' },
       { status: 500 },
