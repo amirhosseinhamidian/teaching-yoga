@@ -109,7 +109,6 @@ async function fetchCourseProgress(courseShortAddress, userId) {
 }
 
 const LessonPage = async ({ params }) => {
-  console.log('lesson here');
   const sessionAuth = await getServerSession(authOptions);
   const userId = sessionAuth?.user?.userId ? sessionAuth.user.userId : '';
   const courseShortAddress = params.shortAddress;
@@ -136,6 +135,7 @@ const LessonPage = async ({ params }) => {
           ) : session.audio?.audioKey ? (
             <AudioPlayer
               coverUrl={course.cover}
+              duration={session.duration}
               sessionId={lessonId}
               src={session.mediaLink}
               userId={userId}
