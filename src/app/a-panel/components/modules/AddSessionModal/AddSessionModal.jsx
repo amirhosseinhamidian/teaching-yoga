@@ -18,11 +18,17 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
   const [name, setName] = useState('');
   const [duration, setDuration] = useState('');
   const [termSelectedId, setTermSelectedId] = useState(null);
+  const [sessionType, setSessionType] = useState(null);
   const [termOptions, setTermOptions] = useState([]);
+  const sessionTypeOptions = [
+    { value: 'VIDEO', label: 'ویدیو' },
+    { value: 'AUDIO', label: 'صدا' },
+  ];
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     duration: '',
     term: '',
+    sessionType: '',
   });
 
   const validateInputs = () => {
@@ -32,6 +38,10 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
       if (!termSelectedId) {
         errors.term = 'انتخاب ترم اجباری است.';
       }
+    }
+
+    if (!sessionType) {
+      errors.sessionType = 'انتخاب نوع محتوا جلسه اجباری است.';
     }
 
     if (!name.trim()) {
@@ -87,6 +97,7 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
     setIsLoading(true);
     const payload = {
       name,
+      type: sessionType,
       duration: Number(duration),
     };
 
@@ -134,8 +145,9 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
             />
           </button>
         </div>
-        {!termId && (
-          <div className='mt-6'>
+
+        <div className='mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2'>
+          {!termId && (
             <DropDown
               options={termOptions}
               placeholder='انتخاب ترم مورد نظر'
@@ -144,10 +156,20 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
               fullWidth
               label='انتخاب ترم'
               errorMessage={errorMessages.term}
-              optionClassName='max-h-96 hide-scrollbar overflow-y-auto'
+              optionClassName='max-h-56 hide-scrollbar overflow-y-auto'
             />
-          </div>
-        )}
+          )}
+          <DropDown
+            options={sessionTypeOptions}
+            placeholder='انتخاب نوع محتوا جلسه مورد نظر'
+            value={sessionType}
+            onChange={setSessionType}
+            fullWidth
+            label='انتخاب نوع محتوا جلسه'
+            errorMessage={errorMessages.sessionType}
+            optionClassName='max-h-56 hide-scrollbar overflow-y-auto'
+          />
+        </div>
         <div className='my-10 grid grid-cols-1 gap-6 sm:grid-cols-2'>
           <Input
             label='عنوان جلسه'

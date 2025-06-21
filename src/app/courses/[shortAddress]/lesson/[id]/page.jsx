@@ -13,6 +13,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import Footer from '@/components/Footer/Footer';
 import Header from '@/components/Header/Header';
 import { redirect } from 'next/navigation';
+import AudioPlayer from '@/components/AudioPlayer/AudioPlayer';
 
 export async function generateMetadata({ params }) {
   const { shortAddress, id } = params;
@@ -124,12 +125,26 @@ const LessonPage = async ({ params }) => {
       <div className='container'>
         <div className='lg:px-20 xl:px-36'>
           <PageTitle className='font-faNa'>{course.title}</PageTitle>
-          <VideoPlayer
-            videoUrl={session.videoLink}
-            posterUrl={course.cover}
-            sessionId={lessonId}
-            userId={userId}
-          />
+          {session.video?.videoKey ? (
+            <VideoPlayer
+              videoUrl={session.mediaLink}
+              posterUrl={course.cover}
+              sessionId={lessonId}
+              userId={userId}
+            />
+          ) : session.audio?.audioKey ? (
+            <AudioPlayer
+              coverUrl={course.cover}
+              duration={session.duration}
+              sessionId={lessonId}
+              src={session.mediaLink}
+              userId={userId}
+            />
+          ) : (
+            <div className='bg-red-50 text-red-500 dark:bg-red-900 dark:text-red-200 rounded-xl p-6 text-center text-sm'>
+              محتوای این جلسه هنوز بارگذاری نشده است.
+            </div>
+          )}
           <div className='my-4 grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-7'>
             <div className='col-span-1 md:col-span-2 xl:col-span-5'>
               <div className='rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>

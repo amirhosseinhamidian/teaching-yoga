@@ -54,7 +54,6 @@ export const GET = async (request) => {
     }
 
     // اگر کد تخفیف وجود نداشته باشد، خرید ادامه پیدا می‌کند و مشکلی ایجاد نمی‌شود.
-    console.log('payment record ===========> ', paymentRecord);
     if (
       paymentRecord.status === 'SUCCESSFUL' &&
       paymentRecord.cart.discountCodeId

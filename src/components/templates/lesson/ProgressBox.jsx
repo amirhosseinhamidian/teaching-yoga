@@ -10,7 +10,7 @@ const ProgressBox = ({ progress }) => {
       </h4>
       <ProgressBar progress={progress} className='mt-4' />
       <p className='mb-2 mr-3 mt-2 font-faNa text-2xs text-subtext-light sm:text-sm dark:text-subtext-dark'>
-        در صورت تماشای 80 درصد ویدیو پیشرفت شما ثبت می شود.
+        با گذر از ۸۰٪ جلسه، پیشرفت شما ثبت می‌شود.
       </p>
     </div>
   );

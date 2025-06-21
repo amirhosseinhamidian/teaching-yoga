@@ -22,14 +22,29 @@ const SessionRow = ({
   const pathname = usePathname();
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showAddToCartModal, setShowAddToCartModal] = useState(false);
-  const handleSessionClick = () => {
-    const { video, access } = session;
 
-    if (video.accessLevel === 'PUBLIC' || access === video.accessLevel) {
+  const getMedia = () => {
+    return session.type === 'VIDEO' ? session.video : session.audio;
+  };
+
+  const handleSessionClick = () => {
+    const media = getMedia();
+    if (!media) return;
+
+    if (
+      media.accessLevel === 'PUBLIC' ||
+      session.access === media.accessLevel
+    ) {
       router.push(`/courses/${courseShortAddress}/lesson/${session.id}`);
-    } else if (video.accessLevel === 'REGISTERED' && access === 'NO_ACCESS') {
+    } else if (
+      media.accessLevel === 'REGISTERED' &&
+      session.access === 'NO_ACCESS'
+    ) {
       setShowRegisterModal(true);
-    } else if (video.accessLevel === 'PURCHASED' && access === 'NO_ACCESS') {
+    } else if (
+      media.accessLevel === 'PURCHASED' &&
+      session.access === 'NO_ACCESS'
+    ) {
       setShowAddToCartModal(true);
     }
   };
@@ -39,76 +54,98 @@ const SessionRow = ({
     router.push('/login');
   };
 
-  const addToCartHandler = () => {};
+  const addToCartHandler = () => {
+    // این قسمت را در صورت نیاز تکمیل کن
+  };
 
   const renderIcon = () => {
-    if (
-      session.access === 'PUBLIC' ||
-      session.access === session.video.accessLevel
-    ) {
+    const media = getMedia();
+    if (!media) return null;
+
+    const isAccessible =
+      session.access === 'PUBLIC' || session.access === media.accessLevel;
+
+    if (isAccessible) {
       return (
         <HiOutlinePlayCircle
-          className={`mb-1 transition-all duration-200 ease-in md:text-2xl ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+          className={`mb-1 transition-all duration-200 ease-in md:text-2xl ${
+            activeSessionId === session.id
+              ? 'text-secondary'
+              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+          }`}
         />
       );
-    } else if (
-      session.video.accessLevel === 'REGISTERED' &&
-      session.access === 'NO_ACCESS'
-    ) {
+    } else if (media.accessLevel === 'REGISTERED') {
       return (
         <AiOutlineLogin
-          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${activeSessionId === session.id ? 'ext-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${
+            activeSessionId === session.id
+              ? 'text-secondary'
+              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+          }`}
         />
-      ); // آیکون لاگین
-    } else if (
-      session.video.accessLevel === 'PURCHASED' &&
-      session.access === 'NO_ACCESS'
-    ) {
-      return (
-        <FiLock
-          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
-        />
-      ); // آیکون قفل
+      );
     } else {
       return (
-        <HiOutlinePlayCircle
-          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+        <FiLock
+          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${
+            activeSessionId === session.id
+              ? 'text-secondary'
+              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+          }`}
         />
-      ); // قفل برای دسترسی‌های NO_ACCESS
+      );
     }
   };
 
   const renderComplete = () => {
-    if (session.sessionProgress[0]) {
+    if (session.sessionProgress?.[0]) {
       return (
         <BsFillCheckCircleFill
-          className={`transition-all duration-200 ease-in md:text-xl ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+          className={`transition-all duration-200 ease-in md:text-xl ${
+            activeSessionId === session.id
+              ? 'text-secondary'
+              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+          }`}
         />
       );
     } else {
       return (
         <FiCircle
-          className={`transition-all duration-200 ease-in md:text-xl ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+          className={`transition-all duration-200 ease-in md:text-xl ${
+            activeSessionId === session.id
+              ? 'text-secondary'
+              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+          }`}
         />
       );
     }
   };
+
   return (
     <>
       <div
         className={`sm: group flex flex-col justify-between gap-3 border-b border-gray-200 py-4 sm:flex-row sm:items-center sm:gap-1 md:cursor-pointer dark:border-gray-700 ${className}`}
-        onClick={() => handleSessionClick()}
+        onClick={handleSessionClick}
       >
         <div className='flex items-center gap-3'>
           <div
-            className={`flex h-5 w-5 items-center justify-center rounded border transition-all duration-200 ease-in md:h-6 md:w-6 ${activeSessionId === session.id ? 'border-secondary bg-secondary text-text-dark' : 'border-subtext-light text-subtext-light group-hover:border-secondary group-hover:bg-secondary group-hover:text-text-dark dark:border-subtext-dark dark:text-subtext-dark'}`}
+            className={`flex h-5 w-5 items-center justify-center rounded border transition-all duration-200 ease-in md:h-6 md:w-6 ${
+              activeSessionId === session.id
+                ? 'border-secondary bg-secondary text-text-dark'
+                : 'border-subtext-light text-subtext-light group-hover:border-secondary group-hover:bg-secondary group-hover:text-text-dark dark:border-subtext-dark dark:text-subtext-dark'
+            }`}
           >
             <span className='pt-1 font-faNa text-xs sm:text-sm md:text-base'>
               {number}
             </span>
           </div>
           <h5
-            className={`text-xs font-medium transition-all duration-200 ease-in sm:text-sm lg:text-base ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+            className={`text-xs font-medium transition-all duration-200 ease-in sm:text-sm lg:text-base ${
+              activeSessionId === session.id
+                ? 'text-secondary'
+                : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+            }`}
           >
             {session.name}
           </h5>
@@ -117,7 +154,11 @@ const SessionRow = ({
           <div>{renderComplete()}</div>
           <div className='flex items-center gap-2 md:gap-6'>
             <span
-              className={`font-faNa text-2xs transition-all duration-200 ease-in sm:text-xs lg:text-sm ${activeSessionId === session.id ? 'text-secondary' : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'}`}
+              className={`font-faNa text-2xs transition-all duration-200 ease-in sm:text-xs lg:text-sm ${
+                activeSessionId === session.id
+                  ? 'text-secondary'
+                  : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              }`}
             >
               {formatTime(session.duration, 'mm:ss')}
             </span>
@@ -125,6 +166,7 @@ const SessionRow = ({
           </div>
         </div>
       </div>
+
       {showRegisterModal && (
         <Modal
           title='ثبت نام یا ورود به حساب کاربری'
@@ -140,7 +182,7 @@ const SessionRow = ({
       {showAddToCartModal && (
         <Modal
           title='خرید دوره'
-          desc='برای مشاهده این جلسه ابتدا دوره را تهیه کنید. بعد از خرید شما به محتوای کامل این دوره و تمام جلسات آن دسترسی کامل دارید .'
+          desc='برای مشاهده این جلسه ابتدا دوره را تهیه کنید. بعد از خرید شما به محتوای کامل این دوره و تمام جلسات آن دسترسی کامل دارید.'
           icon={LuShoppingCart}
           iconSize={36}
           primaryButtonClick={addToCartHandler}

@@ -133,12 +133,15 @@ model Session {
   updatedAt       DateTime          @updatedAt
   duration        Int
   videoId         Int?              @unique
+  audioId         Int?              @unique
   order           Int               @default(0)
   isActive        Boolean           @default(false)
   questions       Question[]
   term            Term              @relation("TermToSessions", fields: [termId], references: [id] , onDelete: Cascade)
   video           SessionVideo?     @relation("SessionToVideo", fields: [videoId], references: [id])
+  audio           SessionAudio?     @relation("SessionToAudio", fields: [audioId], references: [id])
   sessionProgress SessionProgress[] @relation("SessionProgress")
+  type            SessionType       @default(VIDEO)
 }
 
 model SessionVideo {
@@ -149,6 +152,16 @@ model SessionVideo {
   createAt    DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
   session     Session?         @relation("SessionToVideo")
+}
+
+model SessionAudio {
+  id          Int              @id @unique @default(autoincrement())
+  audioKey    String           // کلید منحصر به فرد برای فایل صوتی
+  accessLevel VideoAccessLevel @default(REGISTERED)
+  status      VideoStatus      @default(AVAILABLE)
+  createAt    DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  session     Session?         @relation("SessionToAudio")
 }
 
 model SessionProgress {
@@ -516,6 +529,11 @@ enum Role {
   USER
   ADMIN
   MANAGER
+}
+
+enum SessionType {
+  VIDEO
+  AUDIO
 }
 
 enum CourseLevel {

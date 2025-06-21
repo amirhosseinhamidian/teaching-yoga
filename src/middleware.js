@@ -47,8 +47,7 @@ async function handleProtectedRoutes(request, token) {
   return null;
 }
 
-// بررسی دسترسی به ویدئوهای درس
-async function handleLessonVideoAccess(request, token) {
+async function handleLessonMediaAccess(request, token) {
   if (
     request.nextUrl.pathname.startsWith('/courses/') &&
     request.nextUrl.pathname.includes('/lesson/')
@@ -58,27 +57,27 @@ async function handleLessonVideoAccess(request, token) {
     const sessionId = pathnameParts[4];
 
     try {
-      const videoResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-video-access?sessionId=${sessionId}`,
+      const mediaResponse = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-media-access?sessionId=${sessionId}`,
       );
 
-      if (videoResponse.status !== 200) {
+      if (mediaResponse.status !== 200) {
         return NextResponse.redirect(
           new URL(`/courses/${shortAddress}`, request.url),
         );
       }
 
-      const sessionVideo = await videoResponse.json();
+      const media = await mediaResponse.json();
 
-      if (sessionVideo.accessLevel === PUBLIC) {
+      if (media.accessLevel === PUBLIC) {
         return null; // دسترسی عمومی
       }
 
-      if (sessionVideo.accessLevel === REGISTERED && !token) {
+      if (media.accessLevel === REGISTERED && !token) {
         return NextResponse.redirect(new URL('/login', request.url));
       }
 
-      if (sessionVideo.accessLevel === PURCHASED) {
+      if (media.accessLevel === PURCHASED) {
         if (!token) {
           return NextResponse.redirect(new URL('/login', request.url));
         }
@@ -94,7 +93,7 @@ async function handleLessonVideoAccess(request, token) {
         }
       }
     } catch (error) {
-      console.error('Error checking video access:', error);
+      console.error('Error checking media access:', error);
       return NextResponse.redirect(new URL('/error', request.url));
     }
   }
@@ -114,7 +113,7 @@ export async function middleware(request) {
     handleAdminRoutes,
     handleAccessDeniedRoutes,
     handleProtectedRoutes,
-    handleLessonVideoAccess,
+    handleLessonMediaAccess,
   ];
 
   for (const handler of handlers) {

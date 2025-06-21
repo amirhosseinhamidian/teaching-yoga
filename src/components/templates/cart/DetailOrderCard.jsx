@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
@@ -140,19 +140,6 @@ const DetailOrderCard = ({ data, setCartData, className }) => {
       setAddDiscountCodeLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (data) {
-      // تأخیر یک ثانیه‌ای برای بررسی cartData
-      const timeout = setTimeout(() => {
-        console.log('یک ثانیه بعد از آپدیت cartData:', data);
-        // سایر عملیات روی cartData
-      }, 1000);
-
-      // پاک کردن تایمر برای جلوگیری از مشکلات احتمالی
-      return () => clearTimeout(timeout);
-    }
-  }, [data]);
 
   return (
     <div

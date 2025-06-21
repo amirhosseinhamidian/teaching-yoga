@@ -15,7 +15,6 @@ export async function GET(request) {
   }
 
   try {
-    // دریافت جزئیات جلسه
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
       select: {
@@ -23,16 +22,25 @@ export async function GET(request) {
         name: true,
         duration: true,
         isFree: true,
+        type: true,
         video: {
           select: {
             id: true,
-            videoKey: true, // فیلد آپدیت شده
+            videoKey: true,
             accessLevel: true,
             status: true,
           },
         },
+        audio: {
+          select: {
+            id: true,
+            audioKey: true,
+            accessLevel: true,
+          },
+        },
         term: {
           select: {
+            id: true,
             name: true,
           },
         },
@@ -43,15 +51,20 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    // ساخت لینک موقت برای videoKey
-    let videoLink = await generateTemporaryLink(session.video.videoKey);
+    let mediaLink = null;
 
-    // افزودن لینک موقت به پاسخ
-    const response = {
+    if (session.type === 'VIDEO' && session.video?.videoKey) {
+      mediaLink = await generateTemporaryLink(session.video.videoKey);
+    } else if (session.type === 'AUDIO' && session.audio?.audioKey) {
+      mediaLink = await generateTemporaryLink(
+        `audio/${session.term.id}/${session.id}/audio.mp3`,
+      );
+    }
+
+    return NextResponse.json({
       ...session,
-      videoLink, // اضافه کردن لینک موقت
-    };
-    return NextResponse.json(response);
+      mediaLink,
+    });
   } catch (error) {
     console.error('Error fetching session details:', error);
     return NextResponse.json(

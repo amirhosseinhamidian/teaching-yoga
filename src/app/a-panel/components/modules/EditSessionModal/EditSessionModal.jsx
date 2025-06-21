@@ -26,7 +26,11 @@ const EditSessionModal = ({
     session?.duration || session?.sessionDuration || '',
   );
   const [accessLevel, setAccessLevel] = useState(
-    session?.video?.accessLevel || session.videoAccessLevel || '',
+    session?.video?.accessLevel ||
+      session?.audio?.accessLevel ||
+      session.videoAccessLevel ||
+      session.audioAccessLevel ||
+      '',
   );
   const [termSelectedId, setTermSelectedId] = useState(session?.termId || null);
   const [termOptions, setTermOptions] = useState([]);
@@ -109,11 +113,13 @@ const EditSessionModal = ({
           duration: Number(duration),
           termId: Number(termSelectedId),
           sessionId: session.sessionId,
+          type: session.type, // ← اضافه شد
         }
       : {
           name,
           accessLevel,
           duration: Number(duration),
+          type: session.type, // ← اضافه شد
         };
 
     const url = isChangeTerm
@@ -133,7 +139,6 @@ const EditSessionModal = ({
         const data = await response.json();
         toast.showSuccessToast('جلسه با موفقیت بروزرسانی شد');
         onSuccess(data.updatedSession);
-        // هرگونه عملیات اضافه دیگر مانند بستن فرم یا بازخوانی داده‌ها
       } else {
         const errorData = await response.json();
         toast.showErrorToast(errorData.error || 'خطا در بروزرسانی جلسه');

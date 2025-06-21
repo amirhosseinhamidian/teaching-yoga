@@ -39,6 +39,7 @@ export async function GET(request) {
                   select: {
                     id: true,
                     order: true,
+                    isActive: true,
                     sessionProgress: {
                       where: {
                         userId: userId,
@@ -60,25 +61,27 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
 
-    // تعداد کل ویدیوها
-    let totalVideos = 0;
-    // تعداد ویدیوهای تکمیل شده
-    let completedVideos = 0;
+    // تعداد کل جلسات فعال
+    let totalSessions = 0;
+    // تعداد جلسات تکمیل‌شده از بین جلسات فعال
+    let completedSessions = 0;
 
-    // برای هر ترم و هر جلسه، تعداد ویدیوها و وضعیت تکمیل بودن آن‌ها را بررسی می‌کنیم
     course.courseTerms.forEach((courseTerm) => {
-      const term = courseTerm.term; // ترم مربوطه
+      const term = courseTerm.term;
       term.sessions.forEach((session) => {
-        totalVideos += 1;
-        if (session.sessionProgress[0]?.isCompleted) {
-          completedVideos += 1;
+        if (session.isActive) {
+          totalSessions += 1;
+          if (session.sessionProgress[0]?.isCompleted) {
+            completedSessions += 1;
+          }
         }
       });
     });
 
-    // محاسبه درصد پیشرفت
     const progressPercentage =
-      totalVideos > 0 ? Math.ceil((completedVideos / totalVideos) * 100) : 0;
+      totalSessions > 0
+        ? Math.ceil((completedSessions / totalSessions) * 100)
+        : 0;
 
     return NextResponse.json({ progress: progressPercentage }, { status: 200 });
   } catch (error) {

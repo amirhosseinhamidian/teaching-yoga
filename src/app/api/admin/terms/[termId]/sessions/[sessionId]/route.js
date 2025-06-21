@@ -19,21 +19,23 @@ export async function DELETE(req, { params }) {
   });
 
   try {
-    // دریافت اطلاعات جلسه از پایگاه داده
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
-      include: { video: true, sessionProgress: true },
+      include: {
+        video: true,
+        audio: true,
+        sessionProgress: true,
+      },
     });
 
     if (!session) {
       return NextResponse.json({ error: 'جلسه یافت نشد.' }, { status: 404 });
     }
 
-    // حذف ویدیو از فضای ذخیره‌سازی لیارا
+    // 🎥 حذف ویدیو
     if (session.video?.videoKey) {
-      const videoKey = session.video.videoKey.replace('/master.m3u8', ''); // مسیر پوشه ویدیویی
+      const videoKey = session.video.videoKey.replace('/master.m3u8', '');
 
-      // لیست کردن فایل‌ها در پوشه
       const listObjectsResponse = await s3
         .listObjectsV2({ Bucket: bucket, Prefix: videoKey })
         .promise();
@@ -48,14 +50,25 @@ export async function DELETE(req, { params }) {
           },
         };
 
-        // حذف تمام فایل‌ها در پوشه
         await s3.deleteObjects(deleteObjectsParams).promise();
       }
-    } else {
-      console.error('No video found for session');
     }
 
-    // حذف رکوردهای مرتبط در جداول پایگاه داده
+    // 🔊 حذف فایل صوتی تکی
+    if (session.audio?.audioKey) {
+      try {
+        await s3
+          .deleteObject({
+            Bucket: bucket,
+            Key: `audio/${termId}/${sessionId}/audio.mp3`,
+          })
+          .promise();
+      } catch (err) {
+        console.error('Error deleting audio file from storage:', err);
+      }
+    }
+
+    // 🧹 حذف رکوردهای دیتابیس
     if (session.video) {
       try {
         await prismadb.sessionVideo.delete({
@@ -63,6 +76,16 @@ export async function DELETE(req, { params }) {
         });
       } catch (error) {
         console.error('Error deleting session video:', error);
+      }
+    }
+
+    if (session.audio) {
+      try {
+        await prismadb.sessionAudio.delete({
+          where: { id: session.audio.id },
+        });
+      } catch (error) {
+        console.error('Error deleting session audio:', error);
       }
     }
 
@@ -78,24 +101,22 @@ export async function DELETE(req, { params }) {
       }),
     ]);
 
-    // به‌روزرسانی ترتیب باقی‌مانده جلسات در ترم
     const remainingSessions = await prismadb.session.findMany({
       where: { termId: parseInt(termId) },
-      orderBy: { order: 'asc' }, // ترتیب بر اساس فیلد order
+      orderBy: { order: 'asc' },
     });
 
-    const updatedSessions = remainingSessions.map((session, index) => {
-      return prismadb.session.update({
+    const updatedSessions = remainingSessions.map((session, index) =>
+      prismadb.session.update({
         where: { id: session.id },
-        data: { order: index + 1 }, // به‌روزرسانی ترتیب هر جلسه
-      });
-    });
+        data: { order: index + 1 },
+      }),
+    );
 
-    // صبر کردن تا تمامی به‌روزرسانی‌ها انجام شود
     await Promise.all(updatedSessions);
 
     return NextResponse.json(
-      { message: 'جلسه و اطلاعات مرتبط با موفقیت حذف شدند.' },
+      { message: 'جلسه و محتوای آن با موفقیت حذف شد.' },
       { status: 200 },
     );
   } catch (error) {
@@ -108,9 +129,9 @@ export async function PUT(req, { params }) {
   const { termId, sessionId } = params;
 
   try {
-    const { name, duration, accessLevel } = await req.json();
+    const { name, duration, accessLevel, type } = await req.json();
 
-    // اعتبارسنجی داده‌های ورودی
+    // اعتبارسنجی داده‌ها
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
         { error: 'عنوان جلسه معتبر نیست.' },
@@ -130,28 +151,44 @@ export async function PUT(req, { params }) {
       !['PUBLIC', 'REGISTERED', 'PURCHASED'].includes(accessLevel)
     ) {
       return NextResponse.json(
-        { error: 'سطح دسترسی ویدیو معتبر نیست.' },
+        { error: 'سطح دسترسی مدیا معتبر نیست.' },
         { status: 400 },
       );
     }
 
-    // بروزرسانی جلسه در دیتابیس
+    // ساخت شیء data برای بروزرسانی
+    const data = {
+      name,
+      duration,
+    };
+
+    // اگر نوع مدیا ویدیو بود، سطح دسترسی ویدیو را بروز کن
+    if (type === 'VIDEO') {
+      data.video = {
+        update: {
+          accessLevel,
+        },
+      };
+    }
+
+    // اگر نوع مدیا صوت بود، سطح دسترسی صوت را بروز کن
+    if (type === 'AUDIO') {
+      data.audio = {
+        update: {
+          accessLevel,
+        },
+      };
+    }
+
     const updatedSession = await prismadb.session.update({
       where: {
-        id: sessionId, // شناسه جلسه
-        termId: parseInt(termId), // شناسه ترم
+        id: sessionId,
+        termId: parseInt(termId),
       },
-      data: {
-        name,
-        duration,
-        video: {
-          update: {
-            accessLevel,
-          },
-        },
-      },
+      data,
       include: {
         video: true,
+        audio: true,
       },
     });
 

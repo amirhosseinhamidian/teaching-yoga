@@ -1,6 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
+// import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import Image from 'next/image';
 
 const InstructorCard = ({ instructor, className }) => {
@@ -21,17 +21,17 @@ const InstructorCard = ({ instructor, className }) => {
             height={240}
             className='h-14 w-14 rounded-full'
           />
-          <h5 className='text-sm sm:text-base'>
+          <h5 className='text-xs sm:text-sm'>
             {user.firstname} {user.lastname} | {instructor.describe}
           </h5>
         </div>
       </div>
-      <OutlineButton
+      {/* <OutlineButton
         color='subtext'
         className='mx-auto mb-3 w-fit text-xs font-normal sm:text-sm'
       >
         مشاهده اطلاعات
-      </OutlineButton>
+      </OutlineButton> */}
     </div>
   );
 };

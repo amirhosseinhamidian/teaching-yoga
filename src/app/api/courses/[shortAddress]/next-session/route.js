@@ -82,10 +82,23 @@ export async function GET(req, { params }) {
     }
 
     if (!nextSession) {
-      return NextResponse.json(
-        { error: 'No next session found.' },
-        { status: 404 },
-      );
+      // اگر جلسه‌ای پیدا نشد، اولین جلسه فعال از اولین ترم پیدا شود
+      for (const courseTerm of [...courseTerms].reverse()) {
+        const activeSession = courseTerm.term.sessions.find((s) => s.isActive);
+        if (activeSession) {
+          nextSession = activeSession;
+          break;
+        }
+      }
+
+      // اگر هیچ جلسه‌ای فعال نبود، برگردیم به اولین جلسه کلاً
+      if (!nextSession && courseTerms.length > 0) {
+        const fallbackSession = courseTerms.at(-1)?.term.sessions?.at(0);
+
+        if (fallbackSession) {
+          nextSession = fallbackSession;
+        }
+      }
     }
 
     return NextResponse.json({
