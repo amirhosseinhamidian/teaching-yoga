@@ -102,7 +102,7 @@ function OrderDetailsModal({ onClose, sale, onChangeSuccess }) {
               </tr>
               <tr className='border-b border-gray-300 dark:border-gray-600'>
                 <th className='py-2 pl-2 text-secondary'>موبایل</th>
-                <td className='py-2'>{sale.phone}</td>
+                <td className='py-2'>{sale?.phone}</td>
               </tr>
               <tr className='border-b border-gray-300 dark:border-gray-600'>
                 <th className='py-2 pl-2 text-secondary'>شناسه پرداخت</th>

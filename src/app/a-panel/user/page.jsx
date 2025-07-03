@@ -79,7 +79,7 @@ const UserManagementPage = () => {
           ? {
               ...user,
               username: updatedUser.username || user.username,
-              phone: updatedUser.phone || user.phone,
+              phone: updatedUser?.phone || user?.phone,
               firstname: updatedUser.firstname || user.firstname,
               lastname: updatedUser.lastname || user.lastname,
               role: updatedUser.role || user.role,

@@ -57,7 +57,7 @@ export const POST = async (req) => {
   const paymentResponse = await createPayment({
     amountInRial: parseInt(amount) * 10,
     description: desc,
-    mobile: user.userPhone,
+    mobile: user?.userPhone,
   });
 
   if (

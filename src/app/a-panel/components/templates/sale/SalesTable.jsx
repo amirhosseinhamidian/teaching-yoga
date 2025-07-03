@@ -165,7 +165,7 @@ const SalesTable = ({
     method: sale.method,
     amount: sale.amount,
     id: sale.id,
-    phone: sale.phone,
+    phone: sale?.phone,
     transactionId: sale.transactionId,
   }));
 

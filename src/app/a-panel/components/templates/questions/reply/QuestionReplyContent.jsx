@@ -84,7 +84,7 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
             </h4>
             <h4>{question.user.username}</h4>
             <h4 className='font-faNa text-subtext-light dark:text-subtext-dark'>
-              {question.user.phone}
+              {question.user?.phone}
             </h4>
             <h4 className='whitespace-nowrap font-faNa'>
               تاریخ آخرین بروزرسانی: {getTimeFromDate(question.updatedAt)}

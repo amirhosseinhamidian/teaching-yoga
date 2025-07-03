@@ -1,14 +1,34 @@
-export const validatePhoneNumber = (phone) => {
-  // Regex to match Iranian mobile numbers starting with 09 and 11 digits in total
-  const iranPhoneRegex = /^09\d{9}$/;
+import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
-  if (iranPhoneRegex.test(phone)) {
-    return { isValid: true, errorMessage: null };
-  } else {
-    return {
-      isValid: false,
-      errorMessage:
-        'شماره موبایل معتبر نیست. شماره شما باید ۱۱ رقم باشد و با ۰۹ شروع شود.',
-    };
+export const validatePhoneNumber = (phone) => {
+  let cleaned = phone.trim();
+
+  // اگر کاربر 00 نوشته، به + تبدیل کن
+  if (cleaned.startsWith('00')) {
+    cleaned = '+' + cleaned.slice(2);
   }
+
+  // شماره بین‌المللی
+  if (cleaned.startsWith('+')) {
+    const parsed = parsePhoneNumberFromString(cleaned);
+    if (!parsed || !parsed.isValid()) {
+      return {
+        isValid: false,
+        errorMessage: 'شماره بین‌المللی وارد شده معتبر نیست.',
+      };
+    }
+    return { isValid: true, errorMessage: null };
+  }
+
+  // شماره ایران
+  const iranPhoneRegex = /^09\d{9}$/;
+  if (iranPhoneRegex.test(cleaned)) {
+    return { isValid: true, errorMessage: null };
+  }
+
+  return {
+    isValid: false,
+    errorMessage:
+      'شماره موبایل معتبر نیست. شماره باید با ۰۹ یا + شروع شود و معتبر باشد.',
+  };
 };
