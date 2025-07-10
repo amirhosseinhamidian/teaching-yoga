@@ -1,12 +1,15 @@
 /* eslint-disable no-undef */
 'use client';
+import UserLastCourseCard from '@/components/modules/UserLastCourseCard/UserLastCourseCard';
 import Button from '@/components/Ui/Button/Button';
+import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
 const Hero = () => {
   const [siteInfoData, setSiteInfoData] = useState(null);
+  const { user } = useAuth();
   const fetchData = async () => {
     try {
       const res = await fetch(
@@ -44,32 +47,44 @@ const Hero = () => {
             درود و نور بر {'  '} قلبتون؛ <br /> {'  '} سمانه هستم مدرس بین
             المللی یوگا و مدیتیشن
           </h1>
-          <p
-            className='mt-2 text-xs text-subtext-light xs:text-sm sm:text-base dark:text-subtext-dark'
-            data-aos='fade-up'
-            data-aos-delay='400'
-            data-aos-duration='1000'
-          >
-            با من همراه شوید تا با تمرینات روزانه یوگا، مراقبه و تکنیک‌های
-            تنفسی، ذهن و بدن خود را تقویت کنید و به یک زندگی متعادل‌تر و آرام‌تر
-            دست یابید.
-          </p>
-          <p
-            className='mb-6 text-sm font-semibold text-secondary xs:text-base sm:text-lg'
-            data-aos='fade-up'
-            data-aos-delay='400'
-            data-aos-duration='1000'
-          >
-            آماده‌اید سفر درونی خود را آغاز کنید؟
-          </p>
-          <Link
-            href='/courses'
-            data-aos='fade-up'
-            data-aos-delay='600'
-            data-aos-duration='1000'
-          >
-            <Button shadow>شروع همراهی</Button>
-          </Link>
+          {user.courses.length > 0 ? (
+            <UserLastCourseCard
+              courseId={
+                [...user.courses].sort(
+                  (a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt),
+                )[0].courseId
+              }
+            />
+          ) : (
+            <>
+              <p
+                className='mt-2 text-xs text-subtext-light xs:text-sm sm:text-base dark:text-subtext-dark'
+                data-aos='fade-up'
+                data-aos-delay='400'
+                data-aos-duration='1000'
+              >
+                با من همراه شوید تا با تمرینات روزانه یوگا، مراقبه و تکنیک‌های
+                تنفسی، ذهن و بدن خود را تقویت کنید و به یک زندگی متعادل‌تر و
+                آرام‌تر دست یابید.
+              </p>
+              <p
+                className='mb-6 text-sm font-semibold text-secondary xs:text-base sm:text-lg'
+                data-aos='fade-up'
+                data-aos-delay='400'
+                data-aos-duration='1000'
+              >
+                آماده‌اید سفر درونی خود را آغاز کنید؟
+              </p>
+              <Link
+                href='/courses'
+                data-aos='fade-up'
+                data-aos-delay='600'
+                data-aos-duration='1000'
+              >
+                <Button shadow>شروع همراهی</Button>
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Right Section */}

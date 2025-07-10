@@ -1,14 +1,14 @@
 /* eslint-disable no-undef */
-import CourseCard from '@/components/CourseCards/CourseCard';
 import { headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
+import AutoCarousel from './AutoCarousel';
 
 const fetchCourseData = async () => {
   try {
     const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/last-three`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
       {
         method: 'GET',
         headers: headers(),
@@ -29,7 +29,7 @@ async function CoursesSection() {
 
   return (
     <div className='relative'>
-      <div className='relative my-8 -skew-y-6 transform bg-surface-light sm:my-16 dark:bg-surface-dark'>
+      <div className='relative mb-8 mt-12 -skew-y-6 transform bg-surface-light sm:mb-16 sm:mt-24 dark:bg-surface-dark'>
         {/* موج بالایی */}
         <div className='absolute -top-20 left-0 right-0 skew-y-[6]'>
           <svg
@@ -97,26 +97,8 @@ async function CoursesSection() {
             دوره‌ها
           </h2>
 
-          <div className='container my-5 grid grid-cols-1 gap-4 sm:my-7 sm:grid-cols-2 sm:gap-6 md:gap-8 lg:grid-cols-3 lg:gap-12 xl:px-32'>
-            {data.map((course, index) => (
-              <div
-                key={course.id}
-                data-aos={
-                  index === 0
-                    ? 'fade-right'
-                    : index === 1
-                      ? 'fade-up'
-                      : 'fade-left'
-                }
-                data-aos-mirror='true'
-                className='transition-transform duration-300'
-              >
-                <CourseCard
-                  course={course}
-                  className='h-full bg-background-light dark:bg-background-dark'
-                />
-              </div>
-            ))}
+          <div className='container my-5 sm:my-7 xl:px-32'>
+            <AutoCarousel courses={data} />
           </div>
 
           <Link

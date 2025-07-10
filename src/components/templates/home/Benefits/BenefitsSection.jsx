@@ -49,7 +49,7 @@ const BenefitsSection = () => {
   ];
 
   return (
-    <div className='flex flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
+    <div className='flex flex-col items-center justify-center gap-8 py-6 md:gap-12 md:py-12'>
       <h2
         className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
         data-aos='fade-up'

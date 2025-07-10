@@ -63,6 +63,7 @@ const CoursePriceCard = ({
     if (result.success) {
       await updateUser(setUser);
       toast.showSuccessToast(result.cart.message);
+      router.push('/cart');
     } else {
       toast.showErrorToast(result.error);
     }
@@ -86,7 +87,7 @@ const CoursePriceCard = ({
           onClick={handleAddCourseToCart}
           isLoading={isLoading}
         >
-          افزودن به سبد خرید
+          ثبت نام
         </Button>
         <Price
           className='ml-4'

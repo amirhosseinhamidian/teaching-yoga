@@ -9,6 +9,7 @@ import TextArea from '@/components/Ui/TextArea/TextArea';
 import {
   ADVANCED,
   BEGINNER,
+  BEGINNER_ADVANCED,
   BEGINNER_INTERMEDIATE,
   INTERMEDIATE,
   INTERMEDIATE_ADVANCED,
@@ -81,6 +82,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     { label: 'متوسط', value: INTERMEDIATE },
     { label: 'متوسط پیشرفته', value: INTERMEDIATE_ADVANCED },
     { label: 'پیشرفته', value: ADVANCED },
+    { label: 'مبتدی تا پیشرفته', value: BEGINNER_ADVANCED },
   ];
   const courseStatusOptions = [
     { label: 'کامل شده', value: COMPLETED },

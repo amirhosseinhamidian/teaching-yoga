@@ -4,9 +4,9 @@ import PropTypes from 'prop-types';
 export default function Logo({ size = 'medium', className }) {
   // Define size classes
   const sizeClasses = {
-    small: 'max-h-8 text-lg',
-    medium: 'max-h-12 text-2xl',
-    large: 'max-h-16 text-3xl',
+    small: 'max-h-8 text-base sm:text-lg',
+    medium: 'max-h-12 text-lg sm:text-2xl',
+    large: 'max-h-16 text-xl sm:text-3xl',
   };
 
   return (
