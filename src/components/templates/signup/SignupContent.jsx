@@ -115,8 +115,9 @@ const SignupContent = () => {
           fullWidth
           onEnterPress={signupHandle}
           placeholder='شماره همراه'
-          type='number'
-          className='mt-6 text-lg md:min-w-64'
+          type='tel'
+          className='mt-6 text-right text-lg md:min-w-64'
+          maxLength={20}
         />
 
         <Button

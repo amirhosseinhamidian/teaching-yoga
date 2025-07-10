@@ -13,8 +13,8 @@ export default async function Home() {
       <Header />
       <div className='flex flex-col gap-6 overflow-hidden'>
         <Hero />
-        <BenefitsSection />
         <CoursesSection />
+        <BenefitsSection />
         <ArticlesSection />
         <Newsletter />
       </div>

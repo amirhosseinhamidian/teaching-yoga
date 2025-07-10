@@ -118,7 +118,7 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
             </h4>
             <h4>{ticket.user.username}</h4>
             <h4 className='font-faNa text-subtext-light dark:text-subtext-dark'>
-              {ticket.user.phone}
+              {ticket.user?.phone}
             </h4>
             <h4 className='whitespace-nowrap font-faNa'>
               تاریخ آخرین بروزرسانی: {getTimeFromDate(ticket.updatedAt)}

@@ -34,7 +34,7 @@ model User {
   role            Role              @default(USER)
   createAt        DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  phone           String            @unique
+  phone           String?            @unique
   avatar          String?
   email           String?           @unique
   accounts        Account[]
@@ -542,6 +542,7 @@ enum CourseLevel {
   ADVANCED
   BEGINNER_INTERMEDIATE
   INTERMEDIATE_ADVANCED
+  BEGINNER_ADVANCED
 }
 
 enum CourseStatus {

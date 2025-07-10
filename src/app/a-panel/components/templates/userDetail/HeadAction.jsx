@@ -22,7 +22,7 @@ const HeadAction = ({ user, onDeleteUser, onUpdateUser }) => {
             {user?.firstname} {user?.lastname}
           </h4>
           <h4 className='font-faNa text-subtext-light dark:text-subtext-dark'>
-            {user.phone}
+            {user?.phone}
           </h4>
           <h4 className='text-subtext-light dark:text-subtext-dark'>
             نقش: {user.role === ADMIN ? 'ادمین' : 'کاربر'}

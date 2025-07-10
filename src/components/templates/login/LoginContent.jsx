@@ -11,6 +11,8 @@ import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CheckPhoneAction } from '@/app/actions/CheckPhoneAction';
+import { GrGoogle } from 'react-icons/gr';
+import { signIn } from 'next-auth/react';
 
 const LoginContent = () => {
   const { userPhone, setUserPhone, setToken, user } = useAuth();
@@ -95,7 +97,7 @@ const LoginContent = () => {
 
   return (
     <div className='flex h-svh items-center justify-center'>
-      <div className='rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
+      <div className='rounded-2xl bg-surface-light px-12 py-8 dark:bg-surface-dark'>
         <Logo size='large' className='justify-center' />
         <h3 className='mt-4 text-xl font-semibold text-text-light dark:text-text-dark'>
           ورود
@@ -111,9 +113,9 @@ const LoginContent = () => {
           placeholder='شماره همراه'
           focus
           onEnterPress={loginHandler}
-          type='number'
-          className='mt-12 text-lg md:min-w-64'
-          maxLength={11}
+          type='tel'
+          className='mt-6 text-right text-lg md:min-w-56'
+          maxLength={20}
         />
 
         <Button
@@ -133,6 +135,15 @@ const LoginContent = () => {
             ثبت نام کنید{' '}
           </Link>
         </p>
+        <hr className='my-3' />
+        <Button
+          onClick={() => signIn('google')}
+          color='blue'
+          className='mt-4 flex w-full items-center justify-center gap-2'
+        >
+          <GrGoogle />
+          ورود با گوگل
+        </Button>
       </div>
     </div>
   );

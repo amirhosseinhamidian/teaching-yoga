@@ -18,6 +18,7 @@ import {
   ADVANCED,
   BEGINNER_INTERMEDIATE,
   INTERMEDIATE_ADVANCED,
+  BEGINNER_ADVANCED,
 } from '@/constants/courseLevels';
 import { COMPLETED, IN_PROGRESS } from '@/constants/courseStatus';
 import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
@@ -166,6 +167,9 @@ async function page({ params }) {
         break;
       case INTERMEDIATE_ADVANCED:
         value = 'متوسط/پیشرفته';
+        break;
+      case BEGINNER_ADVANCED:
+        value = 'مبتدی تا پیشرفته';
         break;
       default:
         value = 'مبتدی';

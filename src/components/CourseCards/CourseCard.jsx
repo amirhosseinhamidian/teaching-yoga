@@ -47,9 +47,9 @@ export default function CourseCard({ course, className }) {
       <Image
         src={course.cover}
         alt={course.title}
-        className='h-48 w-full rounded-t-xl object-cover xs:h-64 lg:h-72'
-        width={600}
-        height={540}
+        className='h-32 w-full rounded-t-xl object-cover xs:h-48 lg:h-56'
+        width={800}
+        height={600}
       />
       <div className='flex h-full flex-col justify-between gap-2 px-3 pb-3 pt-1 md:px-6 md:pb-4 md:pt-2'>
         <div>
