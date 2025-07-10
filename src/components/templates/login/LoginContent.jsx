@@ -11,8 +11,8 @@ import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CheckPhoneAction } from '@/app/actions/CheckPhoneAction';
-import { GrGoogle } from 'react-icons/gr';
-import { signIn } from 'next-auth/react';
+// import { GrGoogle } from 'react-icons/gr';
+// import { signIn } from 'next-auth/react';
 
 const LoginContent = () => {
   const { userPhone, setUserPhone, setToken, user } = useAuth();
@@ -135,7 +135,7 @@ const LoginContent = () => {
             ثبت نام کنید{' '}
           </Link>
         </p>
-        <hr className='my-3' />
+        {/* <hr className='my-3' />
         <Button
           onClick={() => signIn('google')}
           color='blue'
@@ -143,7 +143,7 @@ const LoginContent = () => {
         >
           <GrGoogle />
           ورود با گوگل
-        </Button>
+        </Button> */}
       </div>
     </div>
   );
