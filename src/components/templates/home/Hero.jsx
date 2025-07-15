@@ -47,7 +47,7 @@ const Hero = () => {
             درود و نور بر {'  '} قلبتون؛ <br /> {'  '} سمانه هستم مدرس بین
             المللی یوگا و مدیتیشن
           </h1>
-          {user.courses.length > 0 ? (
+          {user?.courses.length > 0 ? (
             <UserLastCourseCard
               courseId={
                 [...user.courses].sort(
