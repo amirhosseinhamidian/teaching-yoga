@@ -56,7 +56,6 @@ export default async function RootLayout({ children }) {
   const session = await getServerSession(authOptions);
 
   let user = null;
-
   if (session?.user?.userId) {
     try {
       const rawUser = await prismadb.user.findUnique({
