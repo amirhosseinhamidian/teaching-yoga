@@ -68,13 +68,10 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: coursesWithPrices,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({
+      success: true,
+      data: coursesWithPrices,
+    });
   } catch (error) {
     console.error('Error fetching courses:', error);
     return NextResponse.json(
