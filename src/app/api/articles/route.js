@@ -22,13 +22,10 @@ export async function GET(req) {
       },
       take: onlyLastThree ? 3 : undefined,
     });
-    return NextResponse.json(
-      {
-        success: true,
-        data: articles,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({
+      success: true,
+      data: articles,
+    });
   } catch (error) {
     console.error('Error fetching articles:', error);
     return NextResponse.json(
