@@ -3,5 +3,8 @@
   "port": 3000,
   "static": {
     "publicDir": ".next"
+  },
+  "build": {
+    "location": "germany"
   }
 }
