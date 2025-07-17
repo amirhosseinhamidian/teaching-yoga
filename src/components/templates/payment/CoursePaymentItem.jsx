@@ -16,11 +16,20 @@ const CoursePaymentItem = ({ data }) => {
           />
           <h3 className='text-sm md:text-base'>{data.courseTitle}</h3>
         </div>
+
         <div className='flex items-baseline gap-1'>
-          <h3 className='font-faNa text-sm font-semibold sm:text-base'>
-            {data.finalPrice.toLocaleString('fa-IR')}
-          </h3>
-          <h6 className='text-2xs sm:text-xs'>تومان</h6>
+          {data.finalPrice === 0 ? (
+            <h3 className='font-faNa text-sm font-semibold sm:text-base'>
+              رایگان
+            </h3>
+          ) : (
+            <>
+              <h3 className='font-faNa text-sm font-semibold sm:text-base'>
+                {data.finalPrice.toLocaleString('fa-IR')}
+              </h3>
+              <h6 className='text-2xs sm:text-xs'>تومان</h6>
+            </>
+          )}
         </div>
       </div>
     </>

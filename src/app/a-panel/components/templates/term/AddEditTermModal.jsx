@@ -33,8 +33,8 @@ const AddEditTermModal = ({ onClose, onSuccess, term }) => {
       errors.name = 'عنوان نمی‌تواند خالی باشد.';
     }
 
-    if (!price || isNaN(price) || price <= 0) {
-      errors.price = 'قیمت باید یک عدد معتبر و بیشتر از صفر باشد.';
+    if (!price || isNaN(price)) {
+      errors.price = 'قیمت باید یک عدد معتبر باشد.';
     }
 
     if (discount && (isNaN(discount) || discount < 0 || discount > 100)) {

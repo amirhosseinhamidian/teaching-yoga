@@ -647,7 +647,7 @@ const AddTermSessionPage = () => {
                 key={term.id}
                 title={term.name}
                 subtitle={term.subtitle}
-                info1={`هزینه ترم: ${term.price.toLocaleString('fa-IR')} تومان`}
+                info1={`هزینه ترم: ${term.price === 0 ? 'رایگان' : `${term.price.toLocaleString('fa-IR')} تومان`}`}
                 info2={`تعداد جلسات : ${term.sessions.length ? term.sessions.length : '0'}`}
                 className='mt-6 flex-1 bg-foreground-light dark:bg-foreground-dark'
                 onToggle={(isOpen) => {

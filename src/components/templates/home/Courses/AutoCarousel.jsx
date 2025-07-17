@@ -6,7 +6,11 @@ import CourseCard from '@/components/CourseCards/CourseCard';
 const CoursesGridCarousel = ({ courses, interval = 4000 }) => {
   const containerRef = useRef(null);
   const [itemsPerView, setItemsPerView] = useState(1);
+  const [autoScrollEnabled, setAutoScrollEnabled] = useState(true); // ✳️ کنترل اسکرول خودکار
+
   const reverseCourses = [...courses].reverse();
+
+  // 📏 تنظیم تعداد آیتم‌ها با تغییر سایز
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
@@ -20,7 +24,10 @@ const CoursesGridCarousel = ({ courses, interval = 4000 }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // 🔁 اسکرول خودکار
   useEffect(() => {
+    if (!autoScrollEnabled) return; // اگر غیرفعاله، اسکرول نکن
+
     const scrollNext = () => {
       const container = containerRef.current;
       if (!container) return;
@@ -28,17 +35,20 @@ const CoursesGridCarousel = ({ courses, interval = 4000 }) => {
       const cardWidth = container.offsetWidth / itemsPerView;
 
       if (container.scrollLeft <= 0) {
-        // وقتی به ابتدا رسید، برگرد به انتها
         container.scrollTo({ left: container.scrollWidth, behavior: 'auto' });
       } else {
-        // ← حرکت به چپ واقعی در rtl با کاهش scrollLeft
         container.scrollBy({ left: -cardWidth, behavior: 'smooth' });
       }
     };
 
     const timer = setInterval(scrollNext, interval);
     return () => clearInterval(timer);
-  }, [itemsPerView, interval]);
+  }, [itemsPerView, interval, autoScrollEnabled]);
+
+  // ✅ تابعی برای غیرفعال‌کردن اسکرول خودکار
+  const handleCardClick = () => {
+    setAutoScrollEnabled(false);
+  };
 
   return (
     <div className='relative w-full overflow-hidden'>
@@ -50,6 +60,7 @@ const CoursesGridCarousel = ({ courses, interval = 4000 }) => {
           <div
             key={course.id}
             className='w-full shrink-0 snap-start sm:w-1/2 lg:w-1/3'
+            onClick={handleCardClick} // ✳️ کلیک باعث توقف اسکرول میشه
           >
             <CourseCard course={course} className='h-full' />
           </div>
