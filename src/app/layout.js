@@ -112,7 +112,7 @@ export default async function RootLayout({ children }) {
   return (
     <SessionWrapper session={session}>
       <html lang='fa' dir='rtl'>
-        <body className='...'>
+        <body className='flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark'>
           <AppProviders user={user}>{children}</AppProviders>
         </body>
       </html>
