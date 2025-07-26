@@ -2,6 +2,7 @@ import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
 import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
+import { SessionType } from '@prisma/client';
 
 export async function GET(req, { params }) {
   const { shortAddress } = params;

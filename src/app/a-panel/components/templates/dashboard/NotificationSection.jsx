@@ -7,7 +7,7 @@ const NotificationSection = () => {
   const { notifications } = useNotifications();
   return (
     <div>
-      {notifications.details.map((notification, index) => (
+      {notifications.details?.map((notification, index) => (
         <div key={index}>
           {notification.count !== 0 && (
             <NotificationItem
