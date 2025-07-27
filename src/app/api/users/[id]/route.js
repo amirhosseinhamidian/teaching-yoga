@@ -42,7 +42,7 @@ export async function PUT(request, { params }) {
         firstname,
         lastname,
         username,
-        email,
+        ...(email && email.trim() !== '' && { email }),
       },
     });
 

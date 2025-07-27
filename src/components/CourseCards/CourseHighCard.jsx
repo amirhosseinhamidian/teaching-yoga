@@ -6,9 +6,21 @@ import CardActions from './CardActions';
 import { useRouter } from 'next/navigation';
 import { prizeCountdown } from '@/utils/prizeCountdown';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { GrYoga } from 'react-icons/gr';
+import Button from '../Ui/Button/Button';
+import Link from 'next/link';
+import IconButton from '../Ui/ButtonIcon/ButtonIcon';
+import { TiInfoLarge } from 'react-icons/ti';
 
 export default function CourseHighCard({ course }) {
   const route = useRouter();
+  const { user } = useAuth();
+  const purchasedCourses = user?.courses || [];
+  const isCoursePurchased = purchasedCourses.some(
+    (userCourse) => userCourse.courseId === course.id,
+  );
+  const [isEnterCourseLoading, setIsLoadingCourseLoading] = useState(false);
   const [countdown, setCountdown] = useState('');
   const detailCourseClickHandler = () => {
     route.push(`/courses/${course.shortAddress}`);
@@ -21,6 +33,23 @@ export default function CourseHighCard({ course }) {
 
     return () => clearInterval(timer);
   }, []);
+
+  const courseClickHandler = async () => {
+    try {
+      setIsLoadingCourseLoading(true);
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`,
+      );
+      if (response.ok) {
+        const { sessionId } = await response.json();
+        route.push(`/courses/${course.shortAddress}/lesson/${sessionId}`);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setIsLoadingCourseLoading(false);
+    }
+  };
   return (
     <div className='flex w-full flex-col-reverse rounded-xl bg-surface-light shadow-md md:flex-row dark:bg-surface-dark'>
       <div className='flex flex-1 flex-col p-5'>
@@ -38,17 +67,39 @@ export default function CourseHighCard({ course }) {
             {countdown}
           </span>
         </div> */}
-        <div className='mt-5 flex flex-col-reverse gap-5 md:flex-row md:justify-between'>
-          <CardActions
-            mainBtnClick={detailCourseClickHandler}
-            courseId={course.id}
-          />
-          <Price
-            finalPrice={course.finalPrice}
-            price={course.price}
-            discount={course.discount}
-          />
-        </div>
+        {isCoursePurchased ? (
+          <div className='mt-6'>
+            <div className='flex items-center gap-4'>
+              <Button
+                shadow
+                className='w-full text-xs sm:text-sm md:w-fit md:text-base'
+                isLoading={isEnterCourseLoading}
+                onClick={courseClickHandler}
+              >
+                ورود به دوره
+              </Button>
+              <Link href={`/courses/${course.shortAddress}`}>
+                <IconButton icon={TiInfoLarge} size={28} />
+              </Link>
+            </div>
+            <div className='mt-4 flex gap-1 text-green md:mt-8'>
+              <GrYoga className='min-h-6 min-w-6' />
+              <p className='text-sm lg:text-base'>شما هنرجوی این دوره هستید.</p>
+            </div>
+          </div>
+        ) : (
+          <div className='mt-5 flex flex-col-reverse gap-5 md:flex-row md:justify-between'>
+            <CardActions
+              mainBtnClick={detailCourseClickHandler}
+              courseId={course.id}
+            />
+            <Price
+              finalPrice={course.finalPrice}
+              price={course.price}
+              discount={course.discount}
+            />
+          </div>
+        )}
       </div>
       <Image
         src={course.cover}

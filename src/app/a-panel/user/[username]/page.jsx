@@ -21,6 +21,8 @@ const DetailUserPage = () => {
   const params = useParams();
   let { username } = params;
 
+  console.log('username', username);
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 

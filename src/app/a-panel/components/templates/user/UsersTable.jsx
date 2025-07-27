@@ -28,8 +28,8 @@ const UsersTable = ({
   const [tempUsername, setTempUsername] = useState('');
   const [tempUser, setTempUser] = useState({});
 
-  const handleShowDeleteModal = (username) => {
-    setTempUsername(username);
+  const handleShowDeleteModal = (id) => {
+    setTempUsername(id);
     setShowDeleteModal(true);
   };
 
@@ -91,7 +91,7 @@ const UsersTable = ({
           <ActionButtonIcon
             color='red'
             icon={LuTrash}
-            onClick={() => handleShowDeleteModal(row.username)}
+            onClick={() => handleShowDeleteModal(row.id)}
           />
           <ActionButtonIcon
             color='blue'
@@ -101,7 +101,7 @@ const UsersTable = ({
           <ActionButtonIcon
             color='accent'
             icon={LuUserCog}
-            onClick={() => router.push(`/a-panel/user/${row.username}`)}
+            onClick={() => router.push(`/a-panel/user/${row.id}`)}
           />
         </div>
       ),
@@ -110,6 +110,7 @@ const UsersTable = ({
 
   const data = users.map((user, index) => ({
     number: index + 1 + (page - 1) * 10,
+    id: user.id,
     username: user.username,
     phone: user?.phone,
     firstname: user.firstname,

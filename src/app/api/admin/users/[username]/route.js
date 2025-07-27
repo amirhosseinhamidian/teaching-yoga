@@ -16,7 +16,7 @@ export async function DELETE(request, { params }) {
 
     // پیدا کردن کاربر براساس یوزرنیم
     const user = await prismadb.user.delete({
-      where: { username: username },
+      where: { id: username },
     });
 
     // اگر کاربر پیدا نشد
@@ -62,7 +62,7 @@ export async function PUT(request, { params }) {
 
     // پیدا کردن کاربر براساس یوزرنیم
     const user = await prismadb.user.findUnique({
-      where: { username: username },
+      where: { id: username },
     });
 
     // اگر کاربر پیدا نشد
@@ -72,7 +72,7 @@ export async function PUT(request, { params }) {
 
     // به‌روزرسانی اطلاعات کاربر
     const updatedUser = await prismadb.user.update({
-      where: { username: username },
+      where: { id: username },
       data: {
         phone: phoneNumber,
         firstname,
@@ -125,7 +125,7 @@ export async function GET(request, { params }) {
 
     // پیدا کردن کاربر براساس یوزرنیم
     const user = await prismadb.user.findUnique({
-      where: { username: username },
+      where: { id: username },
     });
 
     // اگر کاربر پیدا نشد

@@ -100,7 +100,7 @@ const AddEditUserModal = ({ onClose, onSuccess, editUser }) => {
     try {
       const method = editUser ? 'PUT' : 'POST';
       const url = editUser
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${editUser.username}`
+        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${editUser.id}`
         : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users`;
       const response = await fetch(url, {
         method,
