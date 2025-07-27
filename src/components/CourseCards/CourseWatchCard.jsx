@@ -21,7 +21,6 @@ const CourseWatchCard = ({ shortAddress, className }) => {
       );
       if (response.ok) {
         const { sessionId } = await response.json();
-        console.log('sessionId ============> ', sessionId);
         router.push(`/courses/${shortAddress}/lesson/${sessionId}`);
       } else {
         toast.showErrorToast('خطای غیرمنتظره');
