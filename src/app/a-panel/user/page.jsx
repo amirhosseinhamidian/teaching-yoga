@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
 import HeadAction from '../components/templates/user/HeadAction';
@@ -14,20 +13,22 @@ const UserManagementPage = () => {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
 
-  // Function to add a new user
   const handleAddNewUser = (newUser) => {
-    setUsers((prevUsers) => [newUser.user, ...prevUsers]);
+    setUsers((prev) => [newUser.user, ...prev]);
   };
 
-  // Fetch users based on the page number
-  const fetchUsers = async (page) => {
+  const fetchUsers = async (pageNumber, q = '') => {
     setIsLoading(true);
-
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users?page=${page}`,
-      );
+      const params = new URLSearchParams({ page: String(pageNumber) });
+      if (q.trim()) params.set('q', q.trim());
+
+      const response = await fetch(`/api/admin/users?${params.toString()}`, {
+        cache: 'no-store',
+      });
       const data = await response.json();
 
       if (response.ok) {
@@ -36,7 +37,7 @@ const UserManagementPage = () => {
       } else {
         toast.showErrorToast(data.error || 'خطایی رخ داده است');
       }
-    } catch (err) {
+    } catch {
       toast.showErrorToast('خطای غیرمنتظره');
     } finally {
       setIsLoading(false);
@@ -44,47 +45,39 @@ const UserManagementPage = () => {
   };
 
   useEffect(() => {
-    fetchUsers(page);
-  }, [page]);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 2000);
 
-  // Handle deleting a user
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    fetchUsers(page, debouncedSearch);
+  }, [page, debouncedSearch]);
+
   const handleDeleteUser = async (username) => {
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
-        {
-          method: 'DELETE',
-        },
-      );
-
+      const response = await fetch(`/api/admin/users/${username}`, {
+        method: 'DELETE',
+      });
       if (response.ok) {
-        setUsers((prevUsers) =>
-          prevUsers.filter((user) => user.username !== username),
-        );
+        setUsers((prev) => prev.filter((u) => u.username !== username));
         toast.showSuccessToast(`کاربر ${username} با موفقیت حذف شد.`);
       } else {
         const data = await response.json();
         toast.showErrorToast(data.error || 'خطای نامشخص');
       }
-    } catch (error) {
+    } catch {
       toast.showErrorToast('خطای غیرمنتظره');
     }
   };
 
-  // Handle updating a user
   const handleUpdateUser = (updatedUser) => {
-    setUsers((prevUsers) =>
-      prevUsers.map((user) =>
-        user.username === updatedUser.username
-          ? {
-              ...user,
-              username: updatedUser.username || user.username,
-              phone: updatedUser?.phone || user?.phone,
-              firstname: updatedUser.firstname || user.firstname,
-              lastname: updatedUser.lastname || user.lastname,
-              role: updatedUser.role || user.role,
-            }
-          : user,
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.username === updatedUser.username ? { ...u, ...updatedUser } : u,
       ),
     );
     toast.showSuccessToast(
@@ -92,14 +85,15 @@ const UserManagementPage = () => {
     );
   };
 
-  // Handle page change
-  const handlePageChange = (newPage) => {
-    setPage(newPage);
+  const handlePageChange = (newPage) => setPage(newPage);
+
+  const handleSearch = (text) => {
+    setSearchQuery(text || '');
   };
 
   return (
     <div>
-      <HeadAction addedNewUser={handleAddNewUser} />
+      <HeadAction addedNewUser={handleAddNewUser} onSearch={handleSearch} />
       <UsersTable
         className='mt-6'
         users={users}

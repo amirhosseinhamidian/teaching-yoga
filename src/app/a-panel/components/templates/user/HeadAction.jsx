@@ -5,7 +5,7 @@ import SearchBox from '../../modules/SearchBox/SearchBox';
 import Button from '@/components/Ui/Button/Button';
 import AddEditUserModal from '../../modules/AddEditUserModal/AddEditUserModal';
 
-const HeadAction = ({ addedNewUser }) => {
+const HeadAction = ({ addedNewUser, onSearch }) => {
   const [searchText, setSearchText] = useState('');
   const [showNewUserModal, setShowUserModal] = useState(false);
 
@@ -16,9 +16,10 @@ const HeadAction = ({ addedNewUser }) => {
     <>
       <div className='flex flex-wrap items-center justify-between gap-2'>
         <SearchBox
-          placeholder=' جست و جو براساس نام کاربری '
+          placeholder='نام کاربری یا شماره موبایل'
           value={searchText}
           onChange={setSearchText}
+          onSearch={() => onSearch?.(searchText)}
         />
         <Button onClick={showAddNewUserModal} shadow>
           ثبت کاربر جدید
@@ -40,6 +41,7 @@ const HeadAction = ({ addedNewUser }) => {
 
 HeadAction.propTypes = {
   addedNewUser: PropTypes.func.isRequired,
+  onSearch: PropTypes.func,
 };
 
 export default HeadAction;
