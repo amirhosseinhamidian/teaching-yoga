@@ -45,9 +45,9 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    // استخراج شماره صفحه از Query Parameters
     const { searchParams } = request.nextUrl;
     const page = parseInt(searchParams.get('page') || '1', 10);
+    const q = (searchParams.get('q') || '').trim();
 
     if (page < 1) {
       return NextResponse.json(
@@ -56,23 +56,33 @@ export async function GET(request) {
       );
     }
 
-    const pageSize = 10; // تعداد کاربران در هر صفحه
-    const skip = (page - 1) * pageSize; // محاسبه کاربران جا افتاده
+    const pageSize = 10;
+    const skip = (page - 1) * pageSize;
 
-    // دریافت کاربران با ترتیب از آخر به اول
-    const users = await prismadb.user.findMany({
-      skip,
-      take: pageSize,
-      orderBy: {
-        createAt: 'desc', // ترتیب از آخر به اول
-      },
-      include: {
-        courses: true, // واکشی اطلاعات مرتبط با UserCourse
-      },
-    });
+    let where = undefined;
+    if (q) {
+      where = {
+        OR: [
+          { username: { contains: q, mode: 'insensitive' } },
+          { phone: { contains: q, mode: 'insensitive' } },
+        ],
+      };
+    }
 
-    // شمارش کل کاربران برای اطلاعات تکمیلی
-    const totalUsers = await prismadb.user.count();
+    const [users, totalUsers] = await Promise.all([
+      prismadb.user.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: {
+          createAt: 'desc',
+        },
+        include: {
+          courses: true,
+        },
+      }),
+      prismadb.user.count({ where }),
+    ]);
 
     return NextResponse.json({
       users,
