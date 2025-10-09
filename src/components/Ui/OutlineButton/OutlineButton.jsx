@@ -31,7 +31,7 @@ const OutlineButton = ({
       disabled={disable || isLoading}
       type={type}
       onClick={onClick}
-      className={`rounded-xl border-2 px-6 py-2 font-main font-medium transition-all duration-300 ease-in-out disabled:opacity-70 ${colorClasses} ${isLoading ? 'flex items-center justify-center gap-1' : ''} ${className}`}
+      className={`rounded-xl border-2 ${!className.includes('px-') ? 'px-6' : ''} py-2 font-main font-medium transition-all duration-300 ease-in-out disabled:opacity-70 ${colorClasses} ${className}`}
     >
       {children}
       {isLoading && <ImSpinner2 className='animate-spin' />}
