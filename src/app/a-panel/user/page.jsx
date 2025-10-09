@@ -5,6 +5,7 @@ import HeadAction from '../components/templates/user/HeadAction';
 import UsersTable from '../components/templates/user/UsersTable';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import * as XLSX from 'xlsx';
 
 const UserManagementPage = () => {
   const { isDark } = useTheme();
@@ -97,9 +98,41 @@ const UserManagementPage = () => {
     setPage(newPage);
   };
 
+  const exportToExcel = async () => {
+  try {
+    const res = await fetch('/api/admin/users/all');
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data.error || 'خطا در دریافت کاربران');
+    }
+
+    const users = data.users;
+
+    // فقط فیلدهای دلخواه رو اکسپورت کن (مثلاً بدون رمز عبور)
+    const exportData = users.map(user => ({
+      نام: user.firstname,
+      نام‌خانوادگی: user.lastname,
+      نام‌کاربری: user.username,
+      موبایل: user.phone,
+      ایمیل: user.email,
+      تاریخ_ثبت: new Date(user.createAt).toLocaleDateString('fa-IR'),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'All Users');
+    XLSX.writeFile(workbook, 'all-users.xlsx');
+  } catch (error) {
+    console.error('Export error:', error);
+    alert('خطا در دانلود فایل اکسل کاربران');
+  }
+};
+
+
   return (
     <div>
-      <HeadAction addedNewUser={handleAddNewUser} />
+      <HeadAction addedNewUser={handleAddNewUser} onExportExcel={exportToExcel}/>
       <UsersTable
         className='mt-6'
         users={users}

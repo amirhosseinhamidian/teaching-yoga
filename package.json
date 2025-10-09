@@ -42,7 +42,8 @@
     "recharts": "^2.15.0",
     "shamsi-date-converter": "^1.0.5",
     "swiper": "^11.1.15",
-    "video.js": "^8.19.1"
+    "video.js": "^8.19.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@babel/core": "^7.25.8",
