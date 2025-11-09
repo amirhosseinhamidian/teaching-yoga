@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
+import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
 
 // GET: لیست پیام‌های یک session خاص (بر اساس userId یا anonymousId)
 export async function GET(req) {
@@ -130,6 +131,28 @@ export async function POST(req) {
         sessionId: supportSession.id,
       },
     });
+
+    // 🔔 ارسال نوتیف به ادمین‌ها (non-blocking)
+    try {
+      const origin =
+        process.env.NEXT_PUBLIC_ADMIN_PANEL_URL || // اگر پنل ادمین دامنه جدا دارد
+        process.env.NEXT_PUBLIC_SITE_URL ||       // یا سایت اصلی
+        process.env.NEXT_PUBLIC_API_BASE_URL ||   // یا fallback
+        'http://localhost:3000';
+
+      // لینکی که ادمین با کلیک روی نوتیف باز می‌کنه
+      const adminThreadUrl = `${origin}/a-panel/message/reply?sessionId=${encodeURIComponent(
+        supportSession.id,
+      )}`;
+
+      await notifyAdminsNewMessage({
+        sessionId: supportSession.id,
+        content,
+        url: adminThreadUrl,
+      });
+    } catch (notifyErr) {
+      console.error('[ADMIN_PUSH_NOTIFY_ERROR]', notifyErr);
+    }
 
     return NextResponse.json({ success: true, message });
   } catch (error) {

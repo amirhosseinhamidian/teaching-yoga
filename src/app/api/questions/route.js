@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
-
+import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
 export async function POST(request) {
   try {
     const { courseId, sessionId, questionText } = await request.json();
@@ -10,11 +10,12 @@ export async function POST(request) {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json(
-        { message: 'You must be logged in to ask a question.' },
+        { message: 'برای ارسال سؤال باید وارد حساب کاربری شوید.' },
         { status: 401 },
       );
     }
 
+    // ✅ ذخیره سؤال
     await prismadb.question.create({
       data: {
         userId: session.user.userId,
@@ -24,18 +25,31 @@ export async function POST(request) {
       },
     });
 
+    // ✅ ساخت پیام نوتیف برای ادمین
+    try {
+      const preview = questionText.replace(/<[^>]*>/g, '').slice(0, 120);
+      const threadUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/a-panel/questions`; // مسیر مشاهده سوالات توسط ادمین
+      await notifyAdminsNewMessage(
+        threadUrl,
+        `سؤال جدید از ${session.user.name || 'کاربر'}`,
+        preview || 'بدون متن'
+      );
+    } catch (err) {
+      console.error('[ADMIN_PUSH_NOTIFY_QUESTION_ERROR]', err);
+    }
+
     return NextResponse.json(
       {
         message:
-          'سوال با موفقیت ارسال شد. \n به زودی پاسخ را در پروفایل خود مشاهده کنید.',
+          'سؤال با موفقیت ارسال شد. به زودی پاسخ را در پروفایل خود مشاهده خواهید کرد.',
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
-    console.error(error);
+    console.error('[QUESTION_POST_ERROR]', error);
     return NextResponse.json(
-      { message: 'عدم ارسال صحیح سوال؛ لطفا بعدا امتحان کنید' },
-      { status: 500 },
+      { message: 'عدم ارسال صحیح سؤال؛ لطفاً بعداً دوباره تلاش کنید.' },
+      { status: 500 }
     );
   }
 }

@@ -17,9 +17,9 @@ const PodcastInfo = ({ podcast, loading, className }) => {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText('https://samaneyoga.ir/rss');
-      toast.showSuccessToast('RSS Feed با موفقیت کپی شد ✅');
+      toast.showSuccessToast('RSS Feed با موفقیت کپی شد');
     } catch (err) {
-      toast.showErrorToast('خطا در کپی کردن RSS Feed ❌');
+      toast.showErrorToast('خطا در کپی کردن RSS Feed');
       console.error(err);
     }
   };
