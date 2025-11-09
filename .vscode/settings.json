@@ -1,3 +1,9 @@
 {
-  "cSpell.words": ["castbox", "firstname", "lastname", "prismadb"]
+  "cSpell.words": [
+    "castbox",
+    "firstname",
+    "lastname",
+    "prismadb"
+  ],
+  "editor.formatOnSave": true
 }

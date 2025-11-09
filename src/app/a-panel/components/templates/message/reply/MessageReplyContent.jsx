@@ -115,7 +115,7 @@ const MessageReplyContent = ({
     <div>
       <div className='mt-8 flex flex-nowrap items-center gap-2'>
         <Image
-          src={data.user?.avatar || '/images/default-avatar.png'}
+          src={data.user?.avatar || '/images/default-profile.png'}
           alt={data.user?.username || 'کاربر'}
           className='h-12 w-12 rounded-full md:h-14 md:w-14 xl:h-20 xl:w-20'
           width={96}

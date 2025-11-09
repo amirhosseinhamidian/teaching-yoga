@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { MdMessage, MdSend } from 'react-icons/md';
 import { IoClose } from 'react-icons/io5';
 import { ImSpinner2 } from 'react-icons/im';
@@ -12,6 +12,19 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useSession } from 'next-auth/react';
 import { getAnonymousId } from '@/utils/localStorageHelper';
+import { BiSupport } from "react-icons/bi";
+
+
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY; // Base64 URL-safe
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - (base64String?.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = typeof window !== 'undefined' ? atob(base64) : '';
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
 
 export default function FloatingMessageButton() {
   const { isDark } = useTheme();
@@ -27,56 +40,56 @@ export default function FloatingMessageButton() {
   const [isLoadingInitial, setIsLoadingInitial] = useState(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const containerRef = useRef();
+  // Push Notifications
+  const [notifPermission, setNotifPermission] = useState(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
 
-  const toggleMessage = () => {
-    if (open) {
-      setOpen(false);
-    } else {
-      setOpen(true);
-    }
-  };
+  const containerRef = useRef(null);
+
+  const isNotifCTAVisible = useMemo(() => {
+    if (!messages?.length) return false;
+    const last = messages[messages.length - 1];
+    return last?.sender === 'USER' && notifPermission !== 'granted';
+  }, [messages, notifPermission]);
+
+  const toggleMessage = () => setOpen((p) => !p);
 
   const fetchMessages = async (requestedPage = 1, appendToTop = false) => {
     try {
-      if (requestedPage === 1) {
-        setIsLoadingInitial(true);
-      } else {
-        setIsFetchingMore(true);
-      }
+      if (requestedPage === 1) setIsLoadingInitial(true);
+      else setIsFetchingMore(true);
 
       const anonymousId = getAnonymousId();
-
-      const queryParams = new URLSearchParams();
-      if (anonymousId) queryParams.append('anonymousId', anonymousId);
-      queryParams.append('page', requestedPage.toString());
+      const params = new URLSearchParams();
+      if (anonymousId) params.append('anonymousId', anonymousId);
+      params.append('page', String(requestedPage));
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/support-message?${queryParams.toString()}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/support-message?${params.toString()}`
       );
 
-      if (res.ok) {
-        const data = await res.json();
+      if (!res.ok) throw new Error('fetch failed');
+      const data = await res.json();
 
-        if (requestedPage === 1) {
-          setMessages(data.messages);
-          setTimeout(() => {
-            if (containerRef.current) {
-              containerRef.current.scrollTop =
-                containerRef.current.scrollHeight;
-            }
-          }, 100);
-        } else if (appendToTop) {
-          setMessages((prev) => [...data.messages, ...prev]);
-        }
-
-        setPage(requestedPage);
-        setHasMore(requestedPage < data.totalPages);
-      } else {
-        toast.showErrorToast('خطا در دریافت پیام‌ها');
+      if (requestedPage === 1) {
+        setMessages(data.messages || []);
+        setTimeout(() => {
+          if (containerRef.current) {
+            containerRef.current.scrollTop = containerRef.current.scrollHeight;
+          }
+        }, 60);
+      } else if (appendToTop) {
+        setMessages((prev) => [...(data.messages || []), ...prev]);
       }
-    } catch (error) {
-      toast.showErrorToast('خطا در ارتباط با سرور');
+
+      setPage(requestedPage);
+      setHasMore(requestedPage < (data.totalPages || 1));
+    } catch (e) {
+      toast.showErrorToast('خطا در دریافت پیام‌ها');
     } finally {
       setIsLoadingInitial(false);
       setIsFetchingMore(false);
@@ -85,14 +98,10 @@ export default function FloatingMessageButton() {
 
   const handleSend = async () => {
     if (!message.trim()) return;
-
     setIsSending(true);
-
     try {
       const payload = { content: message.trim() };
-      if (!session?.user?.userId) {
-        payload.anonymousId = getAnonymousId();
-      }
+      if (!session?.user?.userId) payload.anonymousId = getAnonymousId();
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/support-message`,
@@ -100,100 +109,208 @@ export default function FloatingMessageButton() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
-        },
+        }
       );
 
-      if (res.ok) {
-        const data = await res.json();
-        setMessages((prev) => [...prev, data.message]);
-        setMessage('');
-        setTimeout(() => {
+      if (!res.ok) throw new Error('send failed');
+      const data = await res.json();
+      setMessages((prev) => [...prev, data.message]);
+      setMessage('');
+      setTimeout(() => {
+        if (containerRef.current) {
           containerRef.current.scrollTop = containerRef.current.scrollHeight;
-        }, 100);
-      } else {
-        toast.showErrorToast('خطا در ارسال پیام');
-      }
-    } catch (err) {
-      toast.showErrorToast('خطای شبکه');
+        }
+      }, 40);
+    } catch (e) {
+      toast.showErrorToast('خطا در ارسال پیام');
     } finally {
       setIsSending(false);
     }
   };
 
+  // Init (open/close)
   useEffect(() => {
     if (open) {
       setPage(1);
       setHasMore(true);
       fetchMessages(1);
     }
-
     const handleEsc = (e) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  // Infinite scroll (older)
   useEffect(() => {
-    if (!open) return;
-    const container = containerRef.current;
-    if (!container) return;
-
-    const handleScroll = () => {
-      if (container.scrollTop < 20 && hasMore && !isFetchingMore) {
-        fetchMessages(page + 1, true);
+    if (!open || !containerRef.current) return;
+    const el = containerRef.current;
+    const onScroll = () => {
+      if (el.scrollTop < 20 && hasMore && !isFetchingMore) {
+        const prevH = el.scrollHeight;
+        fetchMessages(page + 1, true).then(() => {
+          const newH = el.scrollHeight;
+          el.scrollTop = newH - prevH;
+        });
       }
     };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
+    el.addEventListener('scroll', onScroll);
+    return () => el.removeEventListener('scroll', onScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, page, hasMore, isFetchingMore]);
+
+  // Push support + existing subscription
+  useEffect(() => {
+    const supported =
+      typeof window !== 'undefined' &&
+      'serviceWorker' in navigator &&
+      'PushManager' in window &&
+      'Notification' in window;
+    setPushSupported(supported);
+    if (!supported) return;
+
+    setNotifPermission(Notification.permission);
+    (async () => {
+      try {
+        const reg = (await navigator.serviceWorker.getRegistration()) || (await navigator.serviceWorker.register('/sw.js'));
+        const sub = await reg.pushManager.getSubscription();
+        setPushEnabled(!!sub);
+      } catch {
+        // ignore
+      }
+    })();
+  }, []);
+
+  const requestAndSubscribe = async () => {
+    if (!pushSupported) return toast.showErrorToast('مرورگر شما از اعلان‌های وب پشتیبانی نمی‌کند.');
+    setSubscribing(true);
+    try {
+      const permission = await Notification.requestPermission();
+      setNotifPermission(permission);
+      if (permission !== 'granted') {
+        toast.showErrorToast('برای دریافت اعلان، اجازهٔ نمایش نوتیف لازم است.');
+        return;
+      }
+
+      const registration =
+        (await navigator.serviceWorker.getRegistration()) ||
+        (await navigator.serviceWorker.register('/sw.js'));
+
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+
+      const body = {
+        subscription,
+        userId: session?.user?.userId || null,
+        anonymousId: session?.user?.userId ? null : getAnonymousId(),
+      };
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/push/subscribe`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (!res.ok) throw new Error('subscribe failed');
+
+      setPushEnabled(true);
+      toast.showSuccessToast('اعلان پاسخ فعال شد ✅');
+    } catch (e) {
+      console.error(e);
+      toast.showErrorToast('فعالسازی اعلان با خطا مواجه شد.');
+    } finally {
+      setSubscribing(false);
+    }
+  };
 
   return (
     <>
       {/* FAB Button */}
       <button
-        onClick={() => toggleMessage()}
+        onClick={toggleMessage}
         className='fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-light shadow-lg transition-transform duration-300 hover:scale-110 sm:h-14 sm:w-14'
+        aria-label={open ? 'بستن چت' : 'باز کردن چت'}
       >
         {open ? <IoClose size={28} /> : <MdMessage size={28} />}
       </button>
 
       {/* Chat Box */}
       {open && (
-        <div className='fixed bottom-[82px] left-6 z-50 flex max-h-[70vh] max-w-[320px] flex-col overflow-hidden rounded-xl bg-white shadow-xl md:bottom-[88px] dark:bg-surface-dark'>
+        <div className='fixed bottom-[82px] left-6 z-50 flex max-h-[78vh] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_20px_60px_rgba(0,0,0,.15)] backdrop-blur-md dark:bg-[#0b0f14] md:bottom-[88px]'>
           {/* Header */}
-          <div className='flex items-center justify-between border-b p-3 dark:border-gray-700'>
-            <span className='text-sm font-semibold'>پشتیبانی</span>
+          <div className='relative flex items-center justify-between border-b border-black/5 p-3.5 dark:border-white/10'>
+            <div className='absolute inset-0 -z-10 bg-gradient-to-r from-primary/10 via-transparent to-primary/10' />
+            <div className='flex items-center gap-2'>
+              <div className='h-8 w-8 shrink-0 flex items-center justify-center rounded-full bg-primary/15 ring-4 ring-primary/10'>
+                <BiSupport className='h-7 w-7'/>
+              </div>
+              <div className='flex flex-col'>
+                <span className='text-sm font-semibold'>پشتیبانی آنلاین</span>
+                <span className='text-[11px] text-emerald-600 dark:text-emerald-400'>معمولاً چند دقیقه</span>
+              </div>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className='rounded-lg p-1.5 text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+              aria-label='بستن'
+            >
+              <IoClose size={20} />
+            </button>
           </div>
 
           {/* Messages */}
           <div
             ref={containerRef}
-            className='max-h-72 min-h-60 flex-1 space-y-2 overflow-y-auto bg-surface-light p-3 text-sm md:max-h-96 md:min-h-80 dark:bg-surface-dark'
+            className='scroll-smooth flex-1 space-y-2 overflow-y-auto bg-[linear-gradient(180deg,_rgba(0,0,0,0)_0%,_rgba(0,0,0,0.02)_100%)] p-3 text-sm'
           >
             {isLoadingInitial ? (
-              <div className='flex h-full items-center justify-center'>
+              <div className='flex h-48 items-center justify-center'>
                 <ImSpinner2 size={24} className='animate-spin text-gray-400' />
               </div>
             ) : messages.length > 0 ? (
               <>
                 {isFetchingMore && (
-                  <div className='flex justify-center py-2'>
-                    <ImSpinner2
-                      size={18}
-                      className='animate-spin text-gray-400'
-                    />
+                  <div className='sticky top-0 z-10 mx-auto my-1 w-max rounded-full bg-black/5 px-3 py-1 text-[11px] text-gray-600 backdrop-blur dark:bg-white/10 dark:text-gray-300'>
+                    در حال دریافت پیام‌های قدیمی‌تر…
                   </div>
                 )}
+
                 {messages.map((msg) =>
                   msg.sender === 'USER' ? (
                     <UserMessage key={msg.id} content={msg.content} />
                   ) : (
                     <SupportMessage key={msg.id} content={msg.content} />
-                  ),
+                  )
+                )}
+
+                {/* CTA: Enable Web Push under last user message */}
+                {isNotifCTAVisible && (
+                  <div className='mt-2 flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-2.5 text-[13px] leading-6 dark:border-amber-400/30 dark:bg-[#2a2207] dark:text-amber-100'>
+                    <div className='mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400' />
+                    <div className='flex-1'>
+                      برای اینکه وقتی پشتیبان پاسخ داد خبرت کنیم، <b>اعلان مرورگر</b> را فعال کن.
+                      <div className='mt-2 flex items-center gap-2'>
+                        <button
+                          onClick={requestAndSubscribe}
+                          disabled={subscribing || pushEnabled}
+                          className='rounded-md bg-green px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60'
+                        >
+                          {pushEnabled ? 'فعال است' : subscribing ? 'در حال فعال‌سازی…' : 'فعالسازی اعلان پاسخ'}
+                        </button>
+                        {notifPermission === 'denied' && (
+                          <span className='text-[11px] text-red-600 dark:text-red-400'>
+                            دسترسی نوتیف مسدود است؛ از تنظیمات مرورگر اجازه بدهید.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </>
             ) : (
-              <p className='text-center text-2xs text-subtext-light xs:text-xs md:text-sm dark:text-subtext-dark'>
+              <p className='rounded-xl border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400'>
                 هنوز گفت‌وگویی آغاز نشده! <br />
                 می‌تونی سوالاتی مثل این‌ها بپرسی:
                 <ul className='mt-2 list-inside list-disc text-right'>
@@ -207,23 +324,31 @@ export default function FloatingMessageButton() {
           </div>
 
           {/* Input */}
-          <div className='flex gap-2 border-t p-3 dark:border-gray-700'>
-            <Input
-              type='text'
-              value={message}
-              onChange={setMessage}
-              fullWidth
-              onEnterPress={handleSend}
-              placeholder='پیام خود را بنویسید...'
-              className='flex-1 px-3 py-2 text-sm'
-            />
-            <IconButton
-              onClick={handleSend}
-              disabled={isSending || !message.trim()}
-              loading={isSending}
-              className='hover:bg-primary-dark rotate-180 rounded-md px-3 py-2 disabled:opacity-50'
-              icon={MdSend}
-            />
+          <div className='border-t border-black/5 p-2.5 dark:border-white/10'>
+            <div className='flex items-center gap-2'>
+              <Input
+                type='text'
+                value={message}
+                onChange={setMessage}
+                fullWidth
+                onEnterPress={handleSend}
+                placeholder='پیام خود را بنویسید…'
+                className='flex-1 rounded-xl border-none bg-black/5 px-3 py-2 text-sm focus:outline-none dark:bg-white/10'
+              />
+              <IconButton
+                onClick={handleSend}
+                disabled={isSending || !message.trim()}
+                loading={isSending}
+                className='rotate-180 rounded-xl px-3 py-2 hover:bg-primary/90 disabled:opacity-50'
+                icon={MdSend}
+              />
+            </div>
+
+            {notifPermission !== 'granted' && !isNotifCTAVisible && (
+              <div className='mt-2 text-[11px] text-gray-500 dark:text-gray-400'>
+                بعد از ارسال پیام، نوتیفیکیشن را جهت اطلاع رسانی فعال کنید.
+              </div>
+            )}
           </div>
         </div>
       )}

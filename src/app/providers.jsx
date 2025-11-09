@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
 import ClientSideAOS from '@/components/ClientSideAOS';
 import ClientWrapper from '@/components/ClientWrapper';
+import { PushLinkOnLogin } from '@/components/PushLinkOnLogin';
 
 export function AppProviders({ children, user }) {
   return (
@@ -16,6 +17,7 @@ export function AppProviders({ children, user }) {
         <ClientSideAOS />
         <ClientWrapper>{children}</ClientWrapper>
         <Toaster />
+        <PushLinkOnLogin />
       </AuthProvider>
     </ThemeProvider>
   );
