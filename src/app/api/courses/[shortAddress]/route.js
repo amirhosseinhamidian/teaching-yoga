@@ -20,12 +20,14 @@ export async function GET(req, { params }) {
           },
         },
         courseTerms: {
-          // Updated to match the new relation with CourseTerm
           include: {
             term: {
-              // Include the related Term model
               include: {
-                sessions: true, // Sessions for each term
+                sessionTerms: {
+                  include: {
+                    session: true,
+                  },
+                },
               },
             },
           },
@@ -40,8 +42,19 @@ export async function GET(req, { params }) {
       );
     }
 
-    // Calculate total price, average discount, and final price
+    // 🔄 تبدیل sessionTerms → sessions[] مانند ساختار قدیم
+    course.courseTerms.forEach((ct) => {
+      const term = ct.term;
+
+      term.sessions = term.sessionTerms
+        .map((st) => st.session)
+        .filter(Boolean)
+        .sort((a, b) => a.order - b.order);
+    });
+
+    // استخراج ترم‌ها برای محاسبه قیمت
     const terms = course.courseTerms.map((courseTerm) => courseTerm.term) || [];
+
     const totalPrice = terms.reduce((sum, term) => sum + (term.price || 0), 0);
 
     const totalDiscount = terms.reduce(
@@ -59,18 +72,18 @@ export async function GET(req, { params }) {
       return sum + discountedPrice;
     }, 0);
 
-    // Add calculated values to the response
+    // اضافه کردن مقادیر محاسبه شده
     const responseData = {
       ...course,
-      price: totalPrice, // مجموع قیمت
-      discount: averageDiscount, // میانگین تخفیف
-      finalPrice, // قیمت نهایی
+      price: totalPrice,
+      discount: averageDiscount,
+      finalPrice,
     };
 
-    // If introVideoUrl exists, generate a temporary signed URL for it
+    // اگر ویدیو معرفی دارد لینک موقت بساز
     if (course.introVideoUrl) {
       const signedUrl = await generateTemporaryLink(course.introVideoUrl);
-      responseData.introLink = signedUrl; // Add the signed URL to introLink
+      responseData.introLink = signedUrl;
     }
 
     return NextResponse.json(responseData, { status: 200 });

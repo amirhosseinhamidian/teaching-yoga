@@ -1,15 +1,15 @@
-'use client';
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import Button from '@/components/Ui/Button/Button';
-import AddSessionModal from '../../modules/AddSessionModal/AddSessionModal';
+'use client'
+import React, { useState } from 'react'
+import PropTypes from 'prop-types'
+import Button from '@/components/Ui/Button/Button'
+import SimpleAddSessionModal from '../../modules/SimpleAddSessionModal/SimpleAddSessionModal'
 
 const HeadAction = ({ addSessionSuccessfully, className }) => {
-  const [showAddSessionModal, setShowAddSessionModal] = useState(false);
+  const [showAddSessionModal, setShowAddSessionModal] = useState(false)
   const handleAddSessionSuccessfully = (newSession) => {
-    addSessionSuccessfully(newSession);
-    setShowAddSessionModal(false);
-  };
+    addSessionSuccessfully(newSession)
+    setShowAddSessionModal(false)
+  }
   return (
     <>
       <div
@@ -27,19 +27,19 @@ const HeadAction = ({ addSessionSuccessfully, className }) => {
         </Button>
       </div>
       {showAddSessionModal && (
-        <AddSessionModal
+        <SimpleAddSessionModal
           onClose={() => setShowAddSessionModal(false)}
           onSuccess={(newSession) => handleAddSessionSuccessfully(newSession)}
         />
       )}
     </>
-  );
-};
+  )
+}
 
 HeadAction.propTypes = {
   courseId: PropTypes.number.isRequired,
   className: PropTypes.string,
   addSessionSuccessfully: PropTypes.func.isRequired,
-};
+}
 
-export default HeadAction;
+export default HeadAction

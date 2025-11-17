@@ -1,41 +1,42 @@
 /* eslint-disable no-undef */
-'use client';
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import Image from 'next/image';
-import Button from '@/components/Ui/Button/Button';
-import { useRouter } from 'next/navigation';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
+'use client'
+import React, { useState } from 'react'
+import PropTypes from 'prop-types'
+import Image from 'next/image'
+import Button from '@/components/Ui/Button/Button'
+import { useRouter } from 'next/navigation'
+import { createToastHandler } from '@/utils/toastHandler'
+import { useTheme } from '@/contexts/ThemeContext'
 
 const PaymentSuccessfully = ({ data, transactionId }) => {
-  const [shortAddressClick, setShortAddressClick] = useState('');
-  const [isClickLoading, setIsClickLoading] = useState(false);
-  const router = useRouter();
-  const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
+  const [shortAddressClick, setShortAddressClick] = useState('')
+  const [isClickLoading, setIsClickLoading] = useState(false)
+  const router = useRouter()
+  const { isDark } = useTheme()
+  const toast = createToastHandler(isDark)
 
-  const courses = data.map((cartCourse) => cartCourse.course);
+  const courses = data.map((cartCourse) => cartCourse.course)
 
   const handleCourseClick = async (shortAddress) => {
-    setShortAddressClick(shortAddress);
-    setIsClickLoading(true);
+    setShortAddressClick(shortAddress)
+    setIsClickLoading(true)
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}/first-session`,
-      );
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}/first-session`
+      )
+
       if (response.ok) {
-        const { sessionId } = await response.json();
-        router.replace(`/courses/${shortAddress}/lesson/${sessionId}`);
+        const { sessionId } = await response.json()
+        router.replace(`/courses/${shortAddress}/lesson/${sessionId}`)
       } else {
-        toast.showErrorToast('خطای غیرمنتظره');
+        toast.showErrorToast('خطای غیرمنتظره')
       }
     } catch (error) {
-      console.error(error);
+      console.error(error)
     } finally {
-      setIsClickLoading(false);
+      setIsClickLoading(false)
     }
-  };
+  }
   return (
     <div className='my-12 flex w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light p-4 xs:p-6 dark:bg-surface-dark'>
       <h2 className='text-center text-base font-semibold text-secondary xs:text-lg md:text-xl lg:text-2xl'>
@@ -72,12 +73,12 @@ const PaymentSuccessfully = ({ data, transactionId }) => {
         </div>
       ))}
     </div>
-  );
-};
+  )
+}
 
 PaymentSuccessfully.propTypes = {
   data: PropTypes.array.isRequired,
   transactionId: PropTypes.string.isRequired,
-};
+}
 
-export default PaymentSuccessfully;
+export default PaymentSuccessfully

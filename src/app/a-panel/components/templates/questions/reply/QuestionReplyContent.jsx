@@ -1,38 +1,38 @@
 /* eslint-disable no-undef */
-'use client';
-import React, { useState } from 'react';
-import PropTypes from 'prop-types';
-import Image from 'next/image';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
-import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper';
-import Button from '@/components/Ui/Button/Button';
-import TextEditor from '@/components/Ui/TextEditor/TextEditor';
+'use client'
+import React, { useState } from 'react'
+import PropTypes from 'prop-types'
+import Image from 'next/image'
+import { createToastHandler } from '@/utils/toastHandler'
+import { useTheme } from '@/contexts/ThemeContext'
+import { getShamsiDate, getTimeFromDate } from '@/utils/dateTimeHelper'
+import Button from '@/components/Ui/Button/Button'
+import TextEditor from '@/components/Ui/TextEditor/TextEditor'
 
 const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
-  const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
-  const [replyText, setReplyText] = useState(question?.answerText || '');
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [errorReplyText, setErrorReplyText] = useState('');
+  const { isDark } = useTheme()
+  const toast = createToastHandler(isDark)
+  const [replyText, setReplyText] = useState(question?.answerText || '')
+  const [submitLoading, setSubmitLoading] = useState(false)
+  const [errorReplyText, setErrorReplyText] = useState('')
 
   const submitReply = async () => {
     if (!replyText.trim()) {
-      setErrorReplyText('پاسخ نباید خالی باشد.');
-      return;
+      setErrorReplyText('پاسخ نباید خالی باشد.')
+      return
     }
     if (replyText.trim().length < 5) {
-      setErrorReplyText('حداقل پاسخ ۵ کارکتر باید باشد.');
-      return;
+      setErrorReplyText('حداقل پاسخ ۵ کارکتر باید باشد.')
+      return
     }
-    setErrorReplyText('');
+    setErrorReplyText('')
 
     try {
-      setSubmitLoading(true);
+      setSubmitLoading(true)
       const payload = {
         id: questionId,
         answerText: replyText,
-      };
+      }
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/question`,
         {
@@ -41,28 +41,28 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        },
-      );
+        }
+      )
       if (!response.ok) {
-        throw new Error('Filed to create reply');
+        throw new Error('Filed to create reply')
       }
-      const data = await response.json();
+      const data = await response.json()
       setQuestion((prev) => ({
         ...prev,
         answerText: data.question.answerText,
         isAnswered: data.question.isAnswered,
         answeredAt: data.question.answeredAt,
         updatedAt: data.question.updatedAt,
-      }));
+      }))
 
-      toast.showSuccessToast('پاسخ سوال ثبت شد.');
+      toast.showSuccessToast('پاسخ سوال ثبت شد.')
     } catch (error) {
-      console.error('Error to Send Reply Create Request : ', error);
-      toast.showErrorToast('خطا در ارسال درخواست، لطفا بعدا تلاش کنید.');
+      console.error('Error to Send Reply Create Request : ', error)
+      toast.showErrorToast('خطا در ارسال درخواست، لطفا بعدا تلاش کنید.')
     } finally {
-      setSubmitLoading(false);
+      setSubmitLoading(false)
     }
-  };
+  }
   return (
     <div>
       <div className='mt-2 flex flex-wrap items-start justify-between gap-6'>
@@ -97,8 +97,11 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
           <div className='rounded-xl border border-subtext-light px-4 py-2 text-2xs text-subtext-light xs:text-xs md:text-sm dark:border-subtext-dark dark:text-subtext-dark'>
             دوره : {question.course.title}
           </div>
-          <div className='rounded-xl border border-subtext-light px-4 py-2 text-2xs text-subtext-light xs:text-xs md:text-sm dark:border-subtext-dark dark:text-subtext-dark'>
-            ترم : {question.session.term.name}
+          <div className='rounded-xl border px-4 py-2 text-xs dark:border-subtext-dark dark:text-subtext-dark'>
+            ترم : {'  '}
+            {question.session.terms?.length > 0
+              ? question.session.terms.map((t) => t.termName).join('، ')
+              : '---'}
           </div>
           <div className='rounded-xl border border-subtext-light px-4 py-2 text-2xs text-subtext-light xs:text-xs md:text-sm dark:border-subtext-dark dark:text-subtext-dark'>
             جلسه : {question.session.name}
@@ -149,13 +152,13 @@ const QuestionReplyContent = ({ questionId, question, setQuestion }) => {
         </div>
       </div>
     </div>
-  );
-};
+  )
+}
 
 QuestionReplyContent.propTypes = {
-  questionId: PropTypes.number.isRequired,
+  questionId: PropTypes.string.isRequired,
   question: PropTypes.object.isRequired,
   setQuestion: PropTypes.func.isRequired,
-};
+}
 
-export default QuestionReplyContent;
+export default QuestionReplyContent

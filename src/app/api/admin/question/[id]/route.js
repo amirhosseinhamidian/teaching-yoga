@@ -1,18 +1,17 @@
-import { NextResponse } from 'next/server';
-import prismadb from '@/libs/prismadb';
+import { NextResponse } from 'next/server'
+import prismadb from '@/libs/prismadb'
 
 export async function GET(request, { params }) {
-  const { id } = params; // استخراج ID از پارامتر URL
+  const { id } = params
 
   if (!id) {
     return NextResponse.json(
       { message: 'Question ID is required' },
-      { status: 400 },
-    );
+      { status: 400 }
+    )
   }
 
   try {
-    // جستجوی اطلاعات سؤال و روابط مرتبط
     const question = await prismadb.question.findUnique({
       where: { id },
       include: {
@@ -26,57 +25,61 @@ export async function GET(request, { params }) {
             avatar: true,
           },
         },
-        course: {
-          select: {
-            title: true,
-          },
-        },
+        course: { select: { title: true } },
         session: {
-          select: {
-            name: true,
-            term: {
+          include: {
+            sessionTerms: {
               select: {
-                name: true,
+                term: {
+                  select: {
+                    id: true,
+                    name: true,
+                  },
+                },
               },
             },
           },
         },
       },
-    });
+    })
 
-    // بررسی اینکه آیا سؤال وجود دارد
     if (!question) {
       return NextResponse.json(
         { message: 'Question not found' },
-        { status: 404 },
-      );
+        { status: 404 }
+      )
     }
 
-    // برگرداندن اطلاعات به صورت JSON
-    return NextResponse.json(
-      {
-        id: question.id,
-        questionText: question.questionText,
-        answerText: question.answerText,
-        isAnswered: question.isAnswered,
-        isReadByUser: question.isReadByUser,
-        answeredAt: question.answeredAt,
-        createdAt: question.createdAt,
-        updatedAt: question.updatedAt,
-        user: question.user,
-        course: question.course,
-        session: {
-          name: question.session.name,
-          term: question.session.term,
-        },
+    // آماده‌سازی ترم‌ها
+    const terms = question.session.sessionTerms.map((st) => ({
+      termId: st.term.id,
+      termName: st.term.name,
+    }))
+
+    const formatted = {
+      id: question.id,
+      questionText: question.questionText,
+      answerText: question.answerText,
+      isAnswered: question.isAnswered,
+      isReadByUser: question.isReadByUser,
+      answeredAt: question.answeredAt,
+      createdAt: question.createdAt,
+      updatedAt: question.updatedAt,
+      user: question.user,
+      course: question.course,
+      session: {
+        id: question.session.id,
+        name: question.session.name,
+        terms,
       },
-      { status: 200 },
-    );
+    }
+
+    return NextResponse.json(formatted, { status: 200 })
   } catch (error) {
-    console.error(error);
+    console.error(error)
     return NextResponse.json(
       { message: 'An error occurred while fetching the question' },
-      { status: 500 },
-    );
+      { status: 500 }
+    )
   }
 }

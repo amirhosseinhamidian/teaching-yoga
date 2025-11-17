@@ -499,14 +499,19 @@ const AddTermSessionPage = () => {
 
   const tableColumns = [
     {
-      key: 'order',
-      minWidth: '100px',
-      label: 'ترتیب جلسات',
+      key: "order",
+      minWidth: "100px",
+      label: "ترتیب جلسات",
       render: (_, row) => {
-        const termSessions = sessions[row.termId];
-        const options = termSessions.map((session) => ({
-          label: `جلسه ${session.order}`,
-          value: session.order,
+        const termSessions = sessions[row.termId] || [];
+        
+        // تعداد جلسات ← n
+        const total = termSessions.length;
+
+        // ساخت گزینه‌های 1 تا n
+        const options = Array.from({ length: total }, (_, i) => ({
+          label: `جلسه ${i + 1}`,
+          value: i + 1,
         }));
 
         return (

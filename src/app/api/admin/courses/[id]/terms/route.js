@@ -105,7 +105,7 @@ export async function POST(request, { params }) {
 }
 
 export async function GET(request, { params }) {
-  const { id } = params; // گرفتن آیدی دوره از پارامتر URL
+  const { id } = params;
 
   if (!id) {
     return NextResponse.json(
@@ -115,19 +115,20 @@ export async function GET(request, { params }) {
   }
 
   try {
-    // گرفتن ترم‌ها از طریق جدول CourseTerm به همراه جلسات و ویدیوها
     const termsCourse = await prismadb.courseTerm.findMany({
       where: {
-        courseId: parseInt(id), // فیلتر کردن بر اساس آیدی دوره
+        courseId: parseInt(id),
       },
       include: {
         term: {
-          // اطلاعات ترم از جدول Term
           include: {
-            sessions: {
-              // اطلاعات جلسات
+            sessionTerms: {
               include: {
-                video: true, // اطلاعات ویدیو
+                session: {
+                  include: {
+                    video: true,
+                  },
+                },
               },
             },
           },
@@ -135,13 +136,23 @@ export async function GET(request, { params }) {
       },
       orderBy: {
         term: {
-          id: 'asc', // مرتب‌سازی بر اساس شناسه ترم (از کوچک به بزرگ)
+          id: 'asc',
         },
       },
     });
 
-    // بازگرداندن اطلاعات ترم‌ها به همراه جزئیات آنها
-    const terms = termsCourse.map((courseTerm) => courseTerm.term);
+    // 🔥 تبدیل ساختار به ساختار جدید شامل order از SessionTerm
+    const terms = termsCourse.map((courseTerm) => {
+      const t = courseTerm.term;
+
+      return {
+        ...t,
+        sessions: t.sessionTerms.map((st) => ({
+          ...st.session,
+          order: st.order, // ⬅ اضافه کردن order از SessionTerm
+        })),
+      };
+    });
 
     return NextResponse.json(terms, { status: 200 });
   } catch (error) {

@@ -5,81 +5,116 @@ export async function PUT(req, { params }) {
   const { termId, sessionId } = params;
 
   try {
-    // دریافت داده‌های جدید ترتیب از بدنه درخواست
     const { newOrder, oldOrder } = await req.json();
 
-    // دریافت جلسه فعلی برای اطمینان از اینکه جلسه وجود دارد
-    const session = await prismadb.session.findUnique({
-      where: { id: sessionId },
+    // دریافت SessionTerm مربوط به این جلسه در این ترم
+    const sessionTerm = await prismadb.sessionTerm.findFirst({
+      where: {
+        termId: parseInt(termId),
+        sessionId: sessionId
+      },
     });
 
-    if (!session) {
+    if (!sessionTerm) {
       return NextResponse.json(
-        { error: 'جلسه مورد نظر یافت نشد.' },
-        { status: 404 },
+        { error: 'این جلسه در این ترم یافت نشد.' },
+        { status: 404 }
       );
     }
 
-    // اگر ترتیب جدید همان ترتیب فعلی باشد، هیچ تغییری انجام نشود
-    if (session.order === parseInt(newOrder)) {
+    // اگر ترتیب تغییر نکرده
+    if (sessionTerm.order === parseInt(newOrder)) {
       return NextResponse.json(
-        { message: 'ترتیب جلسه تغییر نکرده است.' },
-        { status: 200 },
+        { message: 'ترتیب تغییری نکرده است.' },
+        { status: 200 }
       );
     }
 
-    // به‌روزرسانی ترتیب جلسه با newOrder
-    await prismadb.session.update({
-      where: { id: sessionId },
-      data: { order: parseInt(newOrder) },
+    const newOrderInt = parseInt(newOrder);
+    const oldOrderInt = parseInt(oldOrder);
+
+    // ✔️ ابتدا ترتیب جلسه فعلی را آپدیت کن
+    await prismadb.sessionTerm.update({
+      where: { id: sessionTerm.id },
+      data: { order: newOrderInt },
     });
 
-    // به‌روزرسانی ترتیب باقی‌مانده جلسات در ترم مورد نظر
-    const remainingSessions = await prismadb.session.findMany({
+    // ✔️ گرفتن تمام جلسات ترم به جز این جلسه
+    const allSessionTerms = await prismadb.sessionTerm.findMany({
       where: { termId: parseInt(termId) },
       orderBy: { order: 'asc' },
     });
 
-    // ترتیب‌دهی مجدد جلسات با در نظر گرفتن ترتیب جدید
-    const updatedSessions = remainingSessions
-      .filter((session) => session.id !== sessionId) // حذف جلسه مورد نظر از محاسبات
-      .map((session) => {
-        // اگر جلسه ترتیب بزرگتر یا مساوی از ترتیب جدید داشته باشد، 1 واحد اضافه می‌شود
-        if (
-          session.order >= parseInt(newOrder) &&
-          session.order < parseInt(oldOrder)
-        ) {
-          return prismadb.session.update({
-            where: { id: session.id },
-            data: { order: session.order + 1 },
-          });
+    const updates = [];
+
+    for (const st of allSessionTerms) {
+      if (st.sessionId === sessionId) continue;
+
+      // انتقال از order کوچک → بزرگ
+      if (newOrderInt > oldOrderInt) {
+        if (st.order > oldOrderInt && st.order <= newOrderInt) {
+          updates.push(
+            prismadb.sessionTerm.update({
+              where: { id: st.id },
+              data: { order: st.order - 1 },
+            })
+          );
         }
-      });
+      }
 
-    // منتظر ماندن برای به‌روزرسانی تمام جلسات
-    await Promise.all(updatedSessions);
+      // انتقال از order بزرگ → کوچک
+      else {
+        if (st.order < oldOrderInt && st.order >= newOrderInt) {
+          updates.push(
+            prismadb.sessionTerm.update({
+              where: { id: st.id },
+              data: { order: st.order + 1 },
+            })
+          );
+        }
+      }
+    }
 
-    // دریافت لیست به‌روز شده جلسات ترم
-    const updatedSessionList = await prismadb.session.findMany({
+    await Promise.all(updates);
+
+    // ✔️ دریافت لیست جدید جلسات با session + video + audio
+    const updatedSessionList = await prismadb.sessionTerm.findMany({
       where: { termId: parseInt(termId) },
       include: {
-        video: true, // اطلاعات ویدیو
+        session: {
+          include: {
+            video: true,
+            audio: true,
+          },
+        },
       },
       orderBy: { order: 'asc' },
     });
+
+    // تبدیل ساختار برای سازگار شدن با Front
+    const mapped = updatedSessionList.map((st) => ({
+      id: st.session.id,
+      name: st.session.name,
+      type: st.session.type,
+      isActive: st.session.isActive,
+      order: st.order,
+      termId: st.termId,
+      video: st.session.video,
+      audio: st.session.audio,
+    }));
 
     return NextResponse.json(
       {
-        message: 'ترتیب جلسه با موفقیت به‌روزرسانی شد.',
-        updatedSessions: updatedSessionList, // لیست به‌روز شده جلسات ترم
+        message: 'ترتیب جلسه با موفقیت بروزرسانی شد.',
+        updatedSessions: mapped,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error updating session order:', error);
     return NextResponse.json(
-      { error: 'خطا در به‌روزرسانی ترتیب جلسه.' },
-      { status: 500 },
+      { error: 'خطا در بروزرسانی ترتیب جلسه.' },
+      { status: 500 }
     );
   }
 }

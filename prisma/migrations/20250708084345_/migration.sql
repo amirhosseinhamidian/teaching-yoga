@@ -1,2 +1,0 @@
--- AlterEnum
-ALTER TYPE "CourseLevel" ADD VALUE 'BEGINNER_ADVANCED';

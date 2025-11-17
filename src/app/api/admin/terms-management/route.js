@@ -183,13 +183,14 @@ export async function DELETE(request) {
     if (!termId) {
       return NextResponse.json(
         { error: 'شناسه ترم معتبر نیست.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // شروع تراکنش برای اطمینان از انجام موفقیت‌آمیز عملیات
     await prismadb.$transaction(async (prisma) => {
-      // دریافت اطلاعات ترم برای محاسبات تخفیف
+      // ---------------------------
+      // 1) دریافت ترم
+      // ---------------------------
       const term = await prisma.term.findUnique({
         where: { id: termId },
       });
@@ -198,58 +199,95 @@ export async function DELETE(request) {
         throw new Error('ترم پیدا نشد.');
       }
 
-      // حذف وابستگی‌ها از جدول `CartTerm` و به‌روزرسانی `Cart`
-      const cartTerms = await prisma.cartTerm.findMany({
-        where: {
-          termId, // پیدا کردن CartTerm‌های مرتبط با ترم
-          cart: {
-            status: 'PENDING', // فقط سبد خرید‌هایی که وضعیت PENDING دارند
-          },
-        },
-        include: {
-          cart: true, // شامل اطلاعات جدول Cart برای دسترسی به جزئیات
-        },
+      // ---------------------------
+      // 2) دریافت Session های این ترم از طریق SessionTerm
+      // ---------------------------
+      const sessionLinks = await prisma.sessionTerm.findMany({
+        where: { termId },
+        select: { sessionId: true },
       });
 
-      for (const cartTerm of cartTerms) {
-        // محاسبه مقدار تخفیف به درصد تبدیل شده
-        const termDiscountAmount = (term.price * (term.discount || 0)) / 100;
+      const sessionIds = sessionLinks.map((s) => s.sessionId);
 
-        // به‌روزرسانی جدول `Cart`
-        await prisma.cart.update({
-          where: { id: cartTerm.cartId },
-          data: {
-            totalPrice: {
-              decrement: term.price, // کاهش قیمت ترم از جمع کل
-            },
-            totalDiscount: {
-              decrement: termDiscountAmount, // کاهش تخفیف ترم از تخفیف کل
-            },
+      // ---------------------------
+      // 3) حذف SessionProgress ها
+      // ---------------------------
+      if (sessionIds.length > 0) {
+        await prisma.sessionProgress.deleteMany({
+          where: {
+            sessionId: { in: sessionIds },
           },
         });
       }
 
-      // حذف داده‌ها از جدول `CartTerm`
-      await prisma.cartTerm.deleteMany({
+      // ---------------------------
+      // 4) حذف SessionVideo و SessionAudio
+      // ---------------------------
+      if (sessionIds.length > 0) {
+        const sessions = await prisma.session.findMany({
+          where: { id: { in: sessionIds } },
+          include: { video: true, audio: true },
+        });
+
+        for (const s of sessions) {
+          if (s.video) {
+            await prisma.sessionVideo.delete({
+              where: { id: s.video.id },
+            });
+          }
+
+          if (s.audio) {
+            await prisma.sessionAudio.delete({
+              where: { id: s.audio.id },
+            });
+          }
+        }
+      }
+
+      // ---------------------------
+      // 5) حذف SessionTerm (اتصال جلسات به ترم)
+      // ---------------------------
+      await prisma.sessionTerm.deleteMany({
         where: { termId },
       });
 
-      // حذف داده‌ها از جدول `UserTerm`
-      await prisma.userTerm.deleteMany({
-        where: { termId },
-      });
+      // ---------------------------
+      // 6) حذف Sessions
+      // ---------------------------
+      if (sessionIds.length > 0) {
+        await prisma.session.deleteMany({
+          where: { id: { in: sessionIds } },
+        });
+      }
 
-      // حذف داده‌ها از جدول `CourseTerm`
+      // ---------------------------
+      // 7) حذف CourseTerm
+      // ---------------------------
       await prisma.courseTerm.deleteMany({
         where: { termId },
       });
 
-      // حذف داده‌ها از جدول `Session`
-      await prisma.session.deleteMany({
+      // ---------------------------
+      // 8) حذف CartTerm (سبد خرید)
+      // ---------------------------
+      await prisma.cartTerm.deleteMany({
         where: { termId },
       });
 
-      // در نهایت حذف ترم از جدول `Term`
+      // ---------------------------
+      // 9) حذف UserTerm (اگر مدل حذف شده، این خط حذف می‌شود)
+      // ---------------------------
+      try {
+        await prisma.userTerm.deleteMany({
+          where: { termId },
+        });
+      } catch (e) {
+        // اگر مدل حذف شده باشد هیچ کاری نمی‌کنیم
+      }
+
+      // ---------------------------
+      // 10) حذف خود Term
+      // ---------------------------
       await prisma.term.delete({
         where: { id: termId },
       });
@@ -260,7 +298,7 @@ export async function DELETE(request) {
     console.error('Error deleting term:', error);
     return NextResponse.json(
       { error: 'مشکلی در حذف ترم وجود دارد.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

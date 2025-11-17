@@ -1,149 +1,172 @@
 /* eslint-disable no-undef */
-import prismadb from '@/libs/prismadb';
-import { NextResponse } from 'next/server';
-import { S3 } from 'aws-sdk';
+import prismadb from '@/libs/prismadb'
+import { NextResponse } from 'next/server'
+import { S3 } from 'aws-sdk'
+
+// ===============================
+//           DELETE
+// ===============================
 
 export async function DELETE(req, { params }) {
-  const { termId, sessionId } = params;
-
-  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
-  const endpoint = process.env.AWS_S3_ENDPOINT;
-  const bucket = process.env.AWS_S3_BUCKET_NAME;
+  const { termId, sessionId } = params
 
   const s3 = new S3({
-    accessKeyId,
-    secretAccessKey,
-    endpoint,
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+    endpoint: process.env.AWS_S3_ENDPOINT,
     s3ForcePathStyle: true,
-  });
+  })
 
   try {
+    // دریافت جلسه
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
-      include: {
-        video: true,
-        audio: true,
-        sessionProgress: true,
-      },
-    });
+      include: { video: true, audio: true },
+    })
 
     if (!session) {
-      return NextResponse.json({ error: 'جلسه یافت نشد.' }, { status: 404 });
+      return NextResponse.json({ error: 'جلسه یافت نشد.' }, { status: 404 })
     }
 
-    // 🎥 حذف ویدیو
+    // چک کنیم آیا این جلسه در ترم‌های دیگری هم وجود دارد یا نه
+    const otherLinks = await prismadb.sessionTerm.findMany({
+      where: {
+        sessionId,
+        NOT: { termId: parseInt(termId) },
+      },
+    })
+
+    // ----------------------------------------------------------
+    // مرحله 1: حذف لینک بین ترم و جلسه
+    // ----------------------------------------------------------
+
+    await prismadb.sessionTerm.deleteMany({
+      where: {
+        termId: parseInt(termId),
+        sessionId,
+      },
+    })
+
+    // ----------------------------------------------------------
+    // مرحله 2: مرتب‌سازی مجدد order ترم فعلی
+    // ----------------------------------------------------------
+
+    const remaining = await prismadb.sessionTerm.findMany({
+      where: { termId: parseInt(termId) },
+      orderBy: { order: 'asc' },
+    })
+
+    await Promise.all(
+      remaining.map((st, idx) =>
+        prismadb.sessionTerm.update({
+          where: { id: st.id },
+          data: { order: idx + 1 },
+        })
+      )
+    )
+
+    // ----------------------------------------------------------
+    // اگر جلسه در ترم‌های دیگر هم استفاده شده باشد ← همین‌جا خروج
+    // ----------------------------------------------------------
+
+    if (otherLinks.length > 0) {
+      return NextResponse.json(
+        { message: 'جلسه فقط از این ترم حذف شد.' },
+        { status: 200 }
+      )
+    }
+
+    // ----------------------------------------------------------
+    // مرحله 3: جلسه در هیچ ترمی نیست → پاکسازی کامل جلسه و فایل‌ها
+    // ----------------------------------------------------------
+
+    // ===== حذف فایل ویدیو =====
     if (session.video?.videoKey) {
-      const videoKey = session.video.videoKey.replace('/master.m3u8', '');
+      try {
+        const videoKey = session.video.videoKey.replace('/master.m3u8', '')
 
-      const listObjectsResponse = await s3
-        .listObjectsV2({ Bucket: bucket, Prefix: videoKey })
-        .promise();
+        const listObjects = await s3
+          .listObjectsV2({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Prefix: videoKey,
+          })
+          .promise()
 
-      if (listObjectsResponse.Contents) {
-        const deleteObjectsParams = {
-          Bucket: bucket,
-          Delete: {
-            Objects: listObjectsResponse.Contents.map((file) => ({
-              Key: file.Key,
-            })),
-          },
-        };
-
-        await s3.deleteObjects(deleteObjectsParams).promise();
+        if (listObjects?.Contents?.length > 0) {
+          await s3
+            .deleteObjects({
+              Bucket: process.env.AWS_S3_BUCKET_NAME,
+              Delete: {
+                Objects: listObjects.Contents.map((o) => ({ Key: o.Key })),
+              },
+            })
+            .promise()
+        }
+      } catch (err) {
+        console.error('Error deleting video files:', err)
       }
     }
 
-    // 🔊 حذف فایل صوتی تکی
+    // ===== حذف فایل صوتی =====
     if (session.audio?.audioKey) {
       try {
         await s3
           .deleteObject({
-            Bucket: bucket,
-            Key: `audio/${termId}/${sessionId}/audio.mp3`,
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: session.audio.audioKey,
           })
-          .promise();
+          .promise()
       } catch (err) {
-        console.error('Error deleting audio file from storage:', err);
+        console.error('Error deleting audio file:', err)
       }
     }
 
-    // 🧹 حذف رکوردهای دیتابیس
-    if (session.video) {
-      try {
-        await prismadb.sessionVideo.delete({
-          where: { id: session.video.id },
-        });
-      } catch (error) {
-        console.error('Error deleting session video:', error);
-      }
-    }
-
-    if (session.audio) {
-      try {
-        await prismadb.sessionAudio.delete({
-          where: { id: session.audio.id },
-        });
-      } catch (error) {
-        console.error('Error deleting session audio:', error);
-      }
-    }
-
+    // ===== حذف رکوردهای دیتابیس =====
     await prismadb.$transaction([
-      prismadb.sessionProgress.deleteMany({
-        where: { sessionId },
-      }),
-      prismadb.session.delete({
-        where: {
-          id: sessionId,
-          termId: parseInt(termId),
-        },
-      }),
-    ]);
+      prismadb.sessionProgress.deleteMany({ where: { sessionId } }),
 
-    const remainingSessions = await prismadb.session.findMany({
-      where: { termId: parseInt(termId) },
-      orderBy: { order: 'asc' },
-    });
+      session.video
+        ? prismadb.sessionVideo.delete({ where: { id: session.video.id } })
+        : Promise.resolve(),
 
-    const updatedSessions = remainingSessions.map((session, index) =>
-      prismadb.session.update({
-        where: { id: session.id },
-        data: { order: index + 1 },
-      }),
-    );
+      session.audio
+        ? prismadb.sessionAudio.delete({ where: { id: session.audio.id } })
+        : Promise.resolve(),
 
-    await Promise.all(updatedSessions);
+      prismadb.session.delete({ where: { id: sessionId } }),
+    ])
 
     return NextResponse.json(
-      { message: 'جلسه و محتوای آن با موفقیت حذف شد.' },
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error('Error deleting session:', error);
-    return NextResponse.json({ error: 'خطا در حذف جلسه.' }, { status: 500 });
+      { message: 'جلسه کاملاً حذف شد (در هیچ ترمی استفاده نمی‌شد).' },
+      { status: 200 }
+    )
+  } catch (err) {
+    console.error('Error deleting session:', err)
+    return NextResponse.json({ error: 'خطا در حذف جلسه.' }, { status: 500 })
   }
 }
 
+// ===============================
+//             PUT
+// ===============================
 export async function PUT(req, { params }) {
-  const { termId, sessionId } = params;
+  const { termId, sessionId } = params
 
   try {
-    const { name, duration, accessLevel, type } = await req.json();
+    const { name, duration, accessLevel, type, order } = await req.json()
 
-    // اعتبارسنجی داده‌ها
-    if (!name || typeof name !== 'string') {
+    if (!name) {
       return NextResponse.json(
         { error: 'عنوان جلسه معتبر نیست.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
     if (!duration || typeof duration !== 'number' || duration <= 0) {
       return NextResponse.json(
         { error: 'مدت زمان باید عددی معتبر باشد.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
     if (
@@ -152,55 +175,67 @@ export async function PUT(req, { params }) {
     ) {
       return NextResponse.json(
         { error: 'سطح دسترسی مدیا معتبر نیست.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
-    // ساخت شیء data برای بروزرسانی
-    const data = {
+    if (!order || typeof order !== 'number') {
+      return NextResponse.json(
+        { error: 'ترتیب جلسه معتبر نیست.' },
+        { status: 400 }
+      )
+    }
+
+    const session = await prismadb.session.findUnique({
+      where: { id: sessionId },
+      include: { video: true, audio: true },
+    })
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'جلسه‌ای با این شناسه یافت نشد.' },
+        { status: 404 }
+      )
+    }
+
+    // ===============================
+    // بروزرسانی Session
+    // ===============================
+
+    const updateData = {
       name,
       duration,
-    };
-
-    // اگر نوع مدیا ویدیو بود، سطح دسترسی ویدیو را بروز کن
-    if (type === 'VIDEO') {
-      data.video = {
-        update: {
-          accessLevel,
-        },
-      };
     }
 
-    // اگر نوع مدیا صوت بود، سطح دسترسی صوت را بروز کن
-    if (type === 'AUDIO') {
-      data.audio = {
-        update: {
-          accessLevel,
-        },
-      };
+    if (type === 'VIDEO' && session.video) {
+      updateData.video = { update: { accessLevel } }
     }
+
+    if (type === 'AUDIO' && session.audio) {
+      updateData.audio = { update: { accessLevel } }
+    }
+
+    // بروزرسانی order در SessionTerm
+    await prismadb.sessionTerm.updateMany({
+      where: { sessionId, termId: parseInt(termId) },
+      data: { order },
+    })
 
     const updatedSession = await prismadb.session.update({
-      where: {
-        id: sessionId,
-        termId: parseInt(termId),
-      },
-      data,
-      include: {
-        video: true,
-        audio: true,
-      },
-    });
+      where: { id: sessionId },
+      data: updateData,
+      include: { video: true, audio: true },
+    })
 
     return NextResponse.json(
       { message: 'جلسه با موفقیت بروزرسانی شد.', updatedSession },
-      { status: 200 },
-    );
-  } catch (error) {
-    console.error('Error updating session:', error);
+      { status: 200 }
+    )
+  } catch (e) {
+    console.error('Error updating session:', e)
     return NextResponse.json(
       { error: 'خطا در بروزرسانی جلسه.' },
-      { status: 500 },
-    );
+      { status: 500 }
+    )
   }
 }

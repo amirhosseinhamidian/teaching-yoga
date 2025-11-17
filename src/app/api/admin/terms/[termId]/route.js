@@ -2,83 +2,100 @@ import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
 export async function DELETE(request, { params }) {
-  const { termId } = params; // گرفتن آیدی ترم از پارامتر URL
+  const { termId } = params;
 
   if (!termId) {
     return NextResponse.json({ error: 'Term ID is required' }, { status: 400 });
   }
 
   try {
-    // حذف تمام جلسات مرتبط با ترم
-    await prismadb.session.deleteMany({
-      where: {
-        termId: parseInt(termId),
-      },
+    const termIdInt = parseInt(termId);
+
+    // ---- 1) گرفتن لیست SessionId های متعلق به این ترم (قبل از حذف SessionTerm) ----
+    const sessionLinks = await prismadb.sessionTerm.findMany({
+      where: { termId: termIdInt },
+      select: { sessionId: true },
     });
 
-    // حذف ترم
+    const sessionIds = sessionLinks.map((s) => s.sessionId);
+
+    // ---- 2) حذف SessionProgress جلسات موجود در این ترم ----
+    if (sessionIds.length > 0) {
+      await prismadb.sessionProgress.deleteMany({
+        where: {
+          sessionId: {
+            in: sessionIds,
+          },
+        },
+      });
+    }
+
+    // ---- 3) حذف اتصال جلسات به ترم ----
+    await prismadb.sessionTerm.deleteMany({
+      where: { termId: termIdInt },
+    });
+
+    // ---- 4) حذف اتصال ترم به دوره‌ها ----
+    await prismadb.courseTerm.deleteMany({
+      where: { termId: termIdInt },
+    });
+
+    // ---- 5) حذف خود ترم ----
     await prismadb.term.delete({
-      where: {
-        id: parseInt(termId),
-      },
+      where: { id: termIdInt },
     });
 
     return NextResponse.json(
-      { message: 'ترم و جلسات مربتط حذف شدند.' },
-      { status: 200 },
+      { message: 'ترم با تمام ارتباطات مرتبط حذف شد.' },
+      { status: 200 }
     );
   } catch (error) {
-    console.error('Error deleting term and sessions:', error);
+    console.error('Error deleting term:', error);
     return NextResponse.json(
-      { error: 'خطا در حذف ترم و جلسات' },
-      { status: 500 },
+      { error: 'خطا در حذف ترم' },
+      { status: 500 }
     );
   }
 }
 
 export async function PUT(request, { params }) {
-  const { termId } = params; // گرفتن آیدی ترم از پارامتر URL
+  const { termId } = params;
 
   if (!termId) {
     return NextResponse.json({ error: 'Term ID is required' }, { status: 400 });
   }
 
   try {
-    const body = await request.json(); // دریافت داده‌های ارسال شده در بدنه درخواست
+    const body = await request.json();
+    const { name, subtitle, price, discount, duration } = body;
 
-    const { name, subtitle, price, discount, duration } = body; // استخراج مقادیر از بدنه درخواست
-
-    // اعتبارسنجی مقادیر ورودی
     if (!name || !duration) {
       return NextResponse.json(
         { error: 'All fields (name, duration) are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // آپدیت ترم
     const updatedTerm = await prismadb.term.update({
-      where: {
-        id: parseInt(termId),
-      },
+      where: { id: parseInt(termId) },
       data: {
         name,
         subtitle,
         price,
         discount,
-        duration: parseInt(duration), // تبدیل duration به عدد
+        duration: parseInt(duration),
       },
     });
 
     return NextResponse.json(
-      { message: 'ترم با موفقیت بروز شد', term: updatedTerm },
-      { status: 200 },
+      { message: 'ترم با موفقیت بروزرسانی شد', term: updatedTerm },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error updating term:', error);
     return NextResponse.json(
       { error: 'خطا در بروزرسانی ترم' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

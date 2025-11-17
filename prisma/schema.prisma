@@ -34,7 +34,7 @@ model User {
   role            Role              @default(USER)
   createAt        DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-  phone           String?            @unique
+  phone           String?           @unique
   avatar          String?
   email           String?           @unique
   accounts        Account[]
@@ -44,44 +44,44 @@ model User {
   payments        Payment[]         @relation("UserToPayments")
   questions       Question[]
   sessionProgress SessionProgress[] @relation("SessionProgress")
+  supportMessages SupportMessage[]
+  SupportSession  SupportSession[]
   tickets         Ticket[]
   ticketReplies   TicketReply[]
   courses         UserCourse[]      @relation("UserCourses")
-  terms           UserTerm[]        @relation("UserTerms")
   userDiscount    UserDiscount[]
-  supportMessages SupportMessage[]
-  SupportSession SupportSession[]
+  terms           UserTerm[]        @relation("UserTerms")
 }
 
 model Course {
-  id               Int          @id @unique @default(autoincrement())
+  id               Int            @id @unique @default(autoincrement())
   title            String
   subtitle         String
   description      String
   cover            String
-  isHighPriority   Boolean      @default(false)
-  shortAddress     String       @unique
-  sessionCount     Int          @default(0)
+  isHighPriority   Boolean        @default(false)
+  shortAddress     String         @unique
+  sessionCount     Int            @default(0)
   level            CourseLevel
-  participants     Int          @default(0)
-  rating           Float?       @default(5.0)
+  participants     Int            @default(0)
+  rating           Float?         @default(5.0)
   status           CourseStatus
   instructorId     Int
   introVideoUrl    String?
-  createAt         DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createAt         DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   shortDescription String?
-  activeStatus     Boolean      @default(false)
-  duration         Int          @default(0)
+  activeStatus     Boolean        @default(false)
+  duration         Int            @default(0)
   price            Int?
-  cartCourses      CartCourse[] @relation("CourseToCartCourses")
+  cartCourses      CartCourse[]   @relation("CourseToCartCourses")
   comments         Comment[]
-  instructor       Instructor   @relation(fields: [instructorId], references: [id])
-  courseTerms      CourseTerm[] @relation("CourseToTerms")
+  instructor       Instructor     @relation(fields: [instructorId], references: [id])
+  courseTerms      CourseTerm[]   @relation("CourseToTerms")
+  discountCodes    DiscountCode[]
   questions        Question[]
   tickets          Ticket[]
-  users            UserCourse[] @relation("UserCourses")
-  discountCodes DiscountCode[] 
+  users            UserCourse[]   @relation("UserCourses")
 }
 
 model UserCourse {
@@ -91,7 +91,7 @@ model UserCourse {
   purchasedAt DateTime       @default(now())
   status      PurchaseStatus @default(ACTIVE)
   course      Course         @relation("UserCourses", fields: [courseId], references: [id], onDelete: Cascade)
-  user        User           @relation("UserCourses", fields: [userId], references: [id] , onDelete: Cascade)
+  user        User           @relation("UserCourses", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, courseId])
 }
@@ -109,6 +109,7 @@ model Term {
   courseTerms CourseTerm[] @relation("TermToCourses")
   sessions    Session[]    @relation("TermToSessions")
   userTerms   UserTerm[]   @relation("UserTerms")
+  sessionTerms SessionTerm[] 
 }
 
 model CourseTerm {
@@ -118,8 +119,8 @@ model CourseTerm {
   isOptional Boolean  @default(false)
   createAt   DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  course     Course   @relation("CourseToTerms", fields: [courseId], references: [id] , onDelete: Cascade)
-  term       Term     @relation("TermToCourses", fields: [termId], references: [id] , onDelete: Cascade)
+  course     Course   @relation("CourseToTerms", fields: [courseId], references: [id], onDelete: Cascade)
+  term       Term     @relation("TermToCourses", fields: [termId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, termId])
 }
@@ -127,21 +128,34 @@ model CourseTerm {
 model Session {
   id              String            @id @unique @default(uuid())
   name            String
-  termId          Int
+  termId          Int?
   isFree          Boolean           @default(false)
   createAt        DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   duration        Int
   videoId         Int?              @unique
-  audioId         Int?              @unique
   order           Int               @default(0)
   isActive        Boolean           @default(false)
-  questions       Question[]
-  term            Term              @relation("TermToSessions", fields: [termId], references: [id] , onDelete: Cascade)
-  video           SessionVideo?     @relation("SessionToVideo", fields: [videoId], references: [id])
-  audio           SessionAudio?     @relation("SessionToAudio", fields: [audioId], references: [id])
-  sessionProgress SessionProgress[] @relation("SessionProgress")
+  audioId         Int?              @unique
   type            SessionType       @default(VIDEO)
+  questions       Question[]
+  audio           SessionAudio?     @relation("SessionToAudio", fields: [audioId], references: [id])
+  term            Term?              @relation("TermToSessions", fields: [termId], references: [id], onDelete: Cascade)
+  video           SessionVideo?     @relation("SessionToVideo", fields: [videoId], references: [id])
+  sessionProgress SessionProgress[] @relation("SessionProgress")
+  sessionTerms    SessionTerm[] 
+}
+
+model SessionTerm {
+  id        Int     @id @default(autoincrement())
+  sessionId String
+  termId    Int
+  order     Int?
+
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  term      Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, termId])
 }
 
 model SessionVideo {
@@ -156,7 +170,7 @@ model SessionVideo {
 
 model SessionAudio {
   id          Int              @id @unique @default(autoincrement())
-  audioKey    String           // کلید منحصر به فرد برای فایل صوتی
+  audioKey    String
   accessLevel VideoAccessLevel @default(REGISTERED)
   status      VideoStatus      @default(AVAILABLE)
   createAt    DateTime         @default(now())
@@ -218,20 +232,20 @@ model UserTerm {
 }
 
 model Cart {
-  id            Int          @id @unique @default(autoincrement())
-  userId        String
-  status        CartStatus   @default(PENDING)
-  totalPrice    Int?
-  totalDiscount Int?
-  discountCodeId  Int? 
+  id                 Int          @id @unique @default(autoincrement())
+  userId             String
+  status             CartStatus   @default(PENDING)
+  totalPrice         Int?
+  totalDiscount      Int?
+  createAt           DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+  discountCodeId     Int?
   discountCodeAmount Int?
-  createAt      DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
-  discountAppliedAt DateTime?
-  user          User         @relation("UserCarts", fields: [userId], references: [id], onDelete: Cascade)
-  cartCourses   CartCourse[] @relation("CartToCourses")
-  cartTerms     CartTerm[]   @relation("CartToCartTerms")
-  payment       Payment?     @relation("CartToPayment")
+  discountAppliedAt  DateTime?
+  user               User         @relation("UserCarts", fields: [userId], references: [id], onDelete: Cascade)
+  cartCourses        CartCourse[] @relation("CartToCourses")
+  cartTerms          CartTerm[]   @relation("CartToCartTerms")
+  payment            Payment?     @relation("CartToPayment")
 }
 
 model CartCourse {
@@ -289,17 +303,17 @@ model Comment {
 }
 
 model Article {
-  id        Int       @id @default(autoincrement())
-  title     String
-  content   String
-  createAt  DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  cover     String
-  readTime  Int
-  shortAddress String @unique
-  isActive  Boolean @default(false)
-  subtitle  String
-  comments  Comment[]
+  id           Int       @id @default(autoincrement())
+  title        String
+  content      String
+  createAt     DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  cover        String
+  subtitle     String
+  isActive     Boolean   @default(false)
+  readTime     Int
+  shortAddress String    @unique
+  comments     Comment[]
 }
 
 model VerificationCode {
@@ -320,9 +334,9 @@ model FAQ {
 
 model Newsletter {
   id        Int      @id @default(autoincrement())
-  phone     String   @unique
   userId    String?
   createdAt DateTime @default(now())
+  phone     String   @unique
 
   @@index([phone])
 }
@@ -367,17 +381,17 @@ model SiteInfo {
   id               Int      @id @default(autoincrement())
   shortDescription String
   fullDescription  String
-  rules            String?
   companyAddress   String?
   companyEmail     String
   socialLinks      Json?
-  heroImage        String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
   articlesLinks    Json?
   coursesLinks     Json?
   usefulLinks      Json?
   companyPhone     String?
+  heroImage        String?
+  rules            String?
 }
 
 model SeoSetting {
@@ -392,132 +406,118 @@ model SeoSetting {
 }
 
 model SitemapSetting {
-  id          Int      @id @default(autoincrement()) // شناسه یکتا
-  section     String   // نام بخش (مانند "homepage", "blog", "courses")
+  id           Int      @id @default(autoincrement())
+  section      String   @unique
+  changefreq   String
+  priority     Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
   shortAddress String?
-  changefreq  String   // فرکانس تغییر (مانند "daily", "weekly", "monthly")
-  priority    Float    // اولویت صفحه (مقدار بین 0.1 تا 1.0)
-  createdAt   DateTime @default(now())              // تاریخ ایجاد
-  updatedAt   DateTime @updatedAt                  // تاریخ آخرین بروزرسانی
-
-  @@unique([section]) // جلوگیری از ثبت مقادیر تکراری برای هر بخش و نوع
 }
 
 model DiscountCode {
-  id                Int       @id @default(autoincrement()) // شناسه یکتا
-  title             String    // عنوان کد تخفیف
-  code              String    @unique // کد تخفیف (باید یکتا باشد)
-  discountPercent   Float     // درصد تخفیف (مثلاً 20 برای 20%)
-  maxDiscountAmount Float?    // سقف مبلغ تخفیف (اختیاری)
-  usageLimit        Int?      // سقف تعداد استفاده (اختیاری)
-  usageCount        Int       @default(0) // تعداد استفاده‌شده
-  minPurchaseAmount Float?    // حداقل مبلغ لازم برای استفاده از تخفیف (اختیاری)
-  expiryDate        DateTime? // تاریخ انقضا (اختیاری)
-  description       String?   // توضیحات کد تخفیف (اختیاری)
-  courseId          Int?      // ارتباط با دوره خاص (اختیاری)
-  course            Course?   @relation(fields: [courseId], references: [id], onDelete: Cascade) // رابطه با مدل Course
-  isActive          Boolean   @default(true) // وضعیت فعال/غیرفعال بودن کد تخفیف
-  createdAt         DateTime  @default(now()) // تاریخ ایجاد
-  updatedAt         DateTime  @updatedAt      // تاریخ به‌روزرسانی
+  id                Int            @id @default(autoincrement())
+  title             String
+  code              String         @unique
+  discountPercent   Float
+  maxDiscountAmount Float?
+  usageLimit        Int?
+  usageCount        Int            @default(0)
+  minPurchaseAmount Float?
+  expiryDate        DateTime?
+  description       String?
+  courseId          Int?
+  isActive          Boolean        @default(true)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  course            Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   userDiscount      UserDiscount[]
 }
 
 model UserDiscount {
-  id             Int          @id @default(autoincrement()) // شناسه یکتا
-  userId         String       // شناسه کاربر
-  discountCodeId Int          // شناسه کد تخفیف
-  usedAt         DateTime     @default(now()) // تاریخ استفاده
-  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             Int          @id @default(autoincrement())
+  userId         String
+  discountCodeId Int
+  usedAt         DateTime     @default(now())
   discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, discountCodeId]) // هر کاربر فقط یک بار می‌تواند از یک کد تخفیف استفاده کند
+  @@unique([userId, discountCodeId])
 }
 
 model Podcast {
-  id          String  @id @default(uuid())
-  title       String  @db.VarChar(255)  // عنوان پادکست
-  slug        String    @unique // برای URL
-  description String  // توضیحات کلی
-  logoUrl     String  // آیکون پادکست
-  bannerUrl   String  // لینک بنر پادکست
-  hostName    String  // نام میزبان پادکست
-  language    String  // زبان پادکست (مثلاً "fa" برای فارسی)
-  genre       String  // دسته‌بندی (مثلاً "آموزشی", "تکنولوژی", ...)
-  websiteUrl  String? // آدرس سایت اصلی پادکست
-  rssFeed     String? // لینک RSS برای پادگیرها
-  email       String? // ایمیل پشتیبانی
-  explicit    Boolean @default(false)  // آیا پادکست محتوای بزرگسال دارد؟
-
-  // لینک به پادگیرها
-  spotifyUrl   String?
-  appleUrl     String?
-  googleUrl    String?
-  castboxUrl   String?
-  otherLinks   Json?  // لینک‌های دیگر به‌صورت JSON
-
-  // اطلاعات سئو
+  id              String           @id @default(uuid())
+  title           String           @db.VarChar(255)
+  description     String
+  logoUrl         String
+  bannerUrl       String
+  hostName        String
+  language        String
+  genre           String
+  websiteUrl      String?
+  rssFeed         String?
+  email           String?
+  explicit        Boolean          @default(false)
+  spotifyUrl      String?
+  appleUrl        String?
+  googleUrl       String?
+  castboxUrl      String?
+  otherLinks      Json?
   metaTitle       String?
   metaDescription String?
-  keywords        String?  // کلمات کلیدی جدا شده با کاما
-
+  keywords        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  slug            String           @unique
   episodes        PodcastEpisode[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 model PodcastEpisode {
-  id            String    @id @default(uuid())
-  podcastId     String
-  podcast       Podcast   @relation(fields: [podcastId], references: [id])
-
-  title         String                          // عنوان اپیزود
-  slug          String    @unique               // برای آدرس صفحه اپیزود
-  description   String                          // توضیح کامل اپیزود
-  audioUrl      String                          // لینک فایل صوتی (MP3, etc)
-  duration      Int                             // مدت به ثانیه
-  publishedAt   DateTime                        // تاریخ انتشار عمومی
-
-  seasonNumber  Int?                            // شماره فصل (در صورت وجود)
-  episodeNumber Int?                            // شماره اپیزود
-  explicit      Boolean    @default(false)      // محتوای بزرگسال؟
-
-  coverImageUrl String?                         // کاور مخصوص اپیزود (اختیاری)
-  keywords      String?                         // برای سئو و تگ‌های پادگیرها
-  metaTitle     String?                         // برای SEO
-  metaDescription String?                       // برای SEO
-
-  isDraft       Boolean    @default(false)      // برای پیش‌نویس نگه‌داشتن اپیزود
-  playCount     Int        @default(0)          // تعداد دفعات پخش
-
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id              String   @id @default(uuid())
+  podcastId       String
+  title           String
+  slug            String   @unique
+  description     String
+  audioUrl        String
+  duration        Int
+  publishedAt     DateTime
+  playCount       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  coverImageUrl   String?
+  episodeNumber   Int?
+  explicit        Boolean  @default(false)
+  isDraft         Boolean  @default(false)
+  keywords        String?
+  metaDescription String?
+  metaTitle       String?
+  seasonNumber    Int?
+  podcast         Podcast  @relation(fields: [podcastId], references: [id])
 }
 
 model SupportSession {
-  id           String           @id @default(cuid())
-  userId       String?          // در صورت لاگین بودن
-  anonymousId  String?          // اگر ناشناس بود
-  createdAt    DateTime         @default(now())
-  user         User?            @relation(fields: [userId], references: [id])
-  messages     SupportMessage[] // ارتباط یک به چند
+  id          String           @id @default(cuid())
+  userId      String?
+  anonymousId String?
+  createdAt   DateTime         @default(now())
+  messages    SupportMessage[]
+  user        User?            @relation(fields: [userId], references: [id])
 }
 
 model SupportMessage {
-  id           Int       @id @default(autoincrement())
-  sender       Sender    @default(USER)
-  content      String 
-  userId       String?
-  anonymousId  String?
-  isSeen       Boolean   @default(false)
-  replyToId    Int?
-  createdAt    DateTime  @default(now())
-
-  sessionId     String?
-  session       SupportSession?   @relation(fields: [sessionId], references: [id])
-  user         User?     @relation(fields: [userId], references: [id])
-  replyTo      SupportMessage? @relation("ReplyRelation", fields: [replyToId], references: [id])
-  replies      SupportMessage[] @relation("ReplyRelation")
+  id          Int              @id @default(autoincrement())
+  sender      Sender           @default(USER)
+  content     String
+  userId      String?
+  createdAt   DateTime         @default(now())
+  anonymousId String?
+  isSeen      Boolean          @default(false)
+  replyToId   Int?
+  sessionId   String?
+  replyTo     SupportMessage?  @relation("ReplyRelation", fields: [replyToId], references: [id])
+  replies     SupportMessage[] @relation("ReplyRelation")
+  session     SupportSession?  @relation(fields: [sessionId], references: [id])
+  user        User?            @relation(fields: [userId], references: [id])
 }
 
 enum Sender {

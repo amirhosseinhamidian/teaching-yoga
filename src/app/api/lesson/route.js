@@ -38,6 +38,17 @@ export async function GET(request) {
             accessLevel: true,
           },
         },
+      },
+    });
+
+    if (!session) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+    }
+
+    // ★★★★★ تغییر اصلی: دریافت ترم‌ها از SessionTerm
+    const sessionTerms = await prismadb.sessionTerm.findMany({
+      where: { sessionId },
+      select: {
         term: {
           select: {
             id: true,
@@ -47,22 +58,23 @@ export async function GET(request) {
       },
     });
 
-    if (!session) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-    }
+    // چون قبلاً فقط یک ترم وجود داشت، اینجا اولین ترم را برمی‌گردانیم
+    const term = sessionTerms[0]?.term || null;
 
     let mediaLink = null;
 
     if (session.type === 'VIDEO' && session.video?.videoKey) {
       mediaLink = await generateTemporaryLink(session.video.videoKey);
     } else if (session.type === 'AUDIO' && session.audio?.audioKey) {
+      // قبلاً از session.term.id استفاده می‌شد → حالا از term?.id
       mediaLink = await generateTemporaryLink(
-        `audio/${session.term.id}/${session.id}/audio.mp3`,
+        `audio/${term?.id}/${session.id}/audio.mp3`,
       );
     }
 
     return NextResponse.json({
       ...session,
+      term, // افزودن ترم به خروجی، مشابه قبل
       mediaLink,
     });
   } catch (error) {

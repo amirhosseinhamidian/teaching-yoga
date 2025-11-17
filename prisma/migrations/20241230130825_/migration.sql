@@ -1,5 +1,0 @@
--- CreateEnum
-CREATE TYPE "CategoryFAQ" AS ENUM ('COURSE', 'ONLINE_CLASS', 'GENERAL');
-
--- AlterTable
-ALTER TABLE "FAQ" ADD COLUMN     "category" "CategoryFAQ" NOT NULL DEFAULT 'GENERAL';

@@ -16,7 +16,7 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // بررسی اینکه آیا کاربر دوره را خریداری کرده است
+    // بررسی خرید دوره → (بدون تغییر)
     const userCourse = await prismadb.userCourse.findFirst({
       where: {
         userId: userId,
@@ -26,12 +26,19 @@ export async function GET(req, { params }) {
         course: {
           include: {
             courseTerms: {
-              orderBy: { termId: 'desc' }, // مرتب‌سازی ترم‌ها به ترتیب نزولی
+              orderBy: { termId: 'desc' },
               include: {
                 term: {
                   include: {
-                    sessions: {
-                      orderBy: { order: 'asc' }, // مرتب‌سازی جلسات به ترتیب صعودی
+                    sessionTerms: {
+                      include: {
+                        session: true,
+                      },
+                      orderBy: {
+                        session: {
+                          order: 'asc',
+                        },
+                      },
                     },
                   },
                 },
@@ -51,16 +58,22 @@ export async function GET(req, { params }) {
 
     const courseTerms = userCourse.course.courseTerms;
 
-    // جستجو در ترم‌ها و جلسات برای یافتن جلسه بعدی
+    // 🔄 تبدیل sessionTerms → sessions[]
+    for (const ct of courseTerms) {
+      const term = ct.term;
+
+      term.sessions = term.sessionTerms
+        .map((st) => st.session)
+        .sort((a, b) => a.order - b.order);
+    }
+
+    // 🔍 جستجوی جلسه بعدی
     let nextSession = null;
 
     for (const courseTerm of courseTerms) {
       const termSessions = courseTerm.term.sessions;
 
-      for (let i = 0; i < termSessions.length; i++) {
-        const session = termSessions[i];
-
-        // بررسی وضعیت تکمیل جلسه
+      for (const session of termSessions) {
         const userSessionProgress = await prismadb.sessionProgress.findFirst({
           where: {
             userId: userId,
@@ -69,20 +82,17 @@ export async function GET(req, { params }) {
           },
         });
 
-        // بررسی اینکه جلسه اکتیو هست یا نه
         if (!userSessionProgress && session.isActive) {
           nextSession = session;
           break;
         }
       }
 
-      if (nextSession) {
-        break;
-      }
+      if (nextSession) break;
     }
 
+    // 🔙 اگر جلسه‌ای پیدا نشد → fallback logic
     if (!nextSession) {
-      // اگر جلسه‌ای پیدا نشد، اولین جلسه فعال از اولین ترم پیدا شود
       for (const courseTerm of [...courseTerms].reverse()) {
         const activeSession = courseTerm.term.sessions.find((s) => s.isActive);
         if (activeSession) {
@@ -91,13 +101,10 @@ export async function GET(req, { params }) {
         }
       }
 
-      // اگر هیچ جلسه‌ای فعال نبود، برگردیم به اولین جلسه کلاً
       if (!nextSession && courseTerms.length > 0) {
-        const fallbackSession = courseTerms.at(-1)?.term.sessions?.at(0);
-
-        if (fallbackSession) {
-          nextSession = fallbackSession;
-        }
+        const fallbackSession =
+          courseTerms.at(-1)?.term.sessions?.at(0);
+        if (fallbackSession) nextSession = fallbackSession;
       }
     }
 

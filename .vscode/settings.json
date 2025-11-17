@@ -5,5 +5,27 @@
     "lastname",
     "prismadb"
   ],
-  "editor.formatOnSave": true
+
+  // ✔ فعال‌سازی فرمت خودکار
+  "editor.formatOnSave": true,
+
+  // ✔ تعیین اینکه Prettier فرمت‌کننده‌ی پیش‌فرض باشد
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  // ✔ اجباری برای کار کردن prettier-plugin-tailwindcss
+  "prettier.enable": true,
+
+  // ✔ جلوگیری از تداخل با سایر Formatter ها
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  }
 }

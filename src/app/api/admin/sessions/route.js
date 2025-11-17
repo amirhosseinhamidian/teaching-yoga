@@ -1,62 +1,75 @@
-import { NextResponse } from 'next/server';
-import prismadb from '@/libs/prismadb';
+import { NextResponse } from 'next/server'
+import prismadb from '@/libs/prismadb'
 
-export const dynamic = 'force-dynamic';
+export const dynamic = 'force-dynamic'
 
 export async function GET(request) {
   try {
-    // استخراج Query Parameters
-    const { searchParams } = request.nextUrl;
-    const termId = parseInt(searchParams.get('termId') || '-1', 10); // فیلتر بر اساس ترم
-    const courseId = parseInt(searchParams.get('courseId') || '-1', 10); // فیلتر بر اساس دوره
-    const search = searchParams.get('search'); // جستجو در نام جلسات
-    const page = parseInt(searchParams.get('page') || '1', 10); // شماره صفحه
-    const perPage = parseInt(searchParams.get('perPage') || '10', 10); // تعداد آیتم‌ها در هر صفحه
+    const { searchParams } = request.nextUrl
 
-    // محاسبه محدودیت‌ها برای Pagination
-    const skip = (page - 1) * perPage;
+    const termId = parseInt(searchParams.get('termId') || '-1', 10)
+    const courseId = parseInt(searchParams.get('courseId') || '-1', 10)
+    const search = searchParams.get('search')
+    const page = parseInt(searchParams.get('page') || '1', 10)
+    const perPage = parseInt(searchParams.get('perPage') || '10', 10)
 
-    // تنظیم شرط‌ها برای فیلتر و جستجو
+    const skip = (page - 1) * perPage
+
+    // -----------------------------
+    // ساخت شرط WHERE
+    // -----------------------------
     const whereConditions = {
       AND: [
-        termId !== -1 ? { termId } : {}, // فیلتر ترم (در صورت مشخص بودن)
+        search
+          ? {
+              name: {
+                contains: search,
+                mode: 'insensitive',
+              },
+            }
+          : {},
+
+        termId !== -1
+          ? {
+              sessionTerms: {
+                some: { termId },
+              },
+            }
+          : {},
+
         courseId !== -1
           ? {
-              term: {
-                courseTerms: {
-                  some: {
-                    courseId,
+              sessionTerms: {
+                some: {
+                  term: {
+                    courseTerms: {
+                      some: { courseId },
+                    },
                   },
                 },
               },
             }
-          : {}, // فیلتر دوره (در صورت مشخص بودن)
-        search
-          ? {
-              name: {
-                contains: search, // جستجو در نام جلسات
-                mode: 'insensitive', // جستجوی غیر حساس به حروف کوچک و بزرگ
-              },
-            }
-          : {}, // جستجو در نام جلسات
+          : {},
       ],
-    };
+    }
 
-    // دریافت جلسات از پایگاه داده
+    // -----------------------------
+    // واکشی جلسات
+    // -----------------------------
     const sessions = await prismadb.session.findMany({
       where: whereConditions,
-      skip, // شروع از آیتم مشخص
-      take: perPage, // تعداد آیتم‌ها در هر صفحه
+      skip,
+      take: perPage,
       include: {
-        video: true, // اطلاعات ویدیو
+        video: true,
         audio: true,
-        term: {
+        sessionTerms: {
           include: {
-            courseTerms: {
+            term: {
               include: {
-                course: {
-                  select: {
-                    title: true, // عنوان دوره
+                courseTerms: {
+                  include: {
+                    course: { select: { title: true } },
                   },
                 },
               },
@@ -64,86 +77,91 @@ export async function GET(request) {
           },
         },
       },
-    });
+      orderBy: { createAt: 'desc' },
+    })
 
-    // شمارش تعداد کل جلسات برای Pagination
-    const totalCount = await prismadb.session.count({
-      where: whereConditions,
-    });
+    const totalCount = await prismadb.session.count({ where: whereConditions })
 
-    // فلت کردن داده‌ها
-    const flattenedData = sessions.map((session) => ({
-      sessionId: session.id,
-      type: session.type,
-      sessionName: session.name,
-      sessionDuration: session.duration,
-      sessionIsFree: session.isFree,
-      sessionIsActive: session.isActive,
-      videoKey: session?.video?.videoKey || null,
-      videoId: session?.video?.id || null,
-      videoAccessLevel: session?.video?.accessLevel || null,
-      videoCreatedAt: session?.video?.createAt || null,
-      audioKey: session?.audio?.audioKey || null,
-      audioId: session?.audio?.id || null,
-      audioAccessLevel: session?.audio?.accessLevel || null,
-      audioCreatedAt: session?.audio?.createAt || null,
-      termId: session.term.id,
-      termName: session.term.name,
-      courseTitles: session.term.courseTerms
-        .map((courseTerm) => courseTerm.course.title)
-        .join(', '), // عنوان دوره‌ها به صورت کاما جدا شده
-    }));
+    // -----------------------------
+    // تبدیل خروجی به ساختار درست
+    // -----------------------------
+    const normalizedData = sessions.map((session) => {
+      const terms = session.sessionTerms.map((st) => ({
+        termId: st.term.id,
+        termName: st.term.name,
+        courseTitles: st.term.courseTerms
+          .map((ct) => ct.course.title)
+          .join(', '),
+      }))
 
-    // ارسال پاسخ
+      return {
+        sessionId: session.id,
+        type: session.type,
+        sessionName: session.name,
+        sessionDuration: session.duration,
+        sessionIsFree: session.isFree,
+        sessionIsActive: session.isActive,
+
+        videoKey: session?.video?.videoKey || null,
+        videoId: session?.video?.id || null,
+        videoAccessLevel: session?.video?.accessLevel || null,
+        videoCreatedAt: session?.video?.createAt || null,
+
+        audioKey: session?.audio?.audioKey || null,
+        audioId: session?.audio?.id || null,
+        audioAccessLevel: session?.audio?.accessLevel || null,
+        audioCreatedAt: session?.audio?.createAt || null,
+
+        terms, // ← یک بار، در یک آرایه
+      }
+    })
+
     return NextResponse.json({
       message: 'اطلاعات با موفقیت بارگذاری شد.',
-      data: flattenedData,
+      data: normalizedData,
       pagination: {
         currentPage: page,
         perPage,
         totalCount,
-        totalPages: Math.ceil(totalCount / perPage), // تعداد کل صفحات
+        totalPages: Math.ceil(totalCount / perPage),
       },
-    });
+    })
   } catch (error) {
-    console.error('Error fetching paginated sessions:', error);
+    console.error('Error fetching paginated sessions:', error)
     return NextResponse.json(
       { error: 'خطا در دریافت اطلاعات.' },
-      { status: 500 },
-    );
+      { status: 500 }
+    )
   }
 }
 
 export async function PUT(req) {
   try {
-    const { sessionId, termId, name, duration, accessLevel } = await req.json();
+    const { sessionId, name, duration, accessLevel, type, termIds } =
+      await req.json()
 
+    // ===============================
+    // Validation
+    // ===============================
     if (!sessionId || typeof sessionId !== 'string') {
       return NextResponse.json(
         { error: 'شناسه جلسه معتبر نیست.' },
-        { status: 400 },
-      );
-    }
-
-    if (!termId || typeof termId !== 'number') {
-      return NextResponse.json(
-        { error: 'شناسه ترم معتبر نیست.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
         { error: 'عنوان جلسه معتبر نیست.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
     if (!duration || typeof duration !== 'number' || duration <= 0) {
       return NextResponse.json(
-        { error: 'مدت زمان باید عددی معتبر باشد.' },
-        { status: 400 },
-      );
+        { error: 'مدت زمان باید معتبر باشد.' },
+        { status: 400 }
+      )
     }
 
     if (
@@ -152,66 +170,161 @@ export async function PUT(req) {
     ) {
       return NextResponse.json(
         { error: 'سطح دسترسی معتبر نیست.' },
-        { status: 400 },
-      );
+        { status: 400 }
+      )
     }
 
-    // ابتدا جلسه را دریافت می‌کنیم تا بفهمیم صدا دارد یا ویدیو
+    if (!Array.isArray(termIds)) {
+      return NextResponse.json(
+        { error: 'ترم‌ها باید در قالب آرایه باشند.' },
+        { status: 400 }
+      )
+    }
+
+    // ===============================
+    // دریافت جلسه
+    // ===============================
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
       include: {
         video: true,
         audio: true,
+        sessionTerms: true,
       },
-    });
+    })
 
     if (!session) {
       return NextResponse.json(
         { error: 'جلسه‌ای با این شناسه یافت نشد.' },
-        { status: 404 },
-      );
+        { status: 404 }
+      )
     }
 
-    // ساختن ساختار dynamic برای update
+    // ===============================
+    // ساختن آپدیت دیتای اصلی
+    // ===============================
     const updateData = {
       name,
       duration,
-      term: {
-        connect: { id: termId },
+      sessionTerms: {
+        deleteMany: {}, // پاکسازی تمام ترم‌های قبلی
+        create: termIds.map((tid) => ({ termId: tid })), // ثبت ترم‌های جدید
       },
-    };
-
-    if (session.video) {
-      updateData.video = {
-        update: { accessLevel },
-      };
-    } else if (session.audio) {
-      updateData.audio = {
-        update: { accessLevel },
-      };
     }
 
+    // ===============================
+    // تنظیم سطح دسترسی ویدیو/صوت
+    // ===============================
+    if (type === 'VIDEO' && session.video) {
+      updateData.video = {
+        update: { accessLevel },
+      }
+    }
+
+    if (type === 'AUDIO' && session.audio) {
+      updateData.audio = {
+        update: { accessLevel },
+      }
+    }
+
+    // ===============================
+    // انجام آپدیت
+    // ===============================
     const updatedSession = await prismadb.session.update({
       where: { id: sessionId },
       data: updateData,
       include: {
         video: true,
         audio: true,
-        term: {
-          select: { name: true },
+        sessionTerms: {
+          include: {
+            term: { select: { id: true, name: true } },
+          },
         },
       },
-    });
+    })
+
+    // ===============================
+    // آماده‌سازی خروجی ساختار جدید
+    // ===============================
+    const formattedSession = {
+      id: updatedSession.id,
+      name: updatedSession.name,
+      duration: updatedSession.duration,
+      type: type,
+      video: updatedSession.video,
+      audio: updatedSession.audio,
+
+      terms: updatedSession.sessionTerms.map((st) => ({
+        termId: st.term.id,
+        termName: st.term.name,
+      })),
+
+      accessLevel:
+        updatedSession.video?.accessLevel ||
+        updatedSession.audio?.accessLevel ||
+        null,
+    }
 
     return NextResponse.json(
-      { message: 'جلسه با موفقیت بروزرسانی شد.', updatedSession },
-      { status: 200 },
-    );
+      {
+        message: 'جلسه با موفقیت بروزرسانی شد.',
+        updatedSession: formattedSession,
+      },
+      { status: 200 }
+    )
   } catch (error) {
-    console.error('Error updating session:', error);
+    console.error('Error updating session:', error)
     return NextResponse.json(
       { error: 'خطا در بروزرسانی جلسه.' },
-      { status: 500 },
-    );
+      { status: 500 }
+    )
+  }
+}
+
+export async function POST(req) {
+  try {
+    const { name, duration, type } = await req.json()
+
+    // ------------------------------
+    // validation
+    // ------------------------------
+    if (!name || typeof name !== 'string') {
+      return NextResponse.json(
+        { error: 'عنوان جلسه معتبر نیست.' },
+        { status: 400 }
+      )
+    }
+
+    if (!duration || isNaN(Number(duration)) || Number(duration) <= 0) {
+      return NextResponse.json(
+        { error: 'مدت زمان جلسه معتبر نیست.' },
+        { status: 400 }
+      )
+    }
+
+    if (!type || !['VIDEO', 'AUDIO'].includes(type)) {
+      return NextResponse.json(
+        { error: 'نوع جلسه معتبر نیست. (VIDEO یا AUDIO)' },
+        { status: 400 }
+      )
+    }
+
+    // ------------------------------
+    // Session ایجاد
+    // ------------------------------
+    const newSession = await prismadb.session.create({
+      data: {
+        name,
+        duration: Number(duration),
+        type,
+        isActive: true,
+      },
+    })
+
+    return NextResponse.json(newSession, { status: 201 })
+  } catch (e) {
+    console.error('Error creating session:', e)
+    return NextResponse.json({ error: 'خطا در ساخت جلسه.' }, { status: 500 })
   }
 }

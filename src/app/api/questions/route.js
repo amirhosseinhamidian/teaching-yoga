@@ -1,8 +1,10 @@
+/* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '../auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
 import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
+
 export async function POST(request) {
   try {
     const { courseId, sessionId, questionText } = await request.json();
@@ -15,7 +17,6 @@ export async function POST(request) {
       );
     }
 
-    // ✅ ذخیره سؤال
     await prismadb.question.create({
       data: {
         userId: session.user.userId,
@@ -25,10 +26,9 @@ export async function POST(request) {
       },
     });
 
-    // ✅ ساخت پیام نوتیف برای ادمین
     try {
       const preview = questionText.replace(/<[^>]*>/g, '').slice(0, 120);
-      const threadUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/a-panel/questions`; // مسیر مشاهده سوالات توسط ادمین
+      const threadUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/a-panel/questions`;
       await notifyAdminsNewMessage(
         threadUrl,
         `سؤال جدید از ${session.user.name || 'کاربر'}`,
@@ -64,10 +64,9 @@ export async function GET() {
       );
     }
 
-    // دریافت سوالات همه وضعیت‌ها
     const allQuestions = await prismadb.question.findMany({
       where: {
-        userId: session.user.userId, // بر اساس ID کاربر سوالات را فیلتر می‌کنیم
+        userId: session.user.userId,
       },
       include: {
         course: {
@@ -88,9 +87,15 @@ export async function GET() {
         session: {
           select: {
             name: true,
-            term: {
+            // ❗ حذف شد: term
+            // ❗ اضافه شد: sessionTerms → term
+            sessionTerms: {
               select: {
-                name: true,
+                term: {
+                  select: {
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -101,23 +106,28 @@ export async function GET() {
       },
     });
 
-    // پردازش سوالات برای اضافه کردن اطلاعات تکمیلی
+    // پردازش سوالات
     const processQuestions = (questions) =>
-      questions.map((question) => ({
-        id: question.id,
-        questionText: question.questionText,
-        answerText: question.answerText,
-        isAnswered: question.isAnswered,
-        isReadByUser: question.isReadByUser,
-        answeredAt: question.answeredAt,
-        createdAt: question.createdAt,
-        updatedAt: question.updatedAt,
-        courseTitle: question.course.title,
-        instructorUsername: question.course.instructor.user.username,
-        instructorAvatar: question.course.instructor.user.avatar,
-        sessionName: question.session?.name || 'N/A',
-        termName: question.session?.term?.name || 'N/A',
-      }));
+      questions.map((question) => {
+        const termName =
+          question.session?.sessionTerms?.[0]?.term?.name || 'N/A';
+
+        return {
+          id: question.id,
+          questionText: question.questionText,
+          answerText: question.answerText,
+          isAnswered: question.isAnswered,
+          isReadByUser: question.isReadByUser,
+          answeredAt: question.answeredAt,
+          createdAt: question.createdAt,
+          updatedAt: question.updatedAt,
+          courseTitle: question.course.title,
+          instructorUsername: question.course.instructor.user.username,
+          instructorAvatar: question.course.instructor.user.avatar,
+          sessionName: question.session?.name || 'N/A',
+          termName: termName,
+        };
+      });
 
     const all = processQuestions(allQuestions);
 
@@ -131,7 +141,6 @@ export async function GET() {
       allQuestions.filter((question) => !question.isAnswered),
     );
 
-    // پاسخ‌دهی به درخواست با سه لیست مختلف
     return NextResponse.json({
       allQuestions: all,
       unreadQuestions: unread,

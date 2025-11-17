@@ -1,8 +1,8 @@
-'use client';
+'use client'
 /* eslint-disable no-undef */
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import QuestionReplyContent from '../../components/templates/questions/reply/QuestionReplyContent';
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
+import QuestionReplyContent from '../../components/templates/questions/reply/QuestionReplyContent'
 
 const fetchQuestion = async (questionId) => {
   try {
@@ -11,38 +11,38 @@ const fetchQuestion = async (questionId) => {
       {
         cache: 'no-cache',
         method: 'GET',
-      },
-    );
+      }
+    )
 
     if (!response.ok) {
-      throw new Error('Failed to Fetch Ticket Data!');
+      throw new Error('Failed to Fetch Ticket Data!')
     }
-    return await response.json();
+    return await response.json()
   } catch (error) {
-    console.error('Error Fetch ticket: ', error);
+    console.error('Error Fetch ticket: ', error)
   }
-};
+}
 
 function QuestionReplyPage() {
-  const searchParams = useSearchParams();
-  const questionId = searchParams.get('questionId');
-  const [question, setQuestion] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const searchParams = useSearchParams()
+  const questionId = searchParams.get('questionId')
+  const [question, setQuestion] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     const getQuestion = async () => {
-      const data = await fetchQuestion(questionId);
-      setQuestion(data);
-      setIsLoading(false);
-    };
+      const data = await fetchQuestion(questionId)
+      setQuestion(data)
+      setIsLoading(false)
+    }
 
     if (questionId) {
-      getQuestion();
+      getQuestion()
     }
-  }, [questionId]);
+  }, [questionId])
 
   if (isLoading) {
-    return <div>در حال بارگذاری...</div>;
+    return <div>در حال بارگذاری...</div>
   }
 
   if (!question) {
@@ -50,7 +50,7 @@ function QuestionReplyPage() {
       <div className='font-faNa'>
         اطلاعات برای سوال با ایدی {questionId} یافت نشد!
       </div>
-    );
+    )
   }
 
   return (
@@ -64,7 +64,7 @@ function QuestionReplyPage() {
         setQuestion={setQuestion}
       />
     </div>
-  );
+  )
 }
 
-export default QuestionReplyPage;
+export default QuestionReplyPage

@@ -14,7 +14,7 @@ export async function GET() {
 
     const userId = session.user.userId;
 
-    // بازیابی تمام دوره‌هایی که کاربر در آن‌ها شرکت کرده
+    // دریافت دوره‌های کاربر همراه با ترم‌ها و جلسات جدید (sessionTerms)
     const userCourses = await prismadb.userCourse.findMany({
       where: { userId },
       select: {
@@ -28,12 +28,16 @@ export async function GET() {
               select: {
                 term: {
                   select: {
-                    sessions: {
+                    sessionTerms: {
                       select: {
-                        id: true,
-                        sessionProgress: {
-                          where: { userId },
-                          select: { isCompleted: true },
+                        session: {
+                          select: {
+                            id: true,
+                            sessionProgress: {
+                              where: { userId },
+                              select: { isCompleted: true },
+                            },
+                          },
                         },
                       },
                     },
@@ -50,7 +54,7 @@ export async function GET() {
       return NextResponse.json([], { status: 200 });
     }
 
-    // پردازش پیشرفت هر دوره
+    // پردازش پیشرفت دوره
     const courseProgress = userCourses.map((userCourse) => {
       const course = userCourse.course;
 
@@ -58,7 +62,15 @@ export async function GET() {
       let completedSessions = 0;
 
       course.courseTerms.forEach((courseTerm) => {
-        courseTerm.term.sessions.forEach((session) => {
+        const term = courseTerm.term;
+
+        // تبدیل sessionTerms → sessions[] برای سازگاری با منطق قبلی
+        const sessions =
+          term.sessionTerms
+            ?.map((st) => st.session)
+            .filter(Boolean) || [];
+
+        sessions.forEach((session) => {
           totalSessions += 1;
           if (session.sessionProgress[0]?.isCompleted) {
             completedSessions += 1;

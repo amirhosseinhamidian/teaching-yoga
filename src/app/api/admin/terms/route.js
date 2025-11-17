@@ -8,9 +8,10 @@ export async function GET() {
         id: true,
         name: true,
         price: true,
+        discount: true,
         _count: {
           select: {
-            sessions: true, // تعداد جلسات مرتبط با ترم
+            sessionTerms: true, // تعداد جلسات از طریق SessionTerm
           },
         },
       },
@@ -20,7 +21,8 @@ export async function GET() {
       id: term.id,
       name: term.name,
       price: term.price,
-      sessionCount: term._count.sessions, // تعداد جلسات
+      discount: term.discount,
+      sessionCount: term._count.sessionTerms, // تعداد جلسات صحیح
     }));
 
     return NextResponse.json(formattedTerms);

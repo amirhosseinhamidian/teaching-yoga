@@ -13,7 +13,7 @@ export async function GET(request) {
       );
     }
 
-    // بازیابی تمام دوره‌هایی که کاربر در آن‌ها شرکت کرده
+    // گرفتن دوره‌هایی که کاربر خریده
     const userCourses = await prismadb.userCourse.findMany({
       where: { userId },
       select: {
@@ -26,22 +26,26 @@ export async function GET(request) {
               select: {
                 term: {
                   select: {
-                    sessions: {
+                    sessionTerms: {
                       select: {
-                        id: true,
-                        sessionProgress: {
-                          where: { userId },
-                          select: { isCompleted: true },
-                        },
-                      },
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+                        session: {
+                          select: {
+                            id: true,
+                            sessionProgress: {
+                              where: { userId },
+                              select: { isCompleted: true },
+                            },
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
 
     if (!userCourses || userCourses.length === 0) {
@@ -51,7 +55,7 @@ export async function GET(request) {
       );
     }
 
-    // پردازش پیشرفت هر دوره
+    // محاسبه درصد پیشرفت با ساختار جدید (sessionTerms)
     const courseProgress = userCourses.map((userCourse) => {
       const course = userCourse.course;
 
@@ -59,8 +63,10 @@ export async function GET(request) {
       let completedSessions = 0;
 
       course.courseTerms.forEach((courseTerm) => {
-        courseTerm.term.sessions.forEach((session) => {
+        courseTerm.term.sessionTerms.forEach((st) => {
+          const session = st.session;
           totalSessions += 1;
+
           if (session.sessionProgress[0]?.isCompleted) {
             completedSessions += 1;
           }
