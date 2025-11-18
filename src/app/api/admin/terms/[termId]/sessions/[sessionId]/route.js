@@ -1,16 +1,16 @@
 /* eslint-disable no-undef */
 import prismadb from '@/libs/prismadb'
 import { NextResponse } from 'next/server'
-import { S3 } from 'aws-sdk'
+import AWS from 'aws-sdk'
 
 // ===============================
 //           DELETE
 // ===============================
-
 export async function DELETE(req, { params }) {
   const { termId, sessionId } = params
 
-  const s3 = new S3({
+  // AWS SDK v2
+  const s3 = new AWS.S3({
     accessKeyId: process.env.AWS_ACCESS_KEY_ID,
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
     endpoint: process.env.AWS_S3_ENDPOINT,
@@ -18,7 +18,7 @@ export async function DELETE(req, { params }) {
   })
 
   try {
-    // دریافت جلسه
+    // 1) دریافت جلسه
     const session = await prismadb.session.findUnique({
       where: { id: sessionId },
       include: { video: true, audio: true },
@@ -28,7 +28,7 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ error: 'جلسه یافت نشد.' }, { status: 404 })
     }
 
-    // چک کنیم آیا این جلسه در ترم‌های دیگری هم وجود دارد یا نه
+    // 2) چک حضور جلسه در ترم‌های دیگر
     const otherLinks = await prismadb.sessionTerm.findMany({
       where: {
         sessionId,
@@ -36,10 +36,7 @@ export async function DELETE(req, { params }) {
       },
     })
 
-    // ----------------------------------------------------------
-    // مرحله 1: حذف لینک بین ترم و جلسه
-    // ----------------------------------------------------------
-
+    // 3) حذف لینک این ترم
     await prismadb.sessionTerm.deleteMany({
       where: {
         termId: parseInt(termId),
@@ -47,10 +44,7 @@ export async function DELETE(req, { params }) {
       },
     })
 
-    // ----------------------------------------------------------
-    // مرحله 2: مرتب‌سازی مجدد order ترم فعلی
-    // ----------------------------------------------------------
-
+    // 4) ساماندهی مجدد order
     const remaining = await prismadb.sessionTerm.findMany({
       where: { termId: parseInt(termId) },
       orderBy: { order: 'asc' },
@@ -65,10 +59,7 @@ export async function DELETE(req, { params }) {
       )
     )
 
-    // ----------------------------------------------------------
-    // اگر جلسه در ترم‌های دیگر هم استفاده شده باشد ← همین‌جا خروج
-    // ----------------------------------------------------------
-
+    // اگر جلسه در ترم دیگر هست، فقط unlink می‌کنیم و برمی‌گردیم
     if (otherLinks.length > 0) {
       return NextResponse.json(
         { message: 'جلسه فقط از این ترم حذف شد.' },
@@ -76,11 +67,8 @@ export async function DELETE(req, { params }) {
       )
     }
 
-    // ----------------------------------------------------------
-    // مرحله 3: جلسه در هیچ ترمی نیست → پاکسازی کامل جلسه و فایل‌ها
-    // ----------------------------------------------------------
-
-    // ===== حذف فایل ویدیو =====
+    // ========== حذف کامل جلسه + فایل‌ها ==========
+    // --- حذف فایل ویدیو ---
     if (session.video?.videoKey) {
       try {
         const videoKey = session.video.videoKey.replace('/master.m3u8', '')
@@ -103,11 +91,11 @@ export async function DELETE(req, { params }) {
             .promise()
         }
       } catch (err) {
-        console.error('Error deleting video files:', err)
+        console.error('Error deleting video file:', err)
       }
     }
 
-    // ===== حذف فایل صوتی =====
+    // --- حذف فایل صوتی ---
     if (session.audio?.audioKey) {
       try {
         await s3
@@ -121,23 +109,26 @@ export async function DELETE(req, { params }) {
       }
     }
 
-    // ===== حذف رکوردهای دیتابیس =====
-    await prismadb.$transaction([
+    // --- حذف رکوردهای دیتابیس ---
+    const trx = [
       prismadb.sessionProgress.deleteMany({ where: { sessionId } }),
-
-      session.video
-        ? prismadb.sessionVideo.delete({ where: { id: session.video.id } })
-        : Promise.resolve(),
-
-      session.audio
-        ? prismadb.sessionAudio.delete({ where: { id: session.audio.id } })
-        : Promise.resolve(),
-
       prismadb.session.delete({ where: { id: sessionId } }),
-    ])
+    ]
+
+    if (session.video)
+      trx.push(
+        prismadb.sessionVideo.delete({ where: { id: session.video.id } })
+      )
+
+    if (session.audio)
+      trx.push(
+        prismadb.sessionAudio.delete({ where: { id: session.audio.id } })
+      )
+
+    await prismadb.$transaction(trx)
 
     return NextResponse.json(
-      { message: 'جلسه کاملاً حذف شد (در هیچ ترمی استفاده نمی‌شد).' },
+      { message: 'جلسه کاملاً حذف شد.' },
       { status: 200 }
     )
   } catch (err) {
@@ -145,7 +136,6 @@ export async function DELETE(req, { params }) {
     return NextResponse.json({ error: 'خطا در حذف جلسه.' }, { status: 500 })
   }
 }
-
 // ===============================
 //             PUT
 // ===============================

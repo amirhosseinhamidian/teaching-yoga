@@ -180,7 +180,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
             value={null}
             onChange={handleSelectTerm}
             label='افزودن ترم'
-            optionClassName='max-h-80 overflow-y-auto'
+            optionClassName='max-h-80 overflow-y-auto custom-scrollbar'
             fullWidth
           />
 
@@ -242,7 +242,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
               errorMessage={errorMessages.duration}
               thousandSeparator
             />
-            <p className='mr-2 mt-1 text-green'>
+            <p className='mr-2 mt-1 font-faNa text-green'>
               {duration && getStringTime(duration)}
             </p>
           </div>

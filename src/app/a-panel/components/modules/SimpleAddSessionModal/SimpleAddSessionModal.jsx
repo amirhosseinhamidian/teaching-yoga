@@ -107,7 +107,6 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
     setIsLoading(true)
 
     try {
-      // 1) ساخت جلسه
       const resp = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions`,
         {
@@ -123,23 +122,31 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
 
       if (!resp.ok) throw new Error('خطا در ساخت جلسه')
 
-      const newSession = await resp.json()
+      const createdSession = await resp.json()
 
-      // 2) اتصال به چندین ترم
+      // 2) اتصال جلسه به ترم‌ها
       for (const term of selectedTerms) {
         await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${term.value}/sessions/attach`,
           {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: newSession.id }),
+            body: JSON.stringify({ sessionId: createdSession.id }),
           }
         )
       }
 
+      // ⛔ newSession ناقص است، باید نسخه کامل را fetch کنیم
+      const fullResp = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions/${createdSession.id}`
+      )
+
+      const fullSession = await fullResp.json()
+
       toast.showSuccessToast('جلسه با موفقیت ساخته و متصل شد')
 
-      onSuccess(newSession)
+      // حالا fullSession شامل sessionTerms و term است
+      onSuccess(fullSession)
       onClose()
     } catch (err) {
       toast.showErrorToast('خطا در ساخت جلسه')
@@ -204,12 +211,19 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
             errorMessage={errors.name}
           />
 
-          <Input
-            label='زمان (ثانیه)'
-            value={duration}
-            onChange={setDuration}
-            errorMessage={errors.duration}
-          />
+          <div>
+            <Input
+              label='زمان (ثانیه)'
+              value={duration}
+              onChange={setDuration}
+              errorMessage={errors.duration}
+            />
+            {duration && (
+              <span className='font-faNa text-green'>
+                {getStringTime(duration)}
+              </span>
+            )}
+          </div>
 
           <DropDown
             options={sessionTypeOptions}

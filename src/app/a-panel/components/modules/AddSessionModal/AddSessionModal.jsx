@@ -217,12 +217,20 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
               errorMessage={errorMessages.name}
             />
 
-            <Input
-              label='مدت زمان (ثانیه)'
-              value={duration}
-              onChange={setDuration}
-              errorMessage={errorMessages.duration}
-            />
+            <div>
+              <Input
+                label='مدت زمان (ثانیه)'
+                value={duration}
+                onChange={setDuration}
+                errorMessage={errorMessages.duration}
+              />
+
+              {duration && (
+                <span className='font-faNa text-green'>
+                  {getStringTime(duration)}
+                </span>
+              )}
+            </div>
 
             <Button
               onClick={handleCreateNewSession}

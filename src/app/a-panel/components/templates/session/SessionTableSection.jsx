@@ -1,104 +1,107 @@
 /* eslint-disable no-undef */
-'use client';
-import React, { useEffect, useState } from 'react';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
-import SearchFilterSessions from './SearchFilterSessions';
-import SessionTable from './SessionTable';
-import HeadAction from './HeadAction';
+'use client'
+import React, { useEffect, useState } from 'react'
+import { createToastHandler } from '@/utils/toastHandler'
+import { useTheme } from '@/contexts/ThemeContext'
+import SearchFilterSessions from './SearchFilterSessions'
+import SessionTable from './SessionTable'
+import HeadAction from './HeadAction'
 
 const SessionTableSection = () => {
-  const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
-  const [isLoading, setIsLoading] = useState(true);
-  const [sessions, setSessions] = useState([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [searchText, setSearchText] = useState('');
-  const [searchDebounce, setSearchDebounce] = useState('');
-  const [filterCourse, setFilterCourse] = useState(-1);
-  const [filterTerm, setFilterTerm] = useState(-1);
-  const [courseOptions, setCourseOptions] = useState([]);
-  const [termOptions, setTermOptions] = useState([]);
+  const { isDark } = useTheme()
+  const toast = createToastHandler(isDark)
+  const [isLoading, setIsLoading] = useState(true)
+  const [sessions, setSessions] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchText, setSearchText] = useState('')
+  const [searchDebounce, setSearchDebounce] = useState('')
+  const [filterCourse, setFilterCourse] = useState(-1)
+  const [filterTerm, setFilterTerm] = useState(-1)
+  const [courseOptions, setCourseOptions] = useState([])
+  const [termOptions, setTermOptions] = useState([])
 
   const fetchSessions = async (page, search) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
       const response = await fetch(
-        `/api/admin/sessions?&page=${page}&perPage=10&courseId=${filterCourse}&termId=${filterTerm}${search ? `&search=${search}` : ''}`,
-      );
+        `/api/admin/sessions?&page=${page}&perPage=10&courseId=${filterCourse}&termId=${filterTerm}${search ? `&search=${search}` : ''}`
+      )
 
       if (response.ok) {
-        const data = await response.json();
-        setSessions(data.data);
-        setTotalPages(data.pagination.totalPages);
+        const data = await response.json()
+        setSessions(data.data)
+        setTotalPages(data.pagination.totalPages)
       } else {
-        toast.showErrorToast(data.error || 'خطایی رخ داده است');
+        toast.showErrorToast(data.error || 'خطایی رخ داده است')
       }
     } catch (err) {
-      toast.showErrorToast('خطای غیرمنتظره');
+      toast.showErrorToast('خطای غیرمنتظره')
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const fetchFilters = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions/filters`,
-      );
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions/filters`
+      )
       if (response.ok) {
-        const data = await response.json();
-        setCourseOptions(data.courseOptions);
-        setTermOptions(data.termOptions);
+        const data = await response.json()
+        setCourseOptions(data.courseOptions)
+        setTermOptions(data.termOptions)
       } else {
-        toast.showErrorToast(data.error || 'خطایی رخ داده است');
+        toast.showErrorToast(data.error || 'خطایی رخ داده است')
       }
     } catch (err) {
-      toast.showErrorToast('خطای غیرمنتظره');
+      toast.showErrorToast('خطای غیرمنتظره')
     }
-  };
+  }
 
   // اجرای جستجو با debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
-      setSearchDebounce(searchText); // به‌روزرسانی وضعیت جستجو پس از توقف تایپ
-      setPage(1); // بازگشت به صفحه اول در صورت تغییر متن جستجو
-    }, 2000);
+      setSearchDebounce(searchText) // به‌روزرسانی وضعیت جستجو پس از توقف تایپ
+      setPage(1) // بازگشت به صفحه اول در صورت تغییر متن جستجو
+    }, 2000)
 
-    return () => clearTimeout(delayDebounceFn); // پاک‌سازی تایمر قبلی
-  }, [searchText]);
+    return () => clearTimeout(delayDebounceFn) // پاک‌سازی تایمر قبلی
+  }, [searchText])
 
   // فراخوانی API هنگام تغییر صفحه یا جستجو
   useEffect(() => {
-    fetchSessions(page, searchDebounce);
-    fetchFilters();
-  }, [page, searchDebounce, filterCourse, filterTerm]);
+    fetchSessions(page, searchDebounce)
+    fetchFilters()
+  }, [page, searchDebounce, filterCourse, filterTerm])
 
   const handlePageChange = (newPage) => {
-    setPage(newPage);
-  };
+    setPage(newPage)
+  }
 
   const addSessionSuccessfully = (newSession) => {
     setSessions((prev) => {
-      // تبدیل ساختار داده‌ی جدید به فرمت داده‌های موجود
+      const mappedTerms =
+        newSession.sessionTerms?.map((st) => ({
+          termId: st.term.id,
+          termName: st.term.name,
+        })) || []
+
       const formattedSession = {
         sessionId: newSession.id,
         sessionName: newSession.name,
         sessionDuration: newSession.duration,
         sessionIsFree: newSession.isFree,
         sessionIsActive: newSession.isActive,
-        videoCreatedAt: newSession.createAt,
-        audioCreatedAt: newSession.createAt,
+        videoCreatedAt: newSession.createdAt,
+        audioCreatedAt: newSession.createdAt,
         type: newSession.type,
-        termId: newSession.termId,
-        termName: newSession.term.name, // فرض بر این است که نام ترم به این شکل ایجاد می‌شود
-        courseTitles: '', // اگر نیاز به مقدار خاصی برای عنوان دوره‌ها دارید، اینجا اضافه کنید
-      };
+        terms: mappedTerms,
+      }
 
-      return [formattedSession, ...prev];
-    });
-  };
+      return [formattedSession, ...prev]
+    })
+  }
 
   return (
     <div>
@@ -129,7 +132,7 @@ const SessionTableSection = () => {
         />
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default SessionTableSection;
+export default SessionTableSection
