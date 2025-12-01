@@ -22,7 +22,7 @@ const Input = React.forwardRef(
       isShowCounter = false,
       onEnterPress,
     },
-    ref,
+    ref
   ) => {
     // تابع فرمت جداکننده هزارگان
     const formatWithThousandSeparator = (num) => {
@@ -31,20 +31,29 @@ const Input = React.forwardRef(
     };
 
     const [displayValue, setDisplayValue] = useState(
-      thousandSeparator ? formatWithThousandSeparator(value) : value,
+      thousandSeparator ? formatWithThousandSeparator(value) : value
     );
 
     // همگام‌سازی displayValue با value
     useEffect(() => {
       setDisplayValue(
-        thousandSeparator ? formatWithThousandSeparator(value) : value,
+        thousandSeparator ? formatWithThousandSeparator(value) : value
       );
     }, [value, thousandSeparator]);
 
-    const handleChange = (event) => {
-      let rawValue = event.target.value.replace(/,/g, ''); // حذف جداکننده‌ها
+    const convertToEnglishDigits = (str) => {
+      return str
+        .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d))) // Persian
+        .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d))); // Arabic
+    };
 
-      // تبدیل به uppercase اگر isUppercase فعال باشد
+    const handleChange = (event) => {
+      let rawValue = event.target.value.replace(/,/g, '');
+
+      // تبدیل اعداد فارسی/عربی به انگلیسی
+      rawValue = convertToEnglishDigits(rawValue);
+
+      // تبدیل به uppercase
       if (isUppercase) {
         rawValue = rawValue.toUpperCase();
       }
@@ -98,7 +107,7 @@ const Input = React.forwardRef(
         )}
       </div>
     );
-  },
+  }
 );
 
 Input.propTypes = {

@@ -19,7 +19,7 @@ const InstructorCard = ({ instructor, className }) => {
             alt='instructor avatar'
             width={240}
             height={240}
-            className='h-14 w-14 rounded-full'
+            className='h-11 w-11 rounded-full border xs:h-12 xs:w-12 sm:h-14 sm:w-14'
           />
           <h5 className='text-xs sm:text-sm'>
             {user.firstname} {user.lastname} | {instructor.describe}

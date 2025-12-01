@@ -1,16 +1,16 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import SectionEditProfile from './SectionEditProfile';
-import { useAuth } from '@/contexts/AuthContext';
 import SectionCourse from './SectionCourse';
 import SectionQuestion from './SectionQuestion';
 import PropTypes from 'prop-types';
 import { useRouter } from 'next/navigation';
 import SectionPaymentOrder from './SectionPaymentOrder';
 import SectionTicket from './SectionTicket';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const ProfileMainBox = ({ status }) => {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const router = useRouter();
   const [questionsCount, setQuestionsCount] = useState(0);
 

@@ -5,22 +5,16 @@ import PropTypes from 'prop-types';
 import Plyr from 'plyr';
 import Hls from 'hls.js';
 import 'plyr/dist/plyr.css';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
-const VideoPlayer = ({
-  videoUrl,
-  posterUrl,
-  sessionId,
-  userId,
-  isAdmin = false,
-}) => {
+const VideoPlayer = ({ videoUrl, posterUrl, sessionId, isAdmin = false }) => {
   const playerRef = useRef(null);
   const hlsRef = useRef(null);
   const watermarkRef = useRef(null);
   const [isVideoCompleted, setIsVideoCompleted] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [speedOptions] = useState([0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]);
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const [videoDimensions, setVideoDimensions] = useState({
     width: 16,
     height: 9,
@@ -33,12 +27,8 @@ const VideoPlayer = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            userId: userId,
-          },
           body: JSON.stringify({ completed: true }),
-        },
+        }
       );
     } catch (error) {
       console.error('Error marking video as completed:', error);
@@ -51,11 +41,7 @@ const VideoPlayer = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            userId: userId,
-          },
-        },
+        }
       );
 
       const data = await response.json();
@@ -220,7 +206,7 @@ const VideoPlayer = ({
                 const currentTime = video.currentTime;
                 const wasPlaying = !video.paused;
                 const quality = availableQualities.find(
-                  (quality) => quality.label === newQuality,
+                  (quality) => quality.label === newQuality
                 );
                 hlsRef.current.currentLevel =
                   newQuality === 'auto' ? -1 : quality.value;
@@ -263,7 +249,7 @@ const VideoPlayer = ({
       watermarkRef.current.style.display = 'none'; // واترمارک بعد از پایان ویدیو مخفی شود
     });
 
-    if (userId) {
+    if (user?.id) {
       video.ontimeupdate = () => {
         const currentTime = video.currentTime;
         if (
@@ -326,7 +312,6 @@ VideoPlayer.propTypes = {
   videoUrl: PropTypes.string.isRequired,
   posterUrl: PropTypes.string,
   sessionId: PropTypes.string,
-  userId: PropTypes.string,
   isAdmin: PropTypes.bool,
 };
 

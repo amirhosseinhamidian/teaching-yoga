@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 'use client';
+
 import React, { useState } from 'react';
 import Logo from '../Logo/Logo';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
@@ -15,44 +16,52 @@ import NavbarRoutes from './NavRoutes';
 import { useTheme } from '@/contexts/ThemeContext';
 import Link from 'next/link';
 import ProfileModal from '../modules/ProfileModal/ProfileModal';
-import { signOut } from 'next-auth/react';
-import { LuLogOut } from 'react-icons/lu';
 import Modal from '../modules/Modal/Modal';
-import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
+import { LuLogOut } from 'react-icons/lu';
 import CartModal from '../modules/CartModal/CartModal';
-import { useSession } from 'next-auth/react';
+
+import { useRouter, usePathname } from 'next/navigation';
+
+// Redux
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useUserActions } from '@/hooks/auth/useUserActions';
+import { useCart } from '@/hooks/cart/useCart';
 
 export default function Header() {
-  const { data: session } = useSession();
-  const { isDark, toggleTheme } = useTheme();
-  const [isShowProfileModal, setShowProfileModal] = useState(false);
-  const [isShowCartModal, setIsShowCartModal] = useState(false);
-  const [showSignOutModal, setShowSignOutModal] = useState(false);
-  const { user, setUser } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
-  const handleCloseProfileModal = () => {
-    setShowProfileModal(false);
-  };
+  const { isDark, toggleTheme } = useTheme();
 
+  // Redux user
+  const { user } = useAuthUser();
+  const { logout } = useUserActions();
+
+  // Redux cart (جایگزین useSelector)
+  const { items } = useCart();
+  const cartCount = items?.length || 0;
+
+  const [isShowProfileModal, setShowProfileModal] = useState(false);
+  const [isShowCartModal, setIsShowCartModal] = useState(false);
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
+
+  // 🔥 Logout handler
   const signOutHandler = async () => {
-    await signOut({ callbackUrl: pathname });
-    setUser(null);
-    setShowSignOutModal(false);
+    try {
+      await fetch('/api/logout', { method: 'POST' });
+
+      logout(); // پاک کردن user از Redux
+      setShowSignOutModal(false);
+
+      router.refresh();
+    } catch (err) {
+      console.error('Logout Error:', err);
+    }
   };
 
   const loginClickHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
     router.push('/login');
-  };
-
-  const getNumberOfCart = () => {
-    if (!user || !user.carts) return 0;
-
-    const pendingCart = user.carts.find((cart) => cart.status === 'PENDING');
-    return pendingCart ? pendingCart.uniqueCourses.length : 0;
   };
 
   return (
@@ -66,22 +75,28 @@ export default function Header() {
             <NavbarRoutes />
           </nav>
         </div>
+
+        {/* Desktop */}
         <div className='hidden items-center gap-2 md:flex'>
           <IconButton
             icon={isDark ? MdOutlineLightMode : MdOutlineDarkMode}
             onClick={toggleTheme}
           />
+
+          {/* Cart Button */}
           <div className='relative' onClick={() => setIsShowCartModal(true)}>
             <IconButton icon={BsCart3} />
-            <div
-              className={`absolute -right-1 -top-3 h-5 w-5 items-center justify-center rounded-full bg-red pt-1 ${getNumberOfCart() === 0 ? 'hidden' : 'flex'}`}
-            >
-              <span className='font-faNa text-xs text-white sm:text-sm'>
-                {getNumberOfCart()}
-              </span>
-            </div>
+            {cartCount > 0 && (
+              <div className='absolute -right-1 -top-3 flex h-5 w-5 items-center justify-center rounded-full bg-red pt-1'>
+                <span className='font-faNa text-xs text-white'>
+                  {cartCount}
+                </span>
+              </div>
+            )}
           </div>
-          {session?.user && user ? (
+
+          {/* Profile / Login */}
+          {user ? (
             <IconButton
               icon={MdOutlinePerson}
               onClick={() => setShowProfileModal(true)}
@@ -95,17 +110,21 @@ export default function Header() {
             </Button>
           )}
         </div>
+
+        {/* Mobile */}
         <div className='flex items-center gap-2 md:hidden'>
           <div className='relative' onClick={() => setIsShowCartModal(true)}>
             <IconButton icon={BsCart3} size={20} />
-            <div
-              className={`absolute -right-1 -top-2 h-4 w-4 items-center justify-center rounded-full bg-red pt-1 ${getNumberOfCart() === 0 ? 'hidden' : 'flex'}`}
-            >
-              <span className='font-faNa text-xs text-white'>
-                {getNumberOfCart()}
-              </span>
-            </div>
+
+            {cartCount > 0 && (
+              <div className='absolute -right-1 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red pt-1'>
+                <span className='font-faNa text-xs text-white'>
+                  {cartCount}
+                </span>
+              </div>
+            )}
           </div>
+
           <NavbarMobileMenu
             isDark={isDark}
             handelDarkMode={toggleTheme}
@@ -114,20 +133,26 @@ export default function Header() {
           />
         </div>
       </div>
+
+      {/* Profile Modal */}
       {isShowProfileModal && (
         <ProfileModal
-          onClose={handleCloseProfileModal}
+          onClose={() => setShowProfileModal(false)}
           setShowSignOutModal={setShowSignOutModal}
           user={user}
         />
       )}
+
+      {/* Cart Modal */}
       {isShowCartModal && (
         <CartModal onClose={() => setIsShowCartModal(false)} />
       )}
+
+      {/* Logout Modal */}
       {showSignOutModal && (
         <Modal
           title='از حساب کاربری خارج می شوید؟'
-          desc='با خروج از حساب کاربری به دوره های تهیه شده دسترسی نخواهید داشت. هر وقت بخواهید می توانید مجددا وارد شوید و به دوره هایتان دسترسی خواهید داشت.'
+          desc='با خروج از حساب کاربری به دوره های تهیه شده دسترسی نخواهید داشت.'
           icon={LuLogOut}
           iconSize={36}
           primaryButtonClick={signOutHandler}

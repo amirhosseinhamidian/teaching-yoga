@@ -1,10 +1,10 @@
 /* eslint-disable no-undef */
 /* eslint-disable react/prop-types */
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
 import React from 'react';
 import PaymentCompleteMain from '@/components/templates/complete-payment/PaymentCompleteMain';
 import { headers } from 'next/headers';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -12,7 +12,7 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
@@ -41,7 +41,7 @@ const CompletePaymentPage = async ({ searchParams }) => {
 
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <PaymentCompleteMain token={token} status={status} />
       <Footer />
     </>

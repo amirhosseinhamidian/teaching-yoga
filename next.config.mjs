@@ -2,7 +2,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    domains: ['samane-yoga.storage.c2.liara.space', 'trustseal.enamad.ir'],
+    domains: [
+      'samane-yoga.storage.c2.liara.space',
+      'trustseal.enamad.ir',
+      'lh3.googleusercontent.com',
+    ],
   },
   webpack(config) {
     config.resolve.extensions.push('.mjs');

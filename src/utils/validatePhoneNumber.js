@@ -1,6 +1,14 @@
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
 
 export const validatePhoneNumber = (phone) => {
+  // اگر phone نبود یا string نبود
+  if (!phone || typeof phone !== 'string') {
+    return {
+      isValid: false,
+      errorMessage: 'شماره موبایل معتبر نیست.',
+    };
+  }
+
   let cleaned = phone.trim();
 
   // اگر کاربر 00 نوشته، به + تبدیل کن

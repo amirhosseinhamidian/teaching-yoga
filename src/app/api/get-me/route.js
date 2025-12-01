@@ -1,18 +1,37 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
-import prismadb from '@/libs/prismadb';
+/* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
+import prismadb from '@/libs/prismadb';
+import jwt from 'jsonwebtoken';
+import { cookies } from 'next/headers';
+
+const JWT_SECRET = process.env.JWT_SECRET;
 
 export async function GET() {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user?.userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
+    // گرفتن توکن از کوکی
+    const token = cookies().get('auth_token')?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // دیکود کردن JWT
+    let decoded;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid token' },
+        { status: 401 }
+      );
+    }
+
+    // پیدا کردن کاربر
     const rawUser = await prismadb.user.findUnique({
-      where: { id: session.user.userId },
+      where: { id: decoded.id },
       include: {
         questions: true,
         comments: true,
@@ -37,32 +56,38 @@ export async function GET() {
     });
 
     if (!rawUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, error: 'User not found' },
+        { status: 404 }
+      );
     }
 
-    // پردازش داده‌های سبد خرید
+    // پردازش cart
     const user = {
       ...rawUser,
-      carts: (rawUser.carts || []).map((cart) => {
-        // استخراج فقط دوره‌ها از cartCourses
-        const courses = cart.cartCourses.map((cartCourse) => cartCourse.course);
+      carts: rawUser.carts.map((cart) => {
+        const courses = cart.cartCourses.map((c) => c.course);
 
         const uniqueCourses = Array.from(
-          new Map(courses.map((course) => [course.id, course])).values(),
+          new Map(courses.map((course) => [course.id, course])).values()
         );
 
         return {
           ...cart,
-          uniqueCourses, // اضافه کردن لیست دوره‌های یکتا
+          uniqueCourses,
         };
       }),
     };
-    return NextResponse.json({ success: true, user });
+
+    return NextResponse.json({
+      success: true,
+      user,
+    });
   } catch (error) {
-    console.error('Error fetching user data:', error);
+    console.error('GET-ME ERROR:', error);
     return NextResponse.json(
-      { error: 'Internal Server Error' },
-      { status: 500 },
+      { success: false, error: 'Server error' },
+      { status: 500 }
     );
   }
 }

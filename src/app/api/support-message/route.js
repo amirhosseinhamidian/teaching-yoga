@@ -1,21 +1,20 @@
+/* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getAuthUser } from '@/utils/getAuthUser';
 import prismadb from '@/libs/prismadb';
 import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
 
 // GET: لیست پیام‌های یک session خاص (بر اساس userId یا anonymousId)
 export async function GET(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const authUser = getAuthUser();
+    const userId = authUser?.id || null;
     const { searchParams } = req.nextUrl;
 
     const anonymousId = searchParams.get('anonymousId');
     const page = parseInt(searchParams.get('page') || '1', 10);
     const pageSize = 10;
     const skip = (page - 1) * pageSize;
-
-    const userId = session?.user?.userId || null;
 
     if (!userId && !anonymousId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -40,7 +39,7 @@ export async function GET(req) {
           pageSize,
           totalPages: 0,
         },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -73,7 +72,7 @@ export async function GET(req) {
     console.error('[SUPPORT_MESSAGES_GET_ERROR]', error);
     return NextResponse.json(
       { error: 'خطا در دریافت پیام‌ها' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -81,24 +80,24 @@ export async function GET(req) {
 // POST: ثبت پیام جدید در session موجود یا جدید
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
     const body = await req.json();
     const { content, anonymousId } = body;
 
     if (!content || content.trim() === '') {
       return NextResponse.json(
         { error: 'متن پیام نباید خالی باشد' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    const userId = session?.user?.userId || null;
+    const authUser = getAuthUser();
+    const userId = authUser?.id || null;
     const isGuest = !userId;
 
     if (isGuest && !anonymousId) {
       return NextResponse.json(
         { error: 'شناسه مهمان الزامی است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -136,13 +135,13 @@ export async function POST(req) {
     try {
       const origin =
         process.env.NEXT_PUBLIC_ADMIN_PANEL_URL || // اگر پنل ادمین دامنه جدا دارد
-        process.env.NEXT_PUBLIC_SITE_URL ||       // یا سایت اصلی
-        process.env.NEXT_PUBLIC_API_BASE_URL ||   // یا fallback
+        process.env.NEXT_PUBLIC_SITE_URL || // یا سایت اصلی
+        process.env.NEXT_PUBLIC_API_BASE_URL || // یا fallback
         'http://localhost:3000';
 
       // لینکی که ادمین با کلیک روی نوتیف باز می‌کنه
       const adminThreadUrl = `${origin}/a-panel/message/reply?sessionId=${encodeURIComponent(
-        supportSession.id,
+        supportSession.id
       )}`;
 
       await notifyAdminsNewMessage({

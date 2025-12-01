@@ -2,14 +2,14 @@
 'use client';
 import UserLastCourseCard from '@/components/modules/UserLastCourseCard/UserLastCourseCard';
 import Button from '@/components/Ui/Button/Button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import Image from 'next/image';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 
 const Hero = () => {
   const [siteInfoData, setSiteInfoData] = useState(null);
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const fetchData = async () => {
     try {
       const res = await fetch(
@@ -19,7 +19,7 @@ const Hero = () => {
           next: {
             revalidate: 86400, // 1 day
           },
-        },
+        }
       );
       if (!res.ok) {
         throw new Error('Error to fetch footer data!');
@@ -51,7 +51,7 @@ const Hero = () => {
             <UserLastCourseCard
               courseId={
                 [...user.courses].sort(
-                  (a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt),
+                  (a, b) => new Date(b.purchasedAt) - new Date(a.purchasedAt)
                 )[0].courseId
               }
             />

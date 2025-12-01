@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 /* eslint-disable react/prop-types */
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import TicketPageContent from '@/components/templates/ticket/TicketPageContent';
 import React from 'react';
 
@@ -17,7 +17,7 @@ async function TicketPage({ params }) {
 
   return (
     <div className='overflow-x-hidden'>
-      <Header />
+      <HeaderWrapper />
       <TicketPageContent ticketId={id} />
       <Footer />
     </div>

@@ -4,13 +4,13 @@ import PropTypes from 'prop-types';
 import Image from 'next/image';
 import TextArea from '@/components/Ui/TextArea/TextArea';
 import Button from '@/components/Ui/Button/Button';
-import { useAuth } from '@/contexts/AuthContext';
 import { IoWarningOutline } from 'react-icons/io5';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const QuestionBox = ({ className, courseId, sessionId }) => {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const [content, setContent] = useState('');
   const [sendLoading, setSendLoading] = useState(false);
   const { isDark } = useTheme();

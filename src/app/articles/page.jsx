@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import ArticleItem from '@/components/templates/articles/ArticleItem';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import { headers } from 'next/headers';
@@ -12,7 +12,7 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
@@ -66,14 +66,14 @@ async function ArticlePage() {
       next: {
         revalidate: 7200, // 2 hours
       },
-    },
+    }
   );
   const result = await res.json();
   const articles = result.data;
 
   return (
     <div>
-      <Header />
+      <HeaderWrapper />
       <div className='container'>
         <PageTitle>مقالات</PageTitle>
         <div className='my-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'>

@@ -4,6 +4,11 @@ import { getShamsiDate } from '@/utils/dateTimeHelper';
 import Image from 'next/image';
 
 const CommentReplyCard = ({ className, reply }) => {
+  const avatar = reply?.user?.avatar || '/images/default-profile.png';
+  const username = reply?.user?.username || 'کاربر';
+  const date = reply?.createAt ? getShamsiDate(reply.createAt) : '';
+  const content = reply?.content || '';
+
   return (
     <div
       className={`rounded-xl bg-foreground-light p-2 sm:p-4 dark:bg-foreground-dark ${className}`}
@@ -11,25 +16,22 @@ const CommentReplyCard = ({ className, reply }) => {
       <div className='border-b border-gray-300 pb-3 sm:pb-4 dark:border-gray-600'>
         <div className='mr-3 flex items-center gap-1'>
           <Image
-            src={reply.user.avatar}
+            src={avatar}
             alt='user profile picture'
             width={240}
             height={240}
             className='h-8 w-8 rounded-full object-cover sm:h-12 sm:w-12'
           />
           <div className='flex flex-col gap-0 sm:gap-1'>
-            <h5 className='text-sm font-medium sm:text-base'>
-              {reply.user.username}
-            </h5>
+            <h5 className='text-sm font-medium sm:text-base'>{username}</h5>
             <span className='font-faNa text-xs font-thin text-subtext-light sm:text-sm dark:text-subtext-dark'>
-              {getShamsiDate(reply.createAt)}
+              {date}
             </span>
           </div>
         </div>
       </div>
-      <p className='m-2 text-xs font-light sm:m-4 sm:text-base'>
-        {reply.content}
-      </p>
+
+      <p className='m-2 text-xs font-light sm:m-4 sm:text-base'>{content}</p>
     </div>
   );
 };

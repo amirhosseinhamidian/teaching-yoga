@@ -2,11 +2,11 @@
 import React from 'react';
 import Image from 'next/image';
 import { HiOutlineUserCircle } from 'react-icons/hi2';
-import { useAuth } from '@/contexts/AuthContext';
 import NavRoutes from './NavRoutes';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const Sidebar = () => {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   return (
     <aside className='h-full min-h-screen w-64 bg-surface-light dark:bg-surface-dark'>
       <div className='flex items-center gap-1 p-4 md:p-6'>
@@ -16,7 +16,7 @@ const Sidebar = () => {
             alt='profile'
             width={50}
             height={50}
-            className='rounded-full'
+            className='h-9 w-9 rounded-full border xs:h-11 xs:w-11 sm:h-14 sm:w-14'
           />
         ) : (
           <HiOutlineUserCircle className='text-5xl text-subtext-light dark:text-subtext-dark' />

@@ -1,19 +1,18 @@
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
-import prismadb from '@/libs/prismadb'
-import { getServerSession } from 'next-auth'
-import { NextResponse } from 'next/server'
+import prismadb from '@/libs/prismadb';
+import { NextResponse } from 'next/server';
+import { getAuthUser } from '@/utils/getAuthUser';
 
 export async function GET(req, { params }) {
-  const { shortAddress } = params
+  const { shortAddress } = params;
 
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.userId || null
+  const authUser = getAuthUser();
+  const userId = authUser?.id || null;
 
   if (!userId) {
     return NextResponse.json(
       { error: 'User not authenticated.' },
       { status: 401 }
-    )
+    );
   }
 
   try {
@@ -21,9 +20,7 @@ export async function GET(req, { params }) {
     const userCourse = await prismadb.userCourse.findFirst({
       where: {
         userId,
-        course: {
-          shortAddress,
-        },
+        course: { shortAddress },
         status: 'ACTIVE',
       },
       include: {
@@ -36,7 +33,7 @@ export async function GET(req, { params }) {
                   include: {
                     sessionTerms: {
                       include: {
-                        session: true, // ❗ بدون فیلتر (Prisma اجازه فیلتر اینجا را نمی‌دهد)
+                        session: true,
                       },
                     },
                   },
@@ -46,23 +43,23 @@ export async function GET(req, { params }) {
           },
         },
       },
-    })
+    });
 
     if (!userCourse) {
       return NextResponse.json(
         { error: 'User has not purchased this course.' },
         { status: 403 }
-      )
+      );
     }
 
-    const terms = userCourse.course.courseTerms.map((ct) => ct.term)
+    const terms = userCourse.course.courseTerms.map((ct) => ct.term);
 
-    // 🔎 پیدا کردن اولین سشن معتبر داخل جاوااسکریپت
-    let firstValidSession = null
+    // پیدا کردن اولین سشن معتبر
+    let firstValidSession = null;
 
     for (const term of terms) {
       for (const st of term.sessionTerms) {
-        const s = st.session
+        const s = st.session;
 
         if (
           s &&
@@ -70,29 +67,29 @@ export async function GET(req, { params }) {
           ((s.type === 'VIDEO' && s.videoId) ||
             (s.type === 'AUDIO' && s.audioId))
         ) {
-          firstValidSession = s
-          break
+          firstValidSession = s;
+          break;
         }
       }
-      if (firstValidSession) break
+      if (firstValidSession) break;
     }
 
     if (!firstValidSession) {
       return NextResponse.json(
         { error: 'No valid session found for this course.' },
         { status: 404 }
-      )
+      );
     }
 
     return NextResponse.json({
       sessionId: firstValidSession.id,
       sessionType: firstValidSession.type,
-    })
+    });
   } catch (error) {
-    console.error('Error fetching first session:', error)
+    console.error('Error fetching first session:', error);
     return NextResponse.json(
       { error: 'Internal server error.' },
       { status: 500 }
-    )
+    );
   }
 }

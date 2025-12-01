@@ -1,35 +1,46 @@
-import { getServerSession } from 'next-auth';
+/* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
-import { authOptions } from '../auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
+import { getAuthUser } from '@/utils/getAuthUser';
 
+// =============================
+// GET → Fetch Article Comments
+// =============================
 export async function GET(request) {
   try {
     const { searchParams } = request.nextUrl;
-    const articleId = parseInt(searchParams.get('articleId'));
-    const page = parseInt(searchParams.get('page')) || 1;
+    const articleId = Number(searchParams.get('articleId'));
+    const page = Number(searchParams.get('page')) || 1;
 
-    const session = await getServerSession(authOptions);
-    const userId = session?.user?.userId || null;
-    const skip = (page - 1) * 6;
+    if (!articleId) {
+      return NextResponse.json(
+        { error: 'articleId is required' },
+        { status: 400 }
+      );
+    }
+
+    const authUser = getAuthUser();
+    const userId = authUser?.id || null;
+
+    const limit = 6;
+    const skip = (page - 1) * limit;
+
+    // Approved comments OR the user’s own comments
     const filters = {
-      articleId: Number(articleId),
+      articleId,
       parentId: null,
       OR: [{ status: 'APPROVED' }],
     };
 
-    // Add userId to filters if it exists
     if (userId) {
       filters.OR.push({ userId: userId });
     }
-    // Fetch main comments (where parentId is null)
+
     const comments = await prismadb.comment.findMany({
       where: filters,
-      skip: skip,
-      take: 6,
-      orderBy: {
-        createAt: 'desc',
-      },
+      skip,
+      take: limit,
+      orderBy: { createAt: 'desc' },
       include: {
         replies: {
           include: {
@@ -44,41 +55,60 @@ export async function GET(request) {
       where: filters,
     });
 
-    const commentsData = {
+    return NextResponse.json({
       comments,
       currentPage: page,
-      totalPages: Math.ceil(totalComments / 6),
+      totalPages: Math.ceil(totalComments / limit),
       totalComments,
-    };
-    return NextResponse.json(commentsData);
-  } catch (error) {
+    });
+  } catch (err) {
+    console.error('ARTICLE COMMENTS GET ERROR:', err);
     return NextResponse.json(
       { error: 'Error fetching comments' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
+// =============================
+// POST → Create Article Comment
+// =============================
 export async function POST(request) {
-  const body = await request.json();
-  const { articleId, content, userId } = body;
-
   try {
+    const authUser = getAuthUser();
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const body = await request.json();
+    const { articleId, content, parentId = null } = body;
+
+    if (!articleId || !content?.trim()) {
+      return NextResponse.json(
+        { error: 'articleId and content are required' },
+        { status: 400 }
+      );
+    }
+
     const newComment = await prismadb.comment.create({
       data: {
         articleId,
         content,
-        userId,
+        parentId,
+        userId: authUser.id, // from JWT
       },
-      include: {
-        user: true,
-      },
+      include: { user: true },
     });
+
     return NextResponse.json(newComment);
-  } catch (error) {
+  } catch (err) {
+    console.error('ARTICLE COMMENT POST ERROR:', err);
     return NextResponse.json(
       { error: 'Error creating comment' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

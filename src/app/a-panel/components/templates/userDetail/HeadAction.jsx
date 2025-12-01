@@ -12,7 +12,7 @@ const HeadAction = ({ user, onDeleteUser, onUpdateUser }) => {
         <Image
           src={user?.avatar ? user.avatar : '/images/default-profile.png'}
           alt={user.username}
-          className='rounded-full'
+          className='h-11 w-11 rounded-full border xs:h-12 xs:w-12 sm:h-14 sm:w-14'
           width={96}
           height={96}
         />

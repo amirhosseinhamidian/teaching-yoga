@@ -3,17 +3,19 @@
 import React, { useRef, useState } from 'react';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import { MdOutlineAddAPhoto } from 'react-icons/md';
-import { useAuth } from '@/contexts/AuthContext';
 import { getShamsiDate } from '@/utils/dateTimeHelper';
 import Image from 'next/image';
 import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useUserActions } from '@/hooks/auth/useUserActions';
 
 const ProfileHead = () => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { user, setUser } = useAuth();
+  const { user } = useAuthUser();
+  const { loadUser } = useUserActions();
   const [loadingUpload, setLoadingUpload] = useState(false);
 
   const fileInputRef = useRef(null);
@@ -41,7 +43,7 @@ const ProfileHead = () => {
           {
             method: 'POST',
             body: formData,
-          },
+          }
         );
 
         if (response.ok) {
@@ -56,11 +58,10 @@ const ProfileHead = () => {
               body: JSON.stringify({
                 avatar: avatarUrl.fileUrl,
               }),
-            },
+            }
           );
           if (updateResponse.ok) {
-            const updatedUser = await updateResponse.json();
-            setUser(updatedUser);
+            await loadUser();
             toast.showSuccessToast('آواتار با موفقیت آپلود شد');
           } else {
             toast.showErrorToast.error('خطا در آپلود تصویر');
@@ -87,10 +88,10 @@ const ProfileHead = () => {
           accept='image/*'
           onChange={handleFileChange}
         />
-        {user.avatar ? (
+        {user?.avatar ? (
           <div className='relative md:cursor-pointer' onClick={handleDivClick}>
             <Image
-              src={user.avatar}
+              src={user?.avatar}
               alt={user.username}
               width={256}
               height={256}
@@ -127,12 +128,12 @@ const ProfileHead = () => {
         )}
         <div className='flex flex-col gap-2'>
           <span className='text-sm font-semibold xs:text-lg'>
-            {user.firstname && user.lastname
+            {user?.firstname && user?.lastname
               ? `${user.firstname} ${user.lastname}`
-              : user.username}
+              : user?.username}
           </span>
           <span className='font-faNa text-2xs text-subtext-light xs:text-sm dark:text-subtext-dark'>
-            {`تاریخ عضویت: ${getShamsiDate(user.createAt)}`}
+            {`تاریخ عضویت: ${getShamsiDate(user?.createAt)}`}
           </span>
         </div>
       </div>

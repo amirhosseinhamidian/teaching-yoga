@@ -3,14 +3,18 @@
 import React, { useState } from 'react';
 import Input from '@/components/Ui/Input/Input';
 import Button from '@/components/Ui/Button/Button';
-import { useAuth } from '@/contexts/AuthContext';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { useUserActions } from '@/hooks/auth/useUserActions';
 
 const SectionEditProfile = () => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { user, setUser } = useAuth();
+
+  const { user } = useAuthUser();
+  const { loadUser } = useUserActions();
+
   const [isLoading, setIsLoading] = useState(false);
 
   const [username, setUsername] = useState(user?.username || '');
@@ -26,30 +30,21 @@ const SectionEditProfile = () => {
   const validateInputs = () => {
     let errors = {};
 
-    // Validation for username (required)
-    if (!username || username.trim() === '') {
+    if (!username.trim()) {
       errors.username = 'نام کاربری الزامی است.';
     }
 
-    // Validation for firstname (optional, minimum 2 characters)
-    if (firstname && firstname.trim() !== '') {
-      if (firstname.trim().length < 2) {
-        errors.firstname = 'نام باید حداقل 2 کاراکتر باشد.';
-      }
+    if (firstname.trim() && firstname.trim().length < 2) {
+      errors.firstname = 'نام باید حداقل 2 کاراکتر باشد.';
     }
 
-    // Validation for lastname (optional, minimum 3 characters)
-    if (lastname && lastname.trim() !== '') {
-      if (lastname.trim().length < 3) {
-        errors.lastname = 'نام خانوادگی باید حداقل 3 کاراکتر باشد.';
-      }
-
-      // Set errors state
-      setErrorMessages(errors);
-
-      // Return true if no errors exist
-      return Object.keys(errors).length === 0;
+    if (lastname.trim() && lastname.trim().length < 3) {
+      errors.lastname = 'نام خانوادگی باید حداقل 3 کاراکتر باشد.';
     }
+
+    setErrorMessages(errors);
+
+    return Object.keys(errors).length === 0;
   };
 
   const handleFormSubmit = async () => {
@@ -58,37 +53,30 @@ const SectionEditProfile = () => {
       return;
     }
 
-    const payload = {
-      firstname,
-      lastname,
-      username,
-    };
+    const payload = { firstname, lastname, username };
 
     setIsLoading(true);
+
     try {
       const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/${user.id}`;
       const response = await fetch(url, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
+
+      const data = await response.json();
+
       if (response.ok) {
-        const updatedUser = await response.json();
         toast.showSuccessToast('اطلاعات با موفقیت ویرایش شد');
-        setUser(updatedUser);
+
+        // 🔥 بارگذاری مجدد اطلاعات جدید کاربر
+        await loadUser();
       } else {
-        const errorData = await response.json();
-        if (errorData.field) {
-          toast.showErrorToast(`${errorData.error}`);
-          if (errorData.field === 'username') {
-            setErrorMessages({ username: errorData.error });
-          }
-        } else {
-          // پیام پیش‌فرض در صورت نبودن جزئیات
-          toast.showErrorToast('خطایی رخ داده است');
+        if (data.field === 'username') {
+          setErrorMessages({ username: data.error });
         }
+        toast.showErrorToast(data.error || 'خطایی رخ داده است');
       }
     } catch (error) {
       console.error('Unexpected error:', error);
@@ -109,16 +97,17 @@ const SectionEditProfile = () => {
         maxLength={20}
         className='bg-surface-light text-text-light placeholder:text-xs sm:w-2/3 placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
       />
+
       <Input
         label='نام خانوادگی'
-        placeholder='  نام خانوادگی را وارد کنید'
+        placeholder='نام خانوادگی را وارد کنید'
         value={lastname}
         onChange={setLastname}
         errorMessage={errorMessages.lastname}
-        thousandSeparator={true}
         maxLength={30}
         className='bg-surface-light text-text-light placeholder:text-xs sm:w-2/3 placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
       />
+
       <Input
         label='نام کاربری'
         placeholder='نام کاربری منحصر به فرد وارد کنید'

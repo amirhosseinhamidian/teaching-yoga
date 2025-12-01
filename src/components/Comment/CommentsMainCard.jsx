@@ -1,78 +1,88 @@
 /* eslint-disable no-undef */
 'use client';
+
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import CommentCard from './CommentCard';
 import OutlineButton from '../Ui/OutlineButton/OutlineButton';
 import { FaSpinner, FaAngleDown } from 'react-icons/fa6';
-import { useAuth } from '@/contexts/AuthContext';
 import CreateCommentCard from './CreateCommentCard';
 import EmptyComment from './EmptyComment';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const CommentsMainCard = ({ className, referenceId, isCourse }) => {
+  const { user } = useAuthUser();
+
   const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // فقط لود اولیه
+  const [pageLoading, setPageLoading] = useState(false); // لود صفحات بعدی
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [finishComments, setFinishComments] = useState(true);
-  const { user } = useAuth();
+
   const [showCreateCard, setShowCreateCard] = useState(false);
 
-  const createToggleHandler = () => {
-    setShowCreateCard((prev) => !prev);
-  };
+  // Toggle create card
+  const toggleCreateCard = () => setShowCreateCard((prev) => !prev);
 
+  // ⬇️ URL مناسب با نوع کامنت (course/article)
+  const commentsUrl = isCourse
+    ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`
+    : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments-article?articleId=${referenceId}&page=${page}`;
+
+  // ======================
+  // 🟦 Fetch Comments
+  // ======================
   useEffect(() => {
     const controller = new AbortController();
-    const fetchComments = async () => {
-      setLoading(true);
-      const url = isCourse
-        ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`
-        : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments-article?articleId=${referenceId}&page=${page}`;
+
+    const getComments = async () => {
+      if (page === 1) setLoading(true);
+      else setPageLoading(true);
+
       try {
-        const response = await fetch(url, {
+        const res = await fetch(commentsUrl, {
           signal: controller.signal,
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
           credentials: 'include',
         });
 
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
+        if (!res.ok) throw new Error('Failed to load comments');
+
+        const data = await res.json();
+
+        setComments((prev) =>
+          page === 1 ? data.comments : [...prev, ...data.comments]
+        );
+
+        setTotalPages(data.totalPages || 1);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          console.error('Error loading comments:', err);
         }
-        const data = await response.json();
-        setComments((prevComments) => [...prevComments, ...data.comments]);
-        setTotalPages(data.totalPages);
+      } finally {
         setLoading(false);
-        if (page >= data.totalPages) {
-          setFinishComments(true);
-        } else {
-          setFinishComments(false);
-        }
-      } catch (error) {
-        if (error.name !== 'AbortError') {
-          console.error('Error comment fetching =>', error.message);
-        }
+        setPageLoading(false);
       }
     };
 
-    fetchComments();
+    getComments();
 
-    return () => {
-      controller.abort();
-    };
-  }, [referenceId, page]);
+    return () => controller.abort();
+  }, [page, referenceId]);
 
-  const loadMoreComments = () => {
-    if (page < totalPages) {
-      setPage((prevPage) => prevPage + 1);
+  // ======================
+  // 🟦 Load More
+  // ======================
+  const loadMore = () => {
+    if (page < totalPages && !pageLoading) {
+      setPage((prev) => prev + 1);
     }
   };
 
+  // ======================
+  // 🟦 Add New Comment (Optimistic)
+  // ======================
   const addComment = (newComment) => {
-    setComments((prevComments) => [newComment, ...prevComments]);
+    setComments((prev) => [newComment, ...prev]);
   };
 
   return (
@@ -81,26 +91,32 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
     >
       <div className='flex items-baseline justify-between'>
         <h3 className='mb-4 font-semibold md:text-lg'>نظرات کاربران</h3>
+
         <OutlineButton
           className='text-2xs sm:text-sm'
-          onClick={createToggleHandler}
+          onClick={toggleCreateCard}
         >
           {showCreateCard ? 'بستن' : 'ایجاد نظر جدید'}
         </OutlineButton>
       </div>
+
+      {/* Create Comment Box */}
       {showCreateCard && (
         <CreateCommentCard
           user={user}
-          referenceId={referenceId}
-          onCloseClick={createToggleHandler}
-          onCommentAdded={addComment}
           isCourse={isCourse}
+          referenceId={referenceId}
+          onCloseClick={toggleCreateCard}
+          onCommentAdded={addComment}
         />
       )}
+
+      {/* Initial Loading */}
       {loading && page === 1 ? (
         <FaSpinner className='mx-auto my-4 animate-spin text-xl text-secondary md:text-3xl' />
       ) : (
         <>
+          {/* Render Comments */}
           {comments.map((comment) => (
             <CommentCard
               key={comment.id}
@@ -108,14 +124,16 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
               comment={comment}
             />
           ))}
-          {!finishComments && (
+
+          {/* Load more */}
+          {page < totalPages && (
             <OutlineButton
-              onClick={loadMoreComments}
+              onClick={loadMore}
               className='mx-auto my-6 flex items-center gap-2 text-sm'
-              disable={loading}
+              disable={pageLoading}
             >
               مشاهده بیشتر
-              {loading ? (
+              {pageLoading ? (
                 <FaSpinner className='animate-spin' />
               ) : (
                 <FaAngleDown />
@@ -124,6 +142,8 @@ const CommentsMainCard = ({ className, referenceId, isCourse }) => {
           )}
         </>
       )}
+
+      {/* Empty State */}
       {!loading && comments.length === 0 && (
         <EmptyComment isCourse={isCourse} />
       )}

@@ -1,9 +1,9 @@
 /* eslint-disable no-undef */
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
 import React from 'react';
 import AccessDeniedView from '@/components/templates/access-denied/AccessDeniedView';
 import { headers } from 'next/headers';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -11,7 +11,7 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
@@ -37,7 +37,7 @@ export async function generateMetadata() {
 async function AccessDeniedPage() {
   return (
     <div>
-      <Header />
+      <HeaderWrapper />
       <AccessDeniedView />
       <Footer />
     </div>

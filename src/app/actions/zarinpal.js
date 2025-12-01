@@ -18,45 +18,29 @@ const createPayment = async ({ amountInRial, mobile, description }) => {
             mobile,
           },
         }),
-      },
+      }
     );
 
     const data = await response.json();
 
+    // ❌ زرین پال خطا داده → authority وجود ندارد
+    if (!data.data || !data.data.authority) {
+      console.error('Zarinpal Error:', data.errors);
+      throw new Error(data.errors?.message || 'خطا در ایجاد تراکنش');
+    }
+
+    const authority = data.data.authority;
+
     return {
-      paymentUrl: process.env.ZARINPAL_PAYMENT_BASE_URL + data.data.authority,
-      authority: data.data.authority,
+      authority,
+      paymentUrl: `${process.env.ZARINPAL_PAYMENT_BASE_URL}${authority}`,
     };
   } catch (error) {
     console.error('create payment error =>', error);
-  }
-};
-
-const verifyPayment = async ({ amountInRial, authority }) => {
-  try {
-    const response = await fetch(
-      `${process.env.ZARINPAL_API_BASE_URL}/verify.json`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          merchant_id: process.env.ZARINPAL_PAYMENT_MERCHANT_ID,
-          amount: amountInRial,
-          authority,
-        }),
-      },
-    );
-    const data = await response.json();
-
-    return data;
-  } catch (error) {
-    return error.response?.data || error;
+    throw error; // ❗ مهم: جلوی undefined را می‌گیرد
   }
 };
 
 module.exports = {
   createPayment,
-  verifyPayment,
 };

@@ -1,188 +1,202 @@
 'use client';
+
 import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
-import { useAuth } from '@/contexts/AuthContext';
+import { useUserForm } from '@/hooks/auth/useUserForm';
+import { useUserActions } from '@/hooks/auth/useUserActions';
+import { useCartActions } from '@/hooks/cart/useCartActions';
 import { countdown } from '@/utils/countdown';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
 import React, { useEffect, useState } from 'react';
 import { FaArrowRight } from 'react-icons/fa6';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { updateUser } from '@/app/actions/updateUser';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const ConfirmCodeContent = () => {
-  const { userPhone, username, token, setToken, setUser } = useAuth();
-  const [confirmCode, setConfirmCode] = useState('');
-  const [time, setTime] = useState('02:00');
-  const [isFinished, setIsFinished] = useState(false);
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTryAgain, setShowTryAgain] = useState(false);
+
+  // وضعیت کاربر (اگر لاگین بود ریدایرکت می‌کنیم)
+  const { user } = useAuthUser();
+
+  // state های موقت فرم
+  const { phone, username, otpToken, setOtpToken, clearForm } = useUserForm();
+
+  // اکشن های Redux
+  const { verifyOtp, signupUser, loginOtp, loadUser } = useUserActions();
+  const { fetchCart } = useCartActions();
+
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
+  const [confirmCode, setConfirmCode] = useState('');
+  const [time, setTime] = useState('02:00');
+  const [isFinished, setIsFinished] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // جلوگیری از ورود مستقیم بدون otpToken
   useEffect(() => {
-    handleStartTimer();
-  }, []);
+    // hydration check
+    console.log('token in confirm code page ========> ', otpToken);
+    if (otpToken === undefined) return;
 
-  const handleStartTimer = async () => {
-    setIsFinished(false);
-    setTime('02:00');
-    await countdown(120, (updatedTime) => {
-      setTime(updatedTime); // Restart countdown and update time with each tick
-      if (updatedTime === '00:01') {
-        setShowTryAgain(true);
-      }
-    }).then((result) => {
-      setTime(result.time);
-      setIsFinished(result.isFinished);
-    });
-  };
-
-  useEffect(() => {
-    if (token === -1 && !showTryAgain) {
-      router.replace('/login');
-    }
-  }, [token, router]);
-
-  const backwardHandle = () => {
-    setToken(-1);
-    router.back();
-  };
-
-  const loginHandle = async () => {
-    if (!confirmCode) {
-      toast.showErrorToast('لطفاً کد تایید را وارد کنید.');
+    if (user) {
+      router.replace('/');
       return;
     }
 
+    if (!otpToken) {
+      router.replace('/login');
+      return;
+    }
+
+    startTimer();
+  }, [otpToken, user]);
+
+  // برگشت
+  const backwardHandle = () => {
+    clearForm();
+    router.back();
+  };
+
+  // تایمر
+  const startTimer = async () => {
+    setIsFinished(false);
+    setTime('02:00');
+
+    await countdown(120, (t) => setTime(t)).then((res) => {
+      setTime(res.time);
+      setIsFinished(res.isFinished);
+    });
+  };
+
+  // ارسال OTP دوباره
+  const tryAgainHandle = async () => {
+    startTimer();
+
+    const req = await fetch('/api/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    });
+
+    const data = await req.json();
+
+    if (!data.success) {
+      toast.showErrorToast(data.error || 'ارسال مجدد کد ناموفق بود.');
+      return;
+    }
+
+    setOtpToken(data.token);
+  };
+
+  // مرحله اصلی ورود
+  const loginHandle = async () => {
     if (confirmCode.length !== 5) {
-      toast.showErrorToast('لطفاً کد تایید را به طور کامل وارد کنید.');
+      toast.showErrorToast('کد تایید باید ۵ رقمی باشد.');
       return;
     }
 
     setIsSubmitting(true);
 
-    const response = await fetch('/api/verify-code', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        phone: userPhone,
-        code: confirmCode,
-      }),
-    });
+    try {
+      // -----------------------
+      // 1) Verify OTP
+      // -----------------------
+      const verify = await verifyOtp({ phone, code: confirmCode });
 
-    const data = await response.json();
-    if (data.success) {
-      if (username) {
-        const signupRes = await fetch('/api/signup', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            username,
-            userPhone,
-          }),
-        });
-
-        const data = await signupRes.json();
-
-        if (data.success) {
-          toast.showSuccessToast('ثبت نام با موفقیت انجام شد');
-        } else {
-          toast.showErrorToast('خطا در ثبت نام.');
-        }
-      }
-
-      const result = await signIn('credentials', {
-        redirect: false,
-        phone: userPhone,
-        code: confirmCode,
-      });
-
-      if (result?.ok) {
-        await updateUser(setUser);
-        toast.showSuccessToast('با موفقیت وارد شدید');
-        const previousPage = sessionStorage.getItem('previousPage');
-        sessionStorage.removeItem('previousPage');
-        router.replace(previousPage);
-      } else {
+      if (verify.meta.requestStatus !== 'fulfilled') {
         toast.showErrorToast('کد تایید نادرست است.');
+        setIsSubmitting(false);
+        return;
       }
-    } else {
-      toast.showErrorToast('کد تأیید نامعتبر است. لطفاً دوباره امتحان کنید.');
+
+      // -----------------------
+      // 2) Signup (اگر username وجود داشت یعنی کاربر جدید است)
+      // -----------------------
+      if (username) {
+        const sign = await signupUser({ username, phone });
+
+        if (sign.meta.requestStatus !== 'fulfilled') {
+          toast.showErrorToast('ثبت نام ناموفق بود.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.showSuccessToast('ثبت نام موفقیت‌آمیز بود');
+      }
+
+      // -----------------------
+      // 3) Login OTP → سرور کوکی ایجاد می‌کند
+      // -----------------------
+      const login = await loginOtp({ phone });
+
+      if (login.meta.requestStatus !== 'fulfilled') {
+        toast.showErrorToast('ورود ناموفق بود.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      // -----------------------
+      // 4) Load full user profile
+      // -----------------------
+      await loadUser();
+
+      // 5) Load cart from server
+      await fetchCart();
+
+      toast.showSuccessToast('با موفقیت وارد شدید');
+
+      const previousPage = sessionStorage.getItem('previousPage') || '/';
+      sessionStorage.removeItem('previousPage');
+
+      clearForm();
+      router.replace(previousPage);
+    } catch (err) {
+      toast.showErrorToast('خطا در ارتباط با سرور.');
     }
 
     setIsSubmitting(false);
   };
 
-  const tryAgainHandle = async () => {
-    try {
-      handleStartTimer();
-      setShowTryAgain(false);
-      const response = await fetch('/api/send-otp', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ phone: userPhone }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setToken(data.token);
-      } else {
-        if (data.error) {
-          toast.showErrorToast(data.error); // Show the error message from the API
-        } else {
-          toast.showErrorToast('ارسال کد ناموفق بود، لطفاً دوباره تلاش کنید');
-        }
-      }
-    } catch (error) {
-      toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
-    }
-  };
   return (
     <div className='flex h-svh items-center justify-center'>
       <div className='relative rounded-2xl bg-surface-light p-12 dark:bg-surface-dark'>
         <FaArrowRight
           onClick={backwardHandle}
-          className='absolute top-20 text-xl text-text-light md:cursor-pointer dark:text-text-dark'
+          className='absolute top-20 text-xl text-text-light dark:text-text-dark'
         />
+
         <Logo size='large' className='justify-center' />
-        <h3 className='mt-4 text-xl font-semibold text-text-light dark:text-text-dark'>
-          ورود
-        </h3>
-        <p className='mt-3 text-xs text-text-light dark:text-text-dark'>
-          کد تایید برای شماره{' '}
-          <span className='font-faNa font-bold'>{userPhone}</span> ارسال شد
+
+        <h3 className='mt-4 text-xl font-semibold'>تایید کد</h3>
+
+        <p className='mt-3 text-xs'>
+          کد تأیید برای شماره
+          <span className='font-faNa font-bold'> {phone} </span>
+          ارسال شد
         </p>
+
         <Input
           value={confirmCode}
           onChange={setConfirmCode}
           fullWidth
           placeholder='کد تایید'
-          focus
-          onEnterPress={loginHandle}
           type='number'
-          className='mt-12 text-lg md:min-w-64'
           maxLength={5}
+          onEnterPress={loginHandle}
+          className='mt-12 text-lg md:min-w-64'
         />
 
         {!isFinished ? (
           <p className='mt-4 text-center text-xs'>
-            <span className='font-faNa text-base'>{time} </span> مانده تا دریافت
-            مجدد کد
+            <span className='font-faNa text-base'>{time}</span> مانده تا دریافت
+            دوباره کد
           </p>
         ) : (
           <p
-            className='mt-4 text-center text-sm text-blue hover:underline md:cursor-pointer'
+            className='mt-4 cursor-pointer text-center text-sm text-blue hover:underline'
             onClick={tryAgainHandle}
           >
             دریافت مجدد کد

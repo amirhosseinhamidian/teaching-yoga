@@ -1,5 +1,5 @@
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import CreateTicket from '@/components/templates/ticket/CreateTicket';
 import React from 'react';
 
@@ -13,7 +13,7 @@ export async function generateMetadata() {
 async function TicketCreatePage() {
   return (
     <div>
-      <Header />
+      <HeaderWrapper />
       <CreateTicket />
       <Footer />
     </div>

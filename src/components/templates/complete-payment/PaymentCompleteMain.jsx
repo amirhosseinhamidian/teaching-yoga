@@ -8,12 +8,11 @@ import PaymentSuccessfully from '@/components/templates/complete-payment/Payment
 import PaymentFailed from '@/components/templates/complete-payment/PaymentFailed';
 import { ImSpinner2 } from 'react-icons/im';
 import { updateUser } from '@/app/actions/updateUser';
-import { useAuth } from '@/contexts/AuthContext';
 
 async function fetchPaymentDetails(token) {
   try {
     const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-details?token=${token}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-details?token=${token}`
     );
     if (!res.ok) {
       throw new Error(`Failed to fetch payment details: ${res.status}`);
@@ -28,7 +27,6 @@ async function fetchPaymentDetails(token) {
 const PaymentCompleteMain = ({ token, status }) => {
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState(null);
-  const { setUser } = useAuth();
 
   const fetchDetails = async () => {
     try {
@@ -48,7 +46,7 @@ const PaymentCompleteMain = ({ token, status }) => {
         setLoading(true);
         try {
           await fetchDetails();
-          await updateUser(setUser);
+          await updateUser();
         } catch (error) {
           console.error('Error fetching details or updating user:', error);
         } finally {

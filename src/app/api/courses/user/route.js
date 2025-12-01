@@ -1,20 +1,19 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getAuthUser } from '@/utils/getAuthUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || !session?.user || !session.user?.userId) {
+    const authUser = getAuthUser();
+    const userId = authUser?.id || null;
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.userId;
-
-    // دریافت دوره‌های کاربر همراه با ترم‌ها و جلسات جدید (sessionTerms)
+    // دریافت دوره‌های کاربر همراه با ترم‌ها و جلسات
     const userCourses = await prismadb.userCourse.findMany({
       where: { userId },
       select: {
@@ -54,7 +53,7 @@ export async function GET() {
       return NextResponse.json([], { status: 200 });
     }
 
-    // پردازش پیشرفت دوره
+    // پردازش پیشرفت هر دوره
     const courseProgress = userCourses.map((userCourse) => {
       const course = userCourse.course;
 
@@ -64,21 +63,18 @@ export async function GET() {
       course.courseTerms.forEach((courseTerm) => {
         const term = courseTerm.term;
 
-        // تبدیل sessionTerms → sessions[] برای سازگاری با منطق قبلی
         const sessions =
-          term.sessionTerms
-            ?.map((st) => st.session)
-            .filter(Boolean) || [];
+          term.sessionTerms?.map((st) => st.session).filter(Boolean) || [];
 
         sessions.forEach((session) => {
           totalSessions += 1;
-          if (session.sessionProgress[0]?.isCompleted) {
+          if (session.sessionProgress?.[0]?.isCompleted) {
             completedSessions += 1;
           }
         });
       });
 
-      const progressPercentage =
+      const progress =
         totalSessions > 0
           ? Math.ceil((completedSessions / totalSessions) * 100)
           : 0;
@@ -88,16 +84,16 @@ export async function GET() {
         courseTitle: course.title,
         courseCover: course.cover,
         shortAddress: course.shortAddress,
-        progress: progressPercentage,
+        progress,
       };
     });
 
     return NextResponse.json(courseProgress, { status: 200 });
   } catch (error) {
-    console.error('خطا در بازیابی پیشرفت دوره:', error);
+    console.error('Course progress error:', error);
     return NextResponse.json(
-      { error: 'بازیابی پیشرفت دوره با شکست مواجه شد' },
-      { status: 500 },
+      { error: 'Failed to fetch course progress.' },
+      { status: 500 }
     );
   }
 }

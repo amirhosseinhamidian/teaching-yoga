@@ -1,13 +1,13 @@
 'use client';
 import React from 'react';
 import PropTypes from 'prop-types';
-import { useAuth } from '@/contexts/AuthContext';
 import Image from 'next/image';
 import { getShamsiDate } from '@/utils/dateTimeHelper';
 import { RiQuestionAnswerLine } from 'react-icons/ri';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const QuestionSliderItem = ({ question }) => {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-wrap items-center gap-2'>
@@ -29,7 +29,7 @@ const QuestionSliderItem = ({ question }) => {
               alt={user.username}
               width={256}
               height={256}
-              className='h-14 w-14 rounded-full'
+              className='h-11 w-11 rounded-full border xs:h-12 xs:w-12 sm:h-14 sm:w-14'
             />
             <div className='flex flex-col'>
               <span className='text-sm sm:text-base'>{user.username}</span>

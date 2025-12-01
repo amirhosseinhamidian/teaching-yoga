@@ -1,127 +1,70 @@
-/* eslint-disable no-undef */
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import CourseItemsCard from '@/components/templates/cart/CourseItemsCard';
-import DetailOrderCard from '@/components/templates/cart/DetailOrderCard';
+import React from 'react';
+
+import CourseItemsCard from './CourseItemsCard';
+import DetailOrderCard from './DetailOrderCard';
+
 import PageCheckoutTitle from '@/components/Ui/PageCheckoutTitle/PageCheckoutTitle';
 import { GoAlert } from 'react-icons/go';
 import { BsHandbag } from 'react-icons/bs';
 import { ImSpinner2 } from 'react-icons/im';
 
-const fetchCartData = async () => {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cart`,
-      {
-        cache: 'no-store', // جلوگیری از کش شدن داده‌ها
-        method: 'GET',
-      },
+import { useCart } from '@/hooks/cart/useCart';
+
+export default function CartMain() {
+  const { items, loading } = useCart();
+
+  const hasItems = items && items.length > 0;
+
+  if (loading) {
+    return (
+      <div className='my-28 flex min-h-48 w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>
+        <ImSpinner2 size={46} className='animate-spin text-secondary' />
+        <h2 className='text-center text-base font-semibold text-secondary md:text-xl'>
+          در حال دریافت اطلاعات سبد خرید...
+        </h2>
+      </div>
     );
-
-    if (!res.ok) {
-      throw new Error('Failed to fetch cart data');
-    }
-
-    return res.json();
-  } catch (error) {
-    console.error(error);
-    return null;
   }
-};
-
-const checkDiscountCodeApplied = async () => {
-  try {
-    await fetch('/api/apply-discount-code', {
-      method: 'PATCH',
-    });
-  } catch (error) {
-    console.error(error);
-  }
-};
-
-const CartMain = () => {
-  const [cartData, setCartData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // بارگذاری داده‌ها در زمان اولین رندر کامپوننت
-  useEffect(() => {
-    const loadCartData = async () => {
-      setIsLoading(true);
-      await checkDiscountCodeApplied();
-      const data = await fetchCartData();
-
-      if (data) {
-        setCartData(data.cart); // ذخیره داده‌های سبد خرید
-      } else {
-        console.error('Error in Fetch Cart Data');
-      }
-      setIsLoading(false);
-    };
-
-    loadCartData();
-  }, []);
-
-  const handleDeleteItem = async () => {
-    const updatedCartData = await fetchCartData();
-    if (updatedCartData) {
-      setCartData(updatedCartData.cart); // به‌روزرسانی سبد خرید پس از حذف آیتم
-    } else {
-      console.error('خطا در به‌روزرسانی سبد خرید.');
-    }
-  };
 
   return (
     <div className='container'>
-      {isLoading ? (
+      {hasItems ? (
+        <>
+          <PageCheckoutTitle isSuccess={true} icon={BsHandbag}>
+            سبد خرید
+          </PageCheckoutTitle>
+
+          <div className='mb-5 mt-4 grid grid-cols-1 gap-10 md:mb-8 md:mt-8 md:grid-cols-2 lg:gap-28'>
+            {/* لیست دوره‌ها */}
+            <CourseItemsCard className='order-last self-start md:order-first' />
+
+            {/* بخش پرداخت + کد تخفیف */}
+            <DetailOrderCard className='order-first self-start md:order-last' />
+          </div>
+
+          {/* پیام آموزشی */}
+          <div className='mb-10 flex items-start gap-1 text-blue md:mb-16'>
+            <GoAlert size={56} className='ml-2 min-h-6 min-w-6' />
+            <p className='text-xs'>
+              هزینه دوره‌ها براساس ترم‌های آن محاسبه می‌شود. در صورتی که
+              دوره‌هایی با ترم یا ترم‌های مشابه در سبد خرید باشد، هزینه آن
+              یک‌بار محاسبه می‌شود. همچنین اگر ترمی در سبد خرید وجود داشته باشد
+              که قبلاً توسط شما خریداری شده باشد، هزینه آن از دوره جدید کسر
+              خواهد شد.
+            </p>
+          </div>
+        </>
+      ) : (
+        // سبد خرید خالی
         <div className='my-28 flex min-h-48 w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>
-          <ImSpinner2 size={46} className='animate-spin text-secondary' />
+          <BsHandbag size={46} className='text-secondary' />
           <h2 className='text-center text-base font-semibold text-secondary md:text-xl'>
-            در حال دریافت اطلاعات سبد خرید...
+            سبد خرید شما خالی است.
           </h2>
         </div>
-      ) : (
-        <>
-          {cartData && cartData?.courses.length !== 0 ? (
-            <>
-              <PageCheckoutTitle isSuccess={true} icon={BsHandbag}>
-                سبد خرید
-              </PageCheckoutTitle>
-              <div className='mb-5 mt-4 grid grid-cols-1 gap-10 md:mb-8 md:mt-8 md:grid-cols-2 lg:gap-28'>
-                <CourseItemsCard
-                  data={cartData}
-                  className='order-last self-start md:order-first'
-                  onDeleteItem={handleDeleteItem}
-                />
-                <DetailOrderCard
-                  data={cartData}
-                  setCartData={setCartData} // ارسال تابع برای به‌روزرسانی داده‌ها
-                  className='order-first self-start md:order-last'
-                />
-              </div>
-              <div className='mb-10 flex items-start gap-1 text-blue md:mb-16'>
-                <GoAlert size={56} className='ml-2 min-h-6 min-w-6' />
-                <p className='text-xs'>
-                  هزینه دوره‌ها براساس ترم‌های آن محاسبه می‌شود. در صورتی که
-                  دوره‌هایی با ترم یا ترم‌های مشابه در سبد خرید باشد، هزینه آن
-                  یک‌بار محاسبه می‌شود. همچنین اگر ترمی در سبد خرید وجود داشته
-                  باشد که قبلاً توسط شما خریداری شده باشد، هزینه آن از دوره جدید
-                  کسر خواهد شد.
-                </p>
-              </div>
-            </>
-          ) : (
-            <div className='my-28 flex min-h-48 w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light p-4 dark:bg-surface-dark'>
-              <BsHandbag size={46} className='text-secondary' />
-              <h2 className='text-center text-base font-semibold text-secondary md:text-xl'>
-                سبد خرید شما خالی است.
-              </h2>
-            </div>
-          )}
-        </>
       )}
     </div>
   );
-};
-
-export default CartMain;
+}

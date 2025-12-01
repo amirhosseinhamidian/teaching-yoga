@@ -2,11 +2,11 @@
 /* eslint-disable no-undef */
 import React from 'react';
 
-import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
 import Image from 'next/image';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
 import SuggestionCourses from '@/components/templates/articles/SuggestionCourses';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/articles/${shortAddress}`,
     {
       method: 'GET',
-    },
+    }
   );
 
   // اطلاعات پیش‌فرض
@@ -68,7 +68,7 @@ const fetchArticleData = async (shortAddress) => {
         next: {
           revalidate: 7200, // 2 hours
         },
-      },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to fetch article data');
@@ -89,7 +89,7 @@ async function ArticleDetailPage({ params }) {
   const article = await fetchArticleData(shortAddress);
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <div className='container relative grid grid-cols-1 md:grid-cols-3 md:gap-6 xl:grid-cols-4'>
         <main className='col-span-1 md:col-span-2 xl:col-span-3'>
           <div className='my-8 flex w-full justify-center'>

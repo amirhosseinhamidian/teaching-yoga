@@ -29,12 +29,11 @@ import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
 import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
 import { headers } from 'next/headers';
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { getAuthUser } from '@/utils/getAuthUser';
 import CoursePriceCard from '@/components/CourseCards/CoursePriceCard';
 import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
 import { formatTime } from '@/utils/dateTimeHelper';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -44,7 +43,7 @@ export async function generateMetadata({ params }) {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   // اطلاعات پیش‌فرض
@@ -98,7 +97,7 @@ const fetchCourseData = async (shortAddress) => {
         next: {
           revalidate: 7200, // 2 hours
         },
-      },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to fetch course data');
@@ -117,7 +116,7 @@ const fetchCourseData = async (shortAddress) => {
 const checkUserBuyCourse = async (shortAddress, userId) => {
   try {
     const purchaseResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`,
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`
     );
     if (!purchaseResponse.ok) {
       const errorData = await purchaseResponse.json();
@@ -137,14 +136,12 @@ const checkUserBuyCourse = async (shortAddress, userId) => {
 };
 
 async function page({ params }) {
-  const session = await getServerSession(authOptions);
+  const user = getAuthUser();
+  const userId = user?.id || null;
   const { shortAddress } = params;
 
   const { course, videoLink } = await fetchCourseData(shortAddress);
-  const isUserPurchased = await checkUserBuyCourse(
-    shortAddress,
-    session?.user.userId,
-  );
+  const isUserPurchased = await checkUserBuyCourse(shortAddress, userId);
 
   if (!course) {
     redirect('/not-found');
@@ -196,7 +193,7 @@ async function page({ params }) {
 
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <div className='container'>
         <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
           <div className='flex flex-col justify-between lg:col-span-1'>

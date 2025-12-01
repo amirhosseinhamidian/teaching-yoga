@@ -1,9 +1,9 @@
 import React from 'react';
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
 import Image from 'next/image';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import Link from 'next/link';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   return {
@@ -15,7 +15,7 @@ export async function generateMetadata() {
 async function NotFound() {
   return (
     <div>
-      <Header />
+      <HeaderWrapper />
       <div className='flex flex-col gap-6 py-16'>
         <div className='flex flex-wrap items-center justify-center gap-4'>
           <h1 className='font-faNa text-4xl font-bold opacity-30 xs:text-6xl sm:text-7xl'>

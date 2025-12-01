@@ -1,37 +1,40 @@
 /* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '../auth/[...nextauth]/route';
 import prismadb from '@/libs/prismadb';
 import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
+import { getAuthUser } from '@/utils/getAuthUser';
 
 export async function POST(request) {
   try {
     const { courseId, sessionId, questionText } = await request.json();
 
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    // احراز هویت کاربر
+    const authUser = getAuthUser();
+    if (!authUser?.id) {
       return NextResponse.json(
         { message: 'برای ارسال سؤال باید وارد حساب کاربری شوید.' },
-        { status: 401 },
+        { status: 401 }
       );
     }
 
+    // ثبت سؤال
     await prismadb.question.create({
       data: {
-        userId: session.user.userId,
+        userId: authUser.id,
         courseId: Number(courseId),
-        sessionId: sessionId,
-        questionText: questionText,
+        sessionId,
+        questionText,
       },
     });
 
+    // اطلاع‌رسانی به ادمین‌ها
     try {
       const preview = questionText.replace(/<[^>]*>/g, '').slice(0, 120);
       const threadUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/a-panel/questions`;
+
       await notifyAdminsNewMessage(
         threadUrl,
-        `سؤال جدید از ${session.user.name || 'کاربر'}`,
+        `سؤال جدید از ${authUser.username || 'کاربر'}`,
         preview || 'بدون متن'
       );
     } catch (err) {
@@ -56,18 +59,20 @@ export async function POST(request) {
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    // احراز هویت
+    const authUser = getAuthUser();
+    if (!authUser?.id) {
       return NextResponse.json(
-        { message: 'You must be logged in to ask a question.' },
-        { status: 401 },
+        { message: 'برای مشاهده سؤالات ابتدا باید وارد شوید.' },
+        { status: 401 }
       );
     }
 
+    const userId = authUser.id;
+
+    // دریافت سؤالات کاربر
     const allQuestions = await prismadb.question.findMany({
-      where: {
-        userId: session.user.userId,
-      },
+      where: { userId },
       include: {
         course: {
           select: {
@@ -87,58 +92,43 @@ export async function GET() {
         session: {
           select: {
             name: true,
-            // ❗ حذف شد: term
-            // ❗ اضافه شد: sessionTerms → term
             sessionTerms: {
               select: {
                 term: {
-                  select: {
-                    name: true,
-                  },
+                  select: { name: true },
                 },
               },
             },
           },
         },
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
 
-    // پردازش سوالات
+    // تبدیل به خروجی مناسب
     const processQuestions = (questions) =>
-      questions.map((question) => {
-        const termName =
-          question.session?.sessionTerms?.[0]?.term?.name || 'N/A';
-
-        return {
-          id: question.id,
-          questionText: question.questionText,
-          answerText: question.answerText,
-          isAnswered: question.isAnswered,
-          isReadByUser: question.isReadByUser,
-          answeredAt: question.answeredAt,
-          createdAt: question.createdAt,
-          updatedAt: question.updatedAt,
-          courseTitle: question.course.title,
-          instructorUsername: question.course.instructor.user.username,
-          instructorAvatar: question.course.instructor.user.avatar,
-          sessionName: question.session?.name || 'N/A',
-          termName: termName,
-        };
-      });
+      questions.map((q) => ({
+        id: q.id,
+        questionText: q.questionText,
+        answerText: q.answerText,
+        isAnswered: q.isAnswered,
+        isReadByUser: q.isReadByUser,
+        answeredAt: q.answeredAt,
+        createdAt: q.createdAt,
+        updatedAt: q.updatedAt,
+        courseTitle: q.course.title,
+        instructorUsername: q.course.instructor.user.username,
+        instructorAvatar: q.course.instructor.user.avatar,
+        sessionName: q.session?.name || 'N/A',
+        termName: q.session?.sessionTerms?.[0]?.term?.name || 'N/A',
+      }));
 
     const all = processQuestions(allQuestions);
-
     const unread = processQuestions(
-      allQuestions.filter(
-        (question) => !question.isReadByUser && question.isAnswered,
-      ),
+      allQuestions.filter((q) => !q.isReadByUser && q.isAnswered)
     );
-
     const unanswered = processQuestions(
-      allQuestions.filter((question) => !question.isAnswered),
+      allQuestions.filter((q) => !q.isAnswered)
     );
 
     return NextResponse.json({
@@ -148,6 +138,6 @@ export async function GET() {
     });
   } catch (error) {
     console.error('Error fetching questions:', error);
-    return NextResponse.error();
+    return NextResponse.json({ message: 'خطای داخلی سرور' }, { status: 500 });
   }
 }

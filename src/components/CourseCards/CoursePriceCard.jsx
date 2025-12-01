@@ -6,37 +6,13 @@ import Button from '../Ui/Button/Button';
 import Price from '../Price/Price';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { updateUser } from '@/app/actions/updateUser';
 import Modal from '../modules/Modal/Modal';
 import { LuLogIn } from 'react-icons/lu';
 import { usePathname, useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
 
-async function addCourseToCart(courseId) {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cart`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ courseId }),
-      },
-    );
-
-    if (!response.ok) {
-      const error = await response.json();
-      return { success: false, error: error.message };
-    }
-
-    const data = await response.json();
-    return { success: true, cart: data };
-  } catch (error) {
-    console.error('Error in API call:', error.message);
-    return { success: false, error: error.message };
-  }
-}
+import { addToCart } from '@/libs/redux/features/cartSlice'; // ✔️ مسیر صحیح
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const CoursePriceCard = ({
   className,
@@ -46,33 +22,51 @@ const CoursePriceCard = ({
   courseId,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+
+  const { isAuthenticated } = useAuthUser(); // ✔️ مهم
   const pathname = usePathname();
   const router = useRouter();
-  const { user, setUser } = useAuth();
+  const dispatch = useDispatch();
+
+  // -------------------------
+  // Add to Cart Handler
+  // -------------------------
   const handleAddCourseToCart = async () => {
-    if (!user) {
+    if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
+
     setIsLoading(true);
-    const result = await addCourseToCart(courseId);
+
+    const result = await dispatch(addToCart(courseId));
     setIsLoading(false);
-    if (result.success) {
-      await updateUser(setUser);
-      toast.showSuccessToast(result.cart.message);
+
+    if (result.meta.requestStatus === 'fulfilled') {
+      toast.showSuccessToast('به سبد خرید اضافه شد!');
       router.push('/cart');
     } else {
-      toast.showErrorToast(result.error);
+      const errorMessage =
+        result.payload?.message ||
+        result.payload ||
+        'خطا در افزودن به سبد خرید';
+
+      toast.showErrorToast(errorMessage);
     }
   };
 
+  // -------------------------
+  // Login Redirect Handler
+  // -------------------------
   const loginHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
     router.push('/login');
   };
+
   return (
     <div
       className={`mx-auto rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark ${className}`}
@@ -80,6 +74,7 @@ const CoursePriceCard = ({
       <h4 className='mr-4 text-xs font-semibold text-subtext-light sm:text-sm dark:text-subtext-dark'>
         هزینه و ثبت نام
       </h4>
+
       <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
         <Button
           shadow
@@ -89,6 +84,7 @@ const CoursePriceCard = ({
         >
           ثبت نام
         </Button>
+
         <Price
           className='ml-4'
           discount={discount}
@@ -96,6 +92,7 @@ const CoursePriceCard = ({
           price={price}
         />
       </div>
+
       {showLoginModal && (
         <Modal
           title='ثبت نام یا ورود به حساب کاربری'

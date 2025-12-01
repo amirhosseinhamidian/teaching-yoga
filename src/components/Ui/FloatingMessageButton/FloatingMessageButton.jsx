@@ -10,9 +10,9 @@ import UserMessage from './UserMessage';
 import SupportMessage from './SupportMessage';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
-import { useSession } from 'next-auth/react';
 import { getAnonymousId } from '@/utils/localStorageHelper';
 import { BiSupport } from 'react-icons/bi';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY; // Base64 URL-safe
 
@@ -21,7 +21,8 @@ function urlBase64ToUint8Array(base64String) {
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
   const rawData = typeof window !== 'undefined' ? atob(base64) : '';
   const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+  for (let i = 0; i < rawData.length; ++i)
+    outputArray[i] = rawData.charCodeAt(i);
   return outputArray;
 }
 
@@ -68,7 +69,8 @@ function detectEnvHint() {
 export default function FloatingMessageButton() {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { data: session } = useSession();
+  const { user: authUser } = useAuthUser();
+  const userId = authUser?.id || null;
 
   const [open, setOpen] = useState(false);
   const [message, setMessage] = useState('');
@@ -81,7 +83,9 @@ export default function FloatingMessageButton() {
 
   // Push Notifications
   const [notifPermission, setNotifPermission] = useState(
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+    typeof window !== 'undefined' && 'Notification' in window
+      ? Notification.permission
+      : 'default'
   );
   const [pushSupported, setPushSupported] = useState(false);
   const [pushEnabled, setPushEnabled] = useState(false);
@@ -141,7 +145,8 @@ export default function FloatingMessageButton() {
     setIsSending(true);
     try {
       const payload = { content: message.trim() };
-      if (!session?.user?.userId) payload.anonymousId = getAnonymousId();
+      if (userId) payload.userId = userId;
+      else payload.anonymousId = getAnonymousId();
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/support-message`,
@@ -178,7 +183,6 @@ export default function FloatingMessageButton() {
     const handleEsc = (e) => e.key === 'Escape' && setOpen(false);
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Infinite scroll (older)
@@ -196,7 +200,6 @@ export default function FloatingMessageButton() {
     };
     el.addEventListener('scroll', onScroll);
     return () => el.removeEventListener('scroll', onScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, page, hasMore, isFetchingMore]);
 
   // Push support + existing subscription + env hint
@@ -230,7 +233,9 @@ export default function FloatingMessageButton() {
 
   const requestAndSubscribe = async () => {
     if (!pushSupported)
-      return toast.showErrorToast('مرورگر شما از اعلان‌های وب پشتیبانی نمی‌کند.');
+      return toast.showErrorToast(
+        'مرورگر شما از اعلان‌های وب پشتیبانی نمی‌کند.'
+      );
     setSubscribing(true);
     try {
       const permission = await Notification.requestPermission();
@@ -251,8 +256,8 @@ export default function FloatingMessageButton() {
 
       const body = {
         subscription,
-        userId: session?.user?.userId || null,
-        anonymousId: session?.user?.userId ? null : getAnonymousId(),
+        userId: userId || null,
+        anonymousId: userId ? null : getAnonymousId(),
       };
 
       const res = await fetch(
@@ -281,7 +286,7 @@ export default function FloatingMessageButton() {
       {/* FAB Button */}
       <button
         onClick={toggleMessage}
-        className="fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-light shadow-lg transition-transform duration-300 hover:scale-110 sm:h-14 sm:w-14"
+        className='fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-light shadow-lg transition-transform duration-300 hover:scale-110 sm:h-14 sm:w-14'
         aria-label={open ? 'بستن چت' : 'باز کردن چت'}
       >
         {open ? <IoClose size={28} /> : <MdMessage size={28} />}
@@ -289,25 +294,25 @@ export default function FloatingMessageButton() {
 
       {/* Chat Box */}
       {open && (
-        <div className="fixed bottom-[82px] left-6 z-50 flex max-h-[78vh] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_20px_60px_rgba(0,0,0,.15)] backdrop-blur-md dark:bg-[#0b0f14] md:bottom-[88px]">
+        <div className='fixed bottom-[82px] left-6 z-50 flex max-h-[78vh] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_20px_60px_rgba(0,0,0,.15)] backdrop-blur-md md:bottom-[88px] dark:bg-[#0b0f14]'>
           {/* Header */}
-          <div className="relative flex items-center justify-between border-b border-black/5 p-3.5 dark:border-white/10">
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-primary/10 via-transparent to-primary/10" />
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 ring-4 ring-primary/10">
-                <BiSupport className="h-7 w-7" />
+          <div className='relative flex items-center justify-between border-b border-black/5 p-3.5 dark:border-white/10'>
+            <div className='absolute inset-0 -z-10 bg-gradient-to-r from-primary/10 via-transparent to-primary/10' />
+            <div className='flex items-center gap-2'>
+              <div className='flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 ring-4 ring-primary/10'>
+                <BiSupport className='h-7 w-7' />
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold">پشتیبانی آنلاین</span>
-                <span className="text-[11px] text-emerald-600 dark:text-emerald-400">
+              <div className='flex flex-col'>
+                <span className='text-sm font-semibold'>پشتیبانی آنلاین</span>
+                <span className='text-[11px] text-emerald-600 dark:text-emerald-400'>
                   معمولاً چند دقیقه
                 </span>
               </div>
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="rounded-lg p-1.5 text-gray-500 hover:bg-black/5 dark:hover:bg-white/10"
-              aria-label="بستن"
+              className='rounded-lg p-1.5 text-gray-500 hover:bg-black/5 dark:hover:bg-white/10'
+              aria-label='بستن'
             >
               <IoClose size={20} />
             </button>
@@ -316,16 +321,16 @@ export default function FloatingMessageButton() {
           {/* Messages */}
           <div
             ref={containerRef}
-            className="scroll-smooth flex-1 space-y-2 overflow-y-auto bg-[linear-gradient(180deg,_rgba(0,0,0,0)_0%,_rgba(0,0,0,0.02)_100%)] p-3 text-sm"
+            className='flex-1 space-y-2 overflow-y-auto scroll-smooth bg-[linear-gradient(180deg,_rgba(0,0,0,0)_0%,_rgba(0,0,0,0.02)_100%)] p-3 text-sm'
           >
             {isLoadingInitial ? (
-              <div className="flex h-48 items-center justify-center">
-                <ImSpinner2 size={24} className="animate-spin text-gray-400" />
+              <div className='flex h-48 items-center justify-center'>
+                <ImSpinner2 size={24} className='animate-spin text-gray-400' />
               </div>
             ) : messages.length > 0 ? (
               <>
                 {isFetchingMore && (
-                  <div className="sticky top-0 z-10 mx-auto my-1 w-max rounded-full bg-black/5 px-3 py-1 text-[11px] text-gray-600 backdrop-blur dark:bg-white/10 dark:text-gray-300">
+                  <div className='sticky top-0 z-10 mx-auto my-1 w-max rounded-full bg-black/5 px-3 py-1 text-[11px] text-gray-600 backdrop-blur dark:bg-white/10 dark:text-gray-300'>
                     در حال دریافت پیام‌های قدیمی‌تر…
                   </div>
                 )}
@@ -340,26 +345,27 @@ export default function FloatingMessageButton() {
 
                 {/* CTA: Enable Web Push under last user message */}
                 {isNotifCTAVisible && (
-                  <div className="mt-2 flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-2.5 text-[13px] leading-6 dark:border-amber-400/30 dark:bg-[#2a2207] dark:text-amber-100">
-                    <div className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
-                    <div className="flex-1">
-                      برای اینکه وقتی پشتیبان پاسخ داد خبرت کنیم، <b>اعلان مرورگر</b> را فعال کن.
-                      <div className="mt-2 flex flex-col gap-1">
-                        <div className="flex items-center gap-2">
+                  <div className='mt-2 flex items-start gap-2 rounded-xl border border-amber-300/60 bg-amber-50 p-2.5 text-[13px] leading-6 dark:border-amber-400/30 dark:bg-[#2a2207] dark:text-amber-100'>
+                    <div className='mt-0.5 h-2 w-2 shrink-0 rounded-full bg-amber-400' />
+                    <div className='flex-1'>
+                      برای اینکه وقتی پشتیبان پاسخ داد خبرت کنیم،{' '}
+                      <b>اعلان مرورگر</b> را فعال کن.
+                      <div className='mt-2 flex flex-col gap-1'>
+                        <div className='flex items-center gap-2'>
                           <button
                             onClick={requestAndSubscribe}
                             disabled={subscribing || pushEnabled}
-                            className="rounded-md bg-green px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60"
+                            className='rounded-md bg-green px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60'
                           >
                             {pushEnabled
                               ? 'فعال است'
                               : subscribing
-                              ? 'در حال فعال‌سازی…'
-                              : 'فعالسازی اعلان پاسخ'}
+                                ? 'در حال فعال‌سازی…'
+                                : 'فعالسازی اعلان پاسخ'}
                           </button>
                         </div>
                         {notifPermission === 'denied' && (
-                          <span className="mt-1 text-[11px] text-red-600 dark:text-red-400 whitespace-pre-line">
+                          <span className='text-red-600 dark:text-red-400 mt-1 whitespace-pre-line text-[11px]'>
                             دسترسی نوتیف در مرورگر مسدود است.
                             {'\n'}
                             {envHint}
@@ -371,10 +377,10 @@ export default function FloatingMessageButton() {
                 )}
               </>
             ) : (
-              <div className="rounded-xl border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400">
+              <div className='rounded-xl border border-dashed border-gray-300 p-4 text-center text-xs text-gray-500 dark:border-gray-700 dark:text-gray-400'>
                 <p>هنوز گفت‌وگویی آغاز نشده!</p>
-                <p className="mt-1">می‌تونی سوالاتی مثل این‌ها بپرسی:</p>
-                <ul className="mt-2 list-inside list-disc text-right">
+                <p className='mt-1'>می‌تونی سوالاتی مثل این‌ها بپرسی:</p>
+                <ul className='mt-2 list-inside list-disc text-right'>
                   <li>دوره مناسب سطح من چیه؟</li>
                   <li>آیا تمرینات برای بارداری مناسبه؟</li>
                   <li>چطور به ویدیوهای خریداری‌شده دسترسی پیدا کنم؟</li>
@@ -385,28 +391,28 @@ export default function FloatingMessageButton() {
           </div>
 
           {/* Input */}
-          <div className="border-t border-black/5 p-2.5 dark:border-white/10">
-            <div className="flex items-center gap-2">
+          <div className='border-t border-black/5 p-2.5 dark:border-white/10'>
+            <div className='flex items-center gap-2'>
               <Input
-                type="text"
+                type='text'
                 value={message}
                 onChange={setMessage}
                 fullWidth
                 onEnterPress={handleSend}
-                placeholder="پیام خود را بنویسید…"
-                className="flex-1 rounded-xl border-none bg-black/5 px-3 py-2 text-sm focus:outline-none dark:bg-white/10"
+                placeholder='پیام خود را بنویسید…'
+                className='flex-1 rounded-xl border-none bg-black/5 px-3 py-2 text-sm focus:outline-none dark:bg-white/10'
               />
               <IconButton
                 onClick={handleSend}
                 disabled={isSending || !message.trim()}
                 loading={isSending}
-                className="rotate-180 rounded-xl px-3 py-2 hover:bg-primary/90 disabled:opacity-50"
+                className='rotate-180 rounded-xl px-3 py-2 hover:bg-primary/90 disabled:opacity-50'
                 icon={MdSend}
               />
             </div>
 
             {notifPermission !== 'granted' && !isNotifCTAVisible && (
-              <div className="mt-2 text-[11px] text-gray-500 dark:text-gray-400 whitespace-pre-line">
+              <div className='mt-2 whitespace-pre-line text-[11px] text-gray-500 dark:text-gray-400'>
                 بعد از ارسال پیام، نوتیفیکیشن را جهت اطلاع رسانی فعال کنید.
                 {notifPermission === 'denied' && (
                   <>

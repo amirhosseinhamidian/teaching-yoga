@@ -1,25 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-
 import prismadb from '@/libs/prismadb';
-import { authOptions } from '../../auth/[...nextauth]/route';
+import { getAuthUser } from '@/utils/getAuthUser';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // احراز هویت کاربر
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user || !session.user.userId) {
+    // احراز هویت با JWT
+    const authUser = getAuthUser();
+    if (!authUser?.id) {
       return NextResponse.json(
         { error: 'کاربر احراز هویت نشده است' },
-        { status: 401 }, // وضعیت Unauthorized
+        { status: 401 }
       );
     }
 
-    // واکشی اطلاعات پرداخت کاربر
-    const userId = session.user.userId;
+    const userId = authUser.id;
 
+    // دریافت پرداخت‌های کاربر
     const payments = await prismadb.payment.findMany({
       where: { userId },
       include: {
@@ -42,16 +40,14 @@ export async function GET() {
       },
     });
 
-    // استخراج اطلاعات مورد نیاز
+    // ساخت خروجی نهایی
     const paymentDetails = payments.map((payment) => {
-      const courseTitles = payment.cart.cartCourses.map(
-        (cartCourse) => cartCourse.course.title,
-      );
+      const courses =
+        payment.cart?.cartCourses?.map((cc) => cc.course.title) || [];
+
       return {
-        transactionId: payment.transactionId
-          ? payment.transactionId.toString() // تبدیل BigInt به String
-          : '0', // مقدار پیش‌فرض به صورت String
-        courses: courseTitles, // لیست عناوین دوره‌ها
+        transactionId: payment.transactionId?.toString() || '0', // BigInt → string
+        courses,
         updatedAt: payment.updatedAt,
         status: payment.status,
         method: payment.method,
@@ -59,9 +55,9 @@ export async function GET() {
       };
     });
 
-    return NextResponse.json(paymentDetails);
+    return NextResponse.json(paymentDetails, { status: 200 });
   } catch (error) {
     console.error('Error fetching payment details:', error);
-    return NextResponse.error();
+    return NextResponse.json({ error: 'خطای سرور' }, { status: 500 });
   }
 }

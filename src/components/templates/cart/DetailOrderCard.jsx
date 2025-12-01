@@ -1,144 +1,59 @@
-/* eslint-disable no-undef */
 'use client';
+
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import { MdOutlineDiscount } from 'react-icons/md';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { createToastHandler } from '@/utils/toastHandler';
+
+import { useCart } from '@/hooks/cart/useCart';
+import { useCartActions } from '@/hooks/cart/useCartActions';
+
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
-const DetailOrderCard = ({ data, setCartData, className }) => {
-  const { isDark } = useTheme();
-  const { user } = useAuth();
-  const toast = createToastHandler(isDark);
+export default function DetailOrderCard({ className }) {
+  const {
+    cartId,
+    totalPrice,
+    totalPriceWithoutDiscount,
+    totalDiscount,
+    loading,
+  } = useCart();
+
+  const { applyDiscount } = useCartActions();
+  const { user } = useAuthUser();
+
+  console.log('cartid ========> ', cartId);
+
   const [discountCode, setDiscountCode] = useState('');
-  const [addCourseLoading, setAddCourseLoading] = useState(false);
-  const [addDiscountCodeLoading, setAddDiscountCodeLoading] = useState(false);
-  const router = useRouter();
 
-  const getDiscount = (discount) => {
-    return discount === 0 ? (
-      <h3 className='font-faNa text-base font-semibold sm:text-lg'>-</h3>
-    ) : (
-      <>
-        <h3 className='font-faNa text-base font-semibold sm:text-lg'>
-          {discount.toLocaleString('fa-IR')}
-        </h3>
-        <h6 className='text-2xs sm:text-xs'>تومان</h6>
-      </>
-    );
-  };
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
 
-  const getPriceWithoutDiscount = (price) => {
-    return price === 0 ? (
-      <h3 className='font-faNa text-base font-semibold sm:text-lg'>رایگان</h3>
-    ) : (
-      <div className='flex items-baseline gap-1'>
-        <h3 className='font-faNa text-base font-semibold sm:text-lg'>
-          {price.toLocaleString('fa-IR')}
-        </h3>
-        <h6 className='text-2xs sm:text-xs'>تومان</h6>
-      </div>
-    );
-  };
+  // 🍀 اعمال کد تخفیف
+  const handleApplyDiscount = async () => {
+    if (!discountCode.trim()) return;
 
-  const getTotalPrice = (price) => {
-    return price === 0 ? (
-      <h3 className='font-faNa text-lg font-semibold text-green sm:text-xl'>
-        رایگان
-      </h3>
-    ) : (
-      <div className='flex items-baseline gap-1 text-green'>
-        <h3 className='font-faNa text-lg font-semibold sm:text-xl'>
-          {price.toLocaleString('fa-IR')}
-        </h3>
-        <h6 className='text-2xs sm:text-xs'>تومان</h6>
-      </div>
-    );
-  };
+    const res = await applyDiscount({ code: discountCode, cartId });
 
-  const addFreeCourse = async (courses, cartId) => {
-    try {
-      // استخراج آرایه از courseId ها
-      const courseIds = courses.map((course) => course.courseId);
-
-      setAddCourseLoading(true);
-
-      // ارسال داده‌ها به API
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/courses`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ courseIds, cartId }), // ارسال لیست آی‌دی‌های دوره‌ها و شناسه سبد خرید
-        },
-      );
-
-      // بررسی وضعیت پاسخ
-      if (!response.ok) {
-        throw new Error('Failed to add courses');
-      }
-
-      // دریافت پاسخ از API
-      const data = await response.json();
-
-      // استخراج paymentId از پاسخ
-      const paymentId = data.paymentId;
-
-      // انتقال به صفحه تکمیل پرداخت
-      router.replace(`/complete-payment?token=${paymentId}&status=OK`);
-    } catch (error) {
-      console.error('Error adding courses:', error);
-      // انتقال به صفحه خطا
-      router.replace('/complete-payment?status=NOK');
-    } finally {
-      setAddCourseLoading(false);
+    if (res.meta.requestStatus === 'fulfilled') {
+      toast.showSuccessToast('کد تخفیف با موفقیت اعمال شد');
+    } else {
+      toast.showErrorToast(res.payload || 'کد تخفیف معتبر نیست');
     }
   };
 
-  const applyDiscountCode = async () => {
-    if (!discountCode) return;
-    try {
-      setAddDiscountCodeLoading(true);
-      const response = await fetch('/api/apply-discount-code', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          discountCode,
-          cartId: data.id,
-          userId: user.id,
-        }),
-      });
-
-      // بررسی پاسخ API
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        setCartData((prev) => ({
-          ...prev,
-          totalDiscount: result.data.totalDiscount,
-          totalPrice: result.data.totalPrice - result.data.totalDiscount,
-          discountCodeId: result.data.discountCodeId,
-        }));
-        toast.showSuccessToast(`تخفیف با موفقیت اعمال شد.`);
-      } else {
-        console.error('خطا:', result.message);
-        toast.showErrorToast(result.message);
-      }
-    } catch (error) {
-      console.error('خطای درخواست:', error);
-      toast.showErrorToast('خطا در برقراری ارتباط با سرور.');
-    } finally {
-      setAddDiscountCodeLoading(false);
-    }
+  // Helpers
+  const formatPrice = (value) => {
+    if (value === 0) return 'رایگان';
+    return `${value?.toLocaleString('fa-IR')} تومان`;
+  };
+  const formatDiscount = (value) => {
+    if (value === 0) return '-';
+    return `${value?.toLocaleString('fa-IR')} تومان`;
   };
 
   return (
@@ -146,24 +61,38 @@ const DetailOrderCard = ({ data, setCartData, className }) => {
       className={`rounded-xl bg-surface-light p-6 shadow sm:p-8 dark:bg-surface-dark ${className}`}
     >
       <h2 className='mb-6 text-lg font-semibold md:text-xl'>جزئیات سفارش</h2>
-      <div className='flex w-full items-center justify-between'>
-        <h3 className='font-medium'>کل مبلغ</h3>
-        {getPriceWithoutDiscount(data.totalPriceWithoutDiscount)}
+
+      {/* قیمت بدون تخفیف */}
+      <div className='flex justify-between'>
+        <span className='font-medium'>کل مبلغ</span>
+        <span className='font-faNa text-base'>
+          {formatPrice(totalPriceWithoutDiscount)}
+        </span>
       </div>
-      <div className='mt-2 flex w-full items-center justify-between sm:mt-3'>
-        <h3 className='font-medium'>تخفیف</h3>
-        <div className='flex items-baseline gap-1 text-red'>
-          {getDiscount(data.totalDiscount)}
-        </div>
+
+      {/* مقدار تخفیف */}
+      <div className='mt-3 flex justify-between'>
+        <span className='font-medium'>تخفیف</span>
+        <span className='font-faNa text-base text-red'>
+          {formatDiscount(totalDiscount)}
+        </span>
       </div>
-      <hr className='my-3 border-t border-gray-300 sm:my-4 dark:border-gray-700' />
-      <div className='flex w-full items-center justify-between'>
-        <h3 className='font-medium'>مبلغ قابل پرداخت</h3>
-        {getTotalPrice(data.totalPrice)}
+
+      <hr className='my-4 border-gray-300 dark:border-gray-700' />
+
+      {/* مبلغ قابل پرداخت */}
+      <div className='flex justify-between'>
+        <span className='font-medium'>مبلغ قابل پرداخت</span>
+        <span className='font-faNa text-lg font-bold text-green'>
+          {formatPrice(totalPrice)}
+        </span>
       </div>
-      {data.totalPrice !== 0 ? (
+
+      {/* اگر رایگان نبود → امکان ثبت کد تخفیف */}
+      {totalPrice !== 0 ? (
         <>
-          <div className='mx-auto my-10 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4 xl:w-3/4'>
+          {/* کد تخفیف */}
+          <div className='mx-auto mb-6 mt-8 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4 xl:w-3/4'>
             <div className='relative w-full xs:flex-1'>
               <Input
                 value={discountCode}
@@ -171,7 +100,6 @@ const DetailOrderCard = ({ data, setCartData, className }) => {
                 placeholder='کد تخفیف'
                 fontDefault={false}
                 className='w-full pr-10'
-                maxLength={20}
                 isUppercase
               />
               <MdOutlineDiscount
@@ -179,15 +107,18 @@ const DetailOrderCard = ({ data, setCartData, className }) => {
                 className='absolute right-2 top-2.5 text-subtext-light dark:text-subtext-dark'
               />
             </div>
+
             <Button
-              className='text-xs sm:text-sm'
               shadow
-              isLoading={addDiscountCodeLoading}
-              onClick={applyDiscountCode}
+              onClick={handleApplyDiscount}
+              isLoading={loading}
+              className='text-xs sm:text-sm'
             >
               ثبت
             </Button>
           </div>
+
+          {/* دکمه پرداخت */}
           <Link className='flex w-full justify-center' href='/payment'>
             <Button
               className='mb-2 flex w-full items-center justify-center gap-1 sm:mb-4'
@@ -198,23 +129,15 @@ const DetailOrderCard = ({ data, setCartData, className }) => {
           </Link>
         </>
       ) : (
-        <Button
-          className='mb-2 mt-10 w-full sm:mb-4'
-          shadow
-          isLoading={addCourseLoading}
-          onClick={() => addFreeCourse(data.courses, data.id)}
-        >
-          افزودن دوره
+        // اگر کل مبلغ 0 باشد → فقط دکمه افزودن دوره رایگان
+        <Button className='mt-10 w-full sm:mb-4' shadow>
+          افزودن دوره رایگان
         </Button>
       )}
     </div>
   );
-};
+}
 
 DetailOrderCard.propTypes = {
-  data: PropTypes.object.isRequired,
-  setCartData: PropTypes.func.isRequired,
   className: PropTypes.string,
 };
-
-export default DetailOrderCard;

@@ -4,9 +4,9 @@ import CourseHighCard from '@/components/CourseCards/CourseHighCard';
 import React from 'react';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -14,7 +14,7 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
@@ -68,7 +68,7 @@ async function CoursesPage() {
       next: {
         revalidate: 7200, // 2 hours
       },
-    },
+    }
   );
 
   const result = await res.json();
@@ -83,7 +83,7 @@ async function CoursesPage() {
 
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <div className='container'>
         <PageTitle>دوره‌ها</PageTitle>
         <div className='my-10 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3'>

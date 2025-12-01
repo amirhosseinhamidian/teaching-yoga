@@ -1,5 +1,6 @@
 /* eslint-disable react/prop-types */
 'use client';
+
 import React, { useState } from 'react';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import { HiMenu } from 'react-icons/hi';
@@ -14,36 +15,42 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { MdOutlineAdminPanelSettings } from 'react-icons/md';
 import { LuLogOut } from 'react-icons/lu';
-import { useSession } from 'next-auth/react';
+
+// سیستم جدید:
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 export default function NavbarMobileMenu({
   isDark,
   handelDarkMode,
-  user,
-  signOutModal,
+  signOutModal, // فقط Modal رو باز می‌کنه
 }) {
-  const { data: session } = useSession();
-  const isLoggedIn = !!session?.user;
-  const [isOpen, setIsOpen] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+
+  // سیستم جدید احراز هویت
+  const { user: authUser } = useAuthUser();
+  const isLoggedIn = !!authUser;
 
   const toggleOpen = () => {
     if (isOpen) {
       setIsOpen(false);
-      setTimeout(() => setIsVisible(false), 300); // 300ms for transition duration
+      setTimeout(() => setIsVisible(false), 300);
     } else {
       setIsVisible(true);
-      setTimeout(() => setIsOpen(true), 10); // Small delay to allow portal to mount
+      setTimeout(() => setIsOpen(true), 10);
     }
   };
+
   const loginClickHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
     router.push('/login');
   };
 
   const handleSignOutModal = () => {
+    if (!isLoggedIn) return;
     signOutModal(true);
     setIsOpen(false);
   };
@@ -58,18 +65,21 @@ export default function NavbarMobileMenu({
           toggleOpen();
         }}
       />
+
       {isVisible &&
         createPortal(
           <>
-            {/* Background overlay */}
+            {/* Overlay */}
             <div
               className='fixed inset-0 bg-black opacity-50'
               onClick={() => toggleOpen()}
             ></div>
 
-            {/* Mobile Menu */}
+            {/* Menu */}
             <div
-              className={`fixed right-0 top-0 flex h-full w-60 transform flex-col justify-between gap-y-4 bg-surface-light p-5 transition-transform duration-300 ease-in-out dark:bg-surface-dark ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+              className={`fixed right-0 top-0 flex h-full w-60 flex-col justify-between gap-y-4 bg-surface-light p-5 transition-transform duration-300 dark:bg-surface-dark ${
+                isOpen ? 'translate-x-0' : 'translate-x-full'
+              }`}
             >
               <div className='flex flex-col gap-y-4'>
                 <div className='flex items-center justify-between'>
@@ -80,15 +90,14 @@ export default function NavbarMobileMenu({
                   />
                 </div>
 
+                {/* USER BOX */}
                 {isLoggedIn ? (
                   <div>
                     <Link href='/profile' onClick={toggleOpen}>
                       <div className='m-2 flex items-center gap-3'>
                         <Image
                           src={
-                            user.avatar
-                              ? user.avatar
-                              : '/images/default-profile.png'
+                            authUser?.avatar || '/images/default-profile.png'
                           }
                           alt='profile'
                           width={50}
@@ -96,15 +105,16 @@ export default function NavbarMobileMenu({
                           className='rounded-full'
                         />
                         <div>
-                          <h4 className='text-base'>{user.username}</h4>
+                          <h4 className='text-base'>{authUser.username}</h4>
                           <h4 className='text-sm'>مشاهده پروفایل</h4>
                         </div>
                       </div>
                     </Link>
-                    {user.userRole !== 'Admin' && (
+
+                    {authUser?.role === 'ADMIN' && (
                       <Link
                         href='/a-panel'
-                        className='mx-auto mt-6 flex items-center gap-2 rounded-full border border-text-light p-2 transition-all duration-200 ease-in hover:bg-background-light dark:border-text-dark dark:hover:bg-background-dark'
+                        className='mx-auto mt-6 flex items-center gap-2 rounded-full border border-text-light p-2 transition-all hover:bg-background-light dark:border-text-dark dark:hover:bg-background-dark'
                       >
                         <MdOutlineAdminPanelSettings className='text-2xl' />
                         پنل ادمین
@@ -119,11 +129,15 @@ export default function NavbarMobileMenu({
                     ثبت نام | ورود
                   </Button>
                 )}
+
                 <div className='border-b'></div>
-                <div className='flex'>
-                  <NavbarRoutes vertical toggleOpen={toggleOpen} />
-                </div>
+
+                {/* Menu Items */}
+                <NavbarRoutes vertical toggleOpen={toggleOpen} />
+
                 <div className='border-b'></div>
+
+                {/* Theme */}
                 <Switch
                   label={isDark ? 'حالت تاریک' : 'حالت روشن'}
                   checked={isDark}
@@ -131,16 +145,20 @@ export default function NavbarMobileMenu({
                   className='gap-12'
                 />
               </div>
-              <div
-                className='flex gap-2 text-subtext-light dark:text-subtext-dark'
-                onClick={handleSignOutModal}
-              >
-                <LuLogOut size={22} />
-                <span className='text-sm'>خروج از حساب</span>
-              </div>
+
+              {/* Logout */}
+              {isLoggedIn && (
+                <div
+                  className='flex gap-2 text-subtext-light dark:text-subtext-dark'
+                  onClick={handleSignOutModal}
+                >
+                  <LuLogOut size={22} />
+                  <span className='text-sm'>خروج از حساب</span>
+                </div>
+              )}
             </div>
           </>,
-          document.body,
+          document.body
         )}
     </div>
   );

@@ -40,7 +40,7 @@ export async function POST(request) {
           token,
           template,
         },
-      },
+      }
     );
 
     if (smsResponse.status !== 200 || !smsResponse.data) {
@@ -60,7 +60,7 @@ export async function POST(request) {
         console.error('Error saving verification code:', error);
         return NextResponse.json(
           { success: false, error: 'خطا در ثبت کد تایید' },
-          { status: 500 },
+          { status: 500 }
         );
       }
     }

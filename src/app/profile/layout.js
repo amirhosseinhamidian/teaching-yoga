@@ -1,8 +1,8 @@
 /* eslint-disable react/prop-types */
 import React from 'react';
 import Footer from '@/components/Footer/Footer';
-import Header from '@/components/Header/Header';
 import prismadb from '@/libs/prismadb';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   const seoSettings = await prismadb.seoSetting.findMany({
@@ -23,7 +23,7 @@ export async function generateMetadata() {
 async function ProfileLayout({ children }) {
   return (
     <div>
-      <Header />
+      <HeaderWrapper />
       {children}
       <Footer />
     </div>

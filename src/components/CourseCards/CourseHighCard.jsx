@@ -6,19 +6,19 @@ import CardActions from './CardActions';
 import { useRouter } from 'next/navigation';
 import { prizeCountdown } from '@/utils/prizeCountdown';
 import Image from 'next/image';
-import { useAuth } from '@/contexts/AuthContext';
 import { GrYoga } from 'react-icons/gr';
 import Button from '../Ui/Button/Button';
 import Link from 'next/link';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import { TiInfoLarge } from 'react-icons/ti';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 export default function CourseHighCard({ course }) {
   const route = useRouter();
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const purchasedCourses = user?.courses || [];
   const isCoursePurchased = purchasedCourses.some(
-    (userCourse) => userCourse.courseId === course.id,
+    (userCourse) => userCourse.courseId === course.id
   );
   const [isEnterCourseLoading, setIsLoadingCourseLoading] = useState(false);
   const [countdown, setCountdown] = useState('');
@@ -38,7 +38,7 @@ export default function CourseHighCard({ course }) {
     try {
       setIsLoadingCourseLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`
       );
       if (response.ok) {
         const { sessionId } = await response.json();

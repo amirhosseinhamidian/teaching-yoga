@@ -1,10 +1,10 @@
 /* eslint-disable no-undef */
 import React from 'react';
-import Header from '@/components/Header/Header';
 import Footer from '@/components/Footer/Footer';
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import RulesContent from '@/components/templates/rules/RulesContent';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata() {
   return {
@@ -27,7 +27,7 @@ async function RulePage() {
       next: {
         revalidate: 1, // 2 hours
       },
-    },
+    }
   );
   if (!res.ok) {
     redirect('/not-found');
@@ -36,7 +36,7 @@ async function RulePage() {
 
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <RulesContent rules={result.rules} />
       <Footer />
     </>

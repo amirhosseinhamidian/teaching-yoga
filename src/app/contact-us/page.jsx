@@ -1,10 +1,10 @@
 /* eslint-disable no-undef */
-import Header from '@/components/Header/Header';
 import AboutUs from '@/components/templates/contact-us/AboutUs';
 import React from 'react';
 import Footer from '@/components/Footer/Footer';
 import FAQs from '@/components/templates/contact-us/FAQs';
 import { headers } from 'next/headers';
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -14,7 +14,7 @@ export async function generateMetadata({ params }) {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   // اطلاعات پیش‌فرض
@@ -69,7 +69,7 @@ async function fetchFAQs() {
         next: {
           revalidate: 86400, // 1 day
         },
-      },
+      }
     );
     if (!response.ok) {
       throw new Error('Failed to fetch FAQs');
@@ -91,7 +91,7 @@ const fetchAboutUsData = async () => {
         next: {
           revalidate: 86400, // 1 day
         },
-      },
+      }
     );
     if (!res.ok) {
       throw new Error('Error to fetch footer data!');
@@ -108,7 +108,7 @@ const page = async () => {
 
   return (
     <>
-      <Header />
+      <HeaderWrapper />
       <div className='container py-10'>
         <div className='grid grid-cols-1 gap-4 md:grid-cols-2 lg:gap-8'>
           <AboutUs data={aboutUs} className='self-start' />

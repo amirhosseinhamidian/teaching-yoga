@@ -4,13 +4,13 @@ import { createPortal } from 'react-dom';
 import IconButton from '@/components/Ui/ButtonIcon/ButtonIcon';
 import { TbLayoutSidebarRightExpandFilled } from 'react-icons/tb';
 import { HiOutlineUserCircle } from 'react-icons/hi2';
-import { useAuth } from '@/contexts/AuthContext';
 import NavRoutes from './NavRoutes';
 import Image from 'next/image';
 import { IoCloseOutline } from 'react-icons/io5';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 const MobileSidebar = () => {
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const [openSidebar, setOpenSidebar] = useState(false);
   const toggleSidebar = () => {
     setOpenSidebar(!openSidebar);
@@ -41,7 +41,7 @@ const MobileSidebar = () => {
                       alt='profile'
                       width={50}
                       height={50}
-                      className='rounded-full'
+                      className='h-9 w-9 rounded-full border xs:h-11 xs:w-11 sm:h-14 sm:w-14'
                     />
                   ) : (
                     <HiOutlineUserCircle className='text-5xl text-subtext-light dark:text-subtext-dark' />
@@ -65,7 +65,7 @@ const MobileSidebar = () => {
               <NavRoutes onLinkClick={toggleSidebar} />
             </aside>
           </>,
-          document.body,
+          document.body
         )}
     </div>
   );

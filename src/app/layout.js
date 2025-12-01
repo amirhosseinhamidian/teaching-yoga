@@ -1,12 +1,12 @@
-/* eslint-disable no-undef */
 /* eslint-disable react/prop-types */
+/* eslint-disable no-undef */
 import './globals.css';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
 import React from 'react';
-import prismadb from '@/libs/prismadb';
-import SessionWrapper from '@/components/Providers/SessionWrapper';
 import { AppProviders } from './providers';
+import prismadb from '@/libs/prismadb';
+import { getSSRUser } from '@/components/server/HydrateUser';
+import ReduxProvider from '@/libs/redux/ReduxProvider';
+import UserHydration from '@/components/UserHydration';
 
 export async function generateMetadata() {
   const seoSettings = await prismadb.seoSetting.findMany({
@@ -53,68 +53,15 @@ export async function generateMetadata() {
 }
 
 export default async function RootLayout({ children }) {
-  const session = await getServerSession(authOptions);
-
-  let user = null;
-  if (session?.user?.userId) {
-    try {
-      const rawUser = await prismadb.user.findUnique({
-        where: { id: session.user.userId },
-        include: {
-          questions: true,
-          comments: true,
-          courses: true,
-          carts: {
-            include: {
-              cartCourses: {
-                include: {
-                  course: {
-                    select: {
-                      id: true,
-                      title: true,
-                      cover: true,
-                      shortAddress: true,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        },
-      });
-
-      // پردازش داده‌های سبد خرید
-      user = {
-        ...rawUser,
-        carts: (rawUser.carts || []).map((cart) => {
-          // استخراج فقط دوره‌ها از cartCourses
-          const courses = cart.cartCourses.map(
-            (cartCourse) => cartCourse.course,
-          );
-
-          const uniqueCourses = Array.from(
-            new Map(courses.map((course) => [course.id, course])).values(),
-          );
-
-          return {
-            ...cart,
-            uniqueCourses, // اضافه کردن لیست دوره‌های یکتا
-          };
-        }),
-      };
-    } catch (error) {
-      console.error('Error fetching user data:', error.message);
-      user = null; // مقدار پیش‌فرض در صورت بروز خطا
-    }
-  }
-
+  const { user } = await getSSRUser();
   return (
-    <SessionWrapper session={session}>
-      <html lang='fa' dir='rtl'>
-        <body className='flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark'>
-          <AppProviders user={user}>{children}</AppProviders>
-        </body>
-      </html>
-    </SessionWrapper>
+    <html lang='fa' dir='rtl'>
+      <body className='flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark'>
+        <ReduxProvider>
+          <UserHydration user={user} /> {/* این کلاینتی + داخل Redux */}
+          <AppProviders>{children}</AppProviders>
+        </ReduxProvider>
+      </body>
+    </html>
   );
 }

@@ -1,95 +1,101 @@
-/* eslint-disable no-undef */
 'use client';
+
 import Logo from '@/components/Logo/Logo';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
 import Link from 'next/link';
 import React, { useEffect, useRef, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useRouter } from 'next/navigation';
 import { validatePhoneNumber } from '@/utils/validatePhoneNumber';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { CheckPhoneAction } from '@/app/actions/CheckPhoneAction';
-// import { GrGoogle } from 'react-icons/gr';
-// import { signIn } from 'next-auth/react';
+import GoogleLoginButton from '@/components/Ui/GoogleLoginButton/GoogleLoginButton';
+import { useUserForm } from '@/hooks/auth/useUserForm';
 
 const LoginContent = () => {
-  const { userPhone, setUserPhone, setToken, user } = useAuth();
   const router = useRouter();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
   const inputRef = useRef(null);
 
-  if (user) {
-    router.back();
-  }
+  // 🔹 وضعیت واقعی کاربر از Redux
+  const { user } = useAuthUser();
 
+  // 🔹 state های موقت فرم از useUserForm
+  const { phone, setPhone, setOtpToken } = useUserForm();
+
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // جلوگیری از ورود کاربر لاگین شده
   useEffect(() => {
-    const handleResize = () => {
-      const inputElement = inputRef.current;
-      if (window.visualViewport && inputElement) {
-        const { height } = window.visualViewport;
-        const inputRect = inputElement.getBoundingClientRect();
+    if (user) router.replace('/');
+  }, [user]);
 
-        // اگر کیبورد باز شد و Input زیر کیبورد قرار گرفت
-        if (inputRect.bottom > height) {
-          window.scrollTo({
-            top: inputRect.top + window.scrollY - 20, // اسکرول به بالای کیبورد
-            behavior: 'smooth',
-          });
-        }
+  // Behavior: جابجایی input هنگام باز شدن کیبورد موبایل
+  useEffect(() => {
+    const handler = () => {
+      const el = inputRef.current;
+      if (!window.visualViewport || !el) return;
+
+      const { height } = window.visualViewport;
+      const rect = el.getBoundingClientRect();
+
+      if (rect.bottom > height) {
+        window.scrollTo({
+          top: rect.top + window.scrollY - 20,
+          behavior: 'smooth',
+        });
       }
     };
 
-    window.visualViewport?.addEventListener('resize', handleResize);
-    return () => {
-      window.visualViewport?.removeEventListener('resize', handleResize);
-    };
+    window.visualViewport?.addEventListener('resize', handler);
+    return () => window.visualViewport?.removeEventListener('resize', handler);
   }, []);
 
+  // -----------------------
+  // Login Handler
+  // -----------------------
   const loginHandler = async () => {
     setIsSubmitting(true);
 
-    const validation = validatePhoneNumber(userPhone);
+    // 1) validate phone
+    const validation = validatePhoneNumber(phone);
     if (!validation.isValid) {
-      setIsSubmitting(false);
       toast.showErrorToast(validation.errorMessage);
+      setIsSubmitting(false);
       return;
     }
 
-    const checkResponse = await CheckPhoneAction(userPhone);
-    if (checkResponse) {
-      try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/send-otp`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ phone: userPhone }),
-          },
-        );
+    // 2) check if user exists
+    const check = await CheckPhoneAction(phone);
 
-        const data = await response.json();
-        if (data.success) {
-          setToken(data.token);
-          router.push('/confirm-code');
-        } else {
-          if (data.error) {
-            toast.showErrorToast(data.error); // Show the error message from the API
-          } else {
-            toast.showErrorToast('ارسال کد ناموفق بود، لطفاً دوباره تلاش کنید');
-          }
-        }
-      } catch (error) {
-        console.error(error);
-        toast.showErrorToast('خطا در ارتباط با سرور. لطفاً بعداً تلاش کنید');
-      }
-    } else {
+    if (!check) {
       router.push('/signup');
+      setIsSubmitting(false);
+      return;
+    }
+
+    // 3) send OTP
+    try {
+      const req = await fetch(`/api/send-otp`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      });
+
+      const data = await req.json();
+
+      if (data.success) {
+        setOtpToken(data.token);
+        router.push('/confirm-code');
+      } else {
+        toast.showErrorToast(data.error || 'ارسال کد ناموفق بود.');
+      }
+    } catch (err) {
+      toast.showErrorToast('خطا در ارتباط با سرور.');
     }
 
     setIsSubmitting(false);
@@ -99,23 +105,21 @@ const LoginContent = () => {
     <div className='flex h-svh items-center justify-center'>
       <div className='rounded-2xl bg-surface-light px-12 py-8 dark:bg-surface-dark'>
         <Logo size='large' className='justify-center' />
-        <h3 className='mt-4 text-xl font-semibold text-text-light dark:text-text-dark'>
-          ورود
-        </h3>
-        <p className='mt-3 text-xs text-text-light dark:text-text-dark'>
-          سلام؛ لطفا شماره موبایل خود را وارد کنید
-        </p>
+
+        <h3 className='mt-4 text-xl font-semibold'>ورود</h3>
+        <p className='mt-3 text-xs'>سلام؛ لطفا شماره موبایل خود را وارد کنید</p>
+
         <Input
           ref={inputRef}
-          value={userPhone}
-          onChange={setUserPhone}
+          value={phone}
+          onChange={setPhone}
           fullWidth
           placeholder='شماره همراه'
           focus
           onEnterPress={loginHandler}
           type='tel'
-          className='mt-6 text-right text-lg md:min-w-56'
           maxLength={20}
+          className='mt-6 text-lg md:min-w-56'
         />
 
         <Button
@@ -126,24 +130,15 @@ const LoginContent = () => {
         >
           ورود
         </Button>
+
         <p className='mt-6 text-center text-sm'>
           حساب کاربری ندارید؟{' '}
-          <Link
-            href='/signup'
-            className='text-primary hover:underline md:cursor-pointer'
-          >
-            ثبت نام کنید{' '}
+          <Link href='/signup' className='text-primary hover:underline'>
+            ثبت نام کنید
           </Link>
         </p>
-        {/* <hr className='my-3' />
-        <Button
-          onClick={() => signIn('google')}
-          color='blue'
-          className='mt-4 flex w-full items-center justify-center gap-2'
-        >
-          <GrGoogle />
-          ورود با گوگل
-        </Button> */}
+        <hr className='my-3' />
+        <GoogleLoginButton />
       </div>
     </div>
   );

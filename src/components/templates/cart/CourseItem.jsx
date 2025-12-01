@@ -18,7 +18,7 @@ const CourseItem = ({ data, onDeleteItem }) => {
       <h3 className='mt-1 font-faNa text-xs sm:text-sm'>رایگان</h3>
     ) : (
       <h3 className='mt-1 font-faNa text-xs sm:text-sm'>
-        قیمت نهایی: {coursePrice.toLocaleString('fa-IR')}{' '}
+        قیمت نهایی: {coursePrice?.toLocaleString('fa-IR')}{' '}
         <span className='text-[8px] sm:text-2xs'>تومان</span>
       </h3>
     );
@@ -39,7 +39,7 @@ const CourseItem = ({ data, onDeleteItem }) => {
             <h3 className='text-base md:text-lg'>{data.courseTitle}</h3>
             {data.discount !== 0 && (
               <h4 className='mt-1 font-faNa text-xs text-red sm:text-sm'>
-                تخفیف: {data.discount.toLocaleString('fa-IR')}{' '}
+                تخفیف: {data?.discount?.toLocaleString('fa-IR')}{' '}
                 <span className='text-[8px] sm:text-2xs'>تومان</span>
               </h4>
             )}

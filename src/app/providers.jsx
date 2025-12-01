@@ -1,24 +1,23 @@
-/* eslint-disable react/prop-types */
 'use client';
+
 import React from 'react';
-import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { Toaster } from 'react-hot-toast';
 import VisitLogger from '@/components/modules/VisitorLogger/VisitorLogger';
 import ClientSideAOS from '@/components/ClientSideAOS';
 import ClientWrapper from '@/components/ClientWrapper';
 import { PushLinkOnLogin } from '@/components/PushLinkOnLogin';
+import CartBootstrapper from '@/components/Bootstrap/CartBootstrapper';
 
-export function AppProviders({ children, user }) {
+export function AppProviders({ children }) {
   return (
     <ThemeProvider>
-      <AuthProvider initialUser={user}>
-        <VisitLogger />
-        <ClientSideAOS />
-        <ClientWrapper>{children}</ClientWrapper>
-        <Toaster />
-        <PushLinkOnLogin />
-      </AuthProvider>
+      <CartBootstrapper />
+      <VisitLogger />
+      <ClientSideAOS />
+      <ClientWrapper>{children}</ClientWrapper>
+      <PushLinkOnLogin />
+      <Toaster />
     </ThemeProvider>
   );
 }

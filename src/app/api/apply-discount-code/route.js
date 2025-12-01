@@ -1,190 +1,209 @@
-import { NextResponse } from 'next/server';
+/* eslint-disable no-undef */
 import prismadb from '@/libs/prismadb';
-import { authOptions } from '../auth/[...nextauth]/route';
-import { getServerSession } from 'next-auth';
+import { buildCartResponse } from '@/utils/buildCartResponse';
+import { getAuthUser } from '@/utils/getAuthUser';
+import { NextResponse } from 'next/server';
 
-export async function POST(request) {
+export async function POST(req) {
   try {
-    const { discountCode, cartId, userId } = await request.json();
+    const user = getAuthUser();
+    if (!user) {
+      return NextResponse.json(
+        { success: false, message: 'ابتدا وارد حساب کاربری شوید.' },
+        { status: 401 }
+      );
+    }
 
-    // مرحله 1: دریافت اطلاعات کد تخفیف
+    const { code, cartId } = await req.json();
+    const userId = user.id;
+
+    if (!code)
+      return NextResponse.json(
+        { success: false, message: 'کد وارد نشده است.' },
+        { status: 400 }
+      );
+
+    if (!cartId)
+      return NextResponse.json(
+        { success: false, message: 'شناسه سبد نامعتبر است.' },
+        { status: 400 }
+      );
+
+    // ۱) دریافت کد تخفیف
     const discount = await prismadb.discountCode.findUnique({
-      where: { code: discountCode },
+      where: { code },
     });
 
-    if (!discount) {
+    if (!discount)
       return NextResponse.json(
         { success: false, message: 'کد تخفیف نامعتبر است.' },
-        { status: 400 },
+        { status: 400 }
       );
-    }
 
-    // مرحله 2: بررسی اعتبار کد تخفیف
     const now = new Date();
 
-    if (!discount.isActive) {
+    if (!discount.isActive)
       return NextResponse.json(
-        { success: false, message: 'این کد تخفیف غیرفعال است.' },
-        { status: 400 },
+        { success: false, message: 'این کد غیرفعال است.' },
+        { status: 400 }
       );
-    }
 
-    if (discount.expiryDate && discount.expiryDate <= now) {
+    if (discount.expiryDate && discount.expiryDate <= now)
       return NextResponse.json(
         { success: false, message: 'کد تخفیف منقضی شده است.' },
-        { status: 400 },
+        { status: 400 }
       );
-    }
 
-    if (discount.usageLimit && discount.usageCount >= discount.usageLimit) {
+    if (discount.usageLimit && discount.usageCount >= discount.usageLimit)
       return NextResponse.json(
-        {
-          success: false,
-          message: 'تعداد استفاده از این کد تخفیف به پایان رسیده است.',
-        },
-        { status: 400 },
+        { success: false, message: 'سقف استفاده از کد پر شده است.' },
+        { status: 400 }
       );
-    }
 
-    // مرحله 3: بررسی استفاده قبلی توسط کاربر
-    const userDiscountUsage = await prismadb.userDiscount.findFirst({
-      where: {
-        userId,
-        discountCodeId: discount.id,
-      },
+    // ۲) بررسی استفاده قبلی
+    const usedBefore = await prismadb.userDiscount.findFirst({
+      where: { userId, discountCodeId: discount.id },
     });
 
-    if (userDiscountUsage) {
+    if (usedBefore)
       return NextResponse.json(
-        {
-          success: false,
-          message: 'شما قبلاً از این کد تخفیف استفاده کرده‌اید.',
-        },
-        { status: 400 },
+        { success: false, message: 'قبلاً از این کد استفاده کرده‌اید.' },
+        { status: 400 }
       );
-    }
 
+    // ۳) دریافت cart
     const cart = await prismadb.cart.findUnique({
       where: { id: cartId },
     });
 
-    if (!cart) {
+    if (!cart)
       return NextResponse.json(
-        { success: false, message: 'سبد خرید پیدا نشد.' },
-        { status: 400 },
+        { success: false, message: 'سبد خرید یافت نشد.' },
+        { status: 404 }
       );
-    }
 
-    // بررسی اینکه آیا کد تخفیف قبلاً اعمال شده است
-    if (cart.discountCodeId) {
+    if (cart.discountCodeId)
       return NextResponse.json(
-        { message: 'کد تخفیف قبلاً روی سبد خرید اعمال شده است.' },
-        { status: 400 },
+        { success: false, message: 'روی این سبد تخفیف اعمال شده است.' },
+        { status: 400 }
       );
-    }
+
+    // ۴) محاسبه cart فعلی با helper
+    const calc = await buildCartResponse(userId);
+    const currentTotal = calc.cart.totalPriceWithoutDiscount;
 
     if (
       discount.minPurchaseAmount &&
-      cart.totalPrice < discount.minPurchaseAmount
+      currentTotal < discount.minPurchaseAmount
     ) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            'مبلغ کل سبد خرید کمتر از حداقل مبلغ لازم برای این کد تخفیف است.',
+          message: 'مبلغ سبد کمتر از حداقل لازم برای اعمال این کد است.',
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // مرحله 4: محاسبه مبلغ تخفیف
-    let discountAmount =
-      ((cart.totalPrice - cart.totalDiscount) * discount.discountPercent) / 100;
+    // ۵) محاسبه مقدار تخفیف
+    let discountAmount = (currentTotal * discount.discountPercent) / 100;
 
     if (discount.maxDiscountAmount) {
       discountAmount = Math.min(discountAmount, discount.maxDiscountAmount);
     }
-    const totalDiscount = (cart.totalDiscount || 0) + discountAmount;
 
-    // مرحله 5: به‌روزرسانی سبد خرید با آیدی کد تخفیف و تخفیف محاسبه شده
-    const updatedCart = await prismadb.cart.update({
+    // ۶) ذخیره در دیتابیس
+    await prismadb.cart.update({
       where: { id: cartId },
       data: {
+        discountCodeId: discount.id,
         discountCodeAmount: discountAmount,
-        totalDiscount,
-        discountCodeId: discount.id, // ثبت آیدی کد تخفیف روی سبد خرید
         discountAppliedAt: new Date(),
       },
     });
 
+    // ۷) خروجی نهایی — cart کامل
+    const updated = await buildCartResponse(userId);
+
     return NextResponse.json({
       success: true,
       message: 'کد تخفیف با موفقیت اعمال شد.',
-      data: updatedCart,
+      ...updated,
     });
-  } catch (error) {
-    console.error('خطا در اعمال کد تخفیف:', error);
+  } catch (err) {
+    console.error('ERROR APPLY DISCOUNT:', err);
     return NextResponse.json(
-      { success: false, message: 'خطایی در اعمال کد تخفیف رخ داد.' },
-      { status: 500 },
+      { success: false, message: 'خطای داخلی سرور.' },
+      { status: 500 }
     );
   }
 }
 
+// ======================
+//   حذف تخفیف منقضی شده
+// ======================
+
 export async function PATCH() {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) {
+    const user = getAuthUser();
+    if (!user) {
       return NextResponse.json(
-        { message: 'برای مشاهده سبد خرید باید وارد شوید.' },
-        { status: 401 },
+        { success: false, message: 'ابتدا وارد شوید.' },
+        { status: 401 }
       );
     }
 
-    const userId = session.user.userId;
+    const userId = user.id;
+
     const cart = await prismadb.cart.findFirst({
       where: { userId, status: 'PENDING' },
     });
 
-    if (!cart) {
+    if (!cart)
       return NextResponse.json(
-        { message: 'سبد خریدی یافت نشد.' },
-        { status: 404 },
+        { success: false, message: 'سبد خریدی یافت نشد.' },
+        { status: 404 }
       );
-    }
 
-    // بررسی مدت‌زمان سپری‌شده از اعمال کد تخفیف
+    // بررسی ۱۰ دقیقه
     if (cart.discountCodeId && cart.discountAppliedAt) {
       const now = new Date();
-      const discountExpiryTime = 10 * 60 * 1000; // 10 دقیقه
-      const timePassed = now - new Date(cart.discountAppliedAt);
+      const elapsed = now - new Date(cart.discountAppliedAt);
+      const TEN_MIN = 10 * 60 * 1000;
 
-      if (timePassed > discountExpiryTime) {
-        const totalDiscount = cart.totalDiscount - cart.discountCodeAmount;
-        // حذف کد تخفیف و بازگرداندن قیمت‌های اصلی
+      if (elapsed > TEN_MIN) {
+        // حذف تخفیف
         await prismadb.cart.update({
           where: { id: cart.id },
           data: {
             discountCodeId: null,
-            totalDiscount,
             discountAppliedAt: null,
-            discountCodeAmount: null,
+            discountCodeAmount: 0,
           },
         });
 
+        const updated = await buildCartResponse(userId);
+
         return NextResponse.json({
           success: true,
-          message: 'کد تخفیف منقضی شده و حذف شد.',
+          message: 'کد تخفیف منقضی شد و حذف گردید.',
+          ...updated,
         });
       }
     }
 
-    return NextResponse.json({ success: true, message: 'سبد خرید معتبر است.' });
-  } catch (error) {
-    console.error('خطا در بررسی سبد خرید:', error);
+    const freshCart = await buildCartResponse(userId);
+
+    return NextResponse.json({
+      success: true,
+      message: 'سبد خرید معتبر است.',
+      ...freshCart,
+    });
+  } catch (err) {
+    console.error('PATCH DISCOUNT ERROR:', err);
     return NextResponse.json(
-      { message: 'خطایی رخ داده است.' },
-      { status: 500 },
+      { success: false, message: 'خطای داخلی سرور.' },
+      { status: 500 }
     );
   }
 }

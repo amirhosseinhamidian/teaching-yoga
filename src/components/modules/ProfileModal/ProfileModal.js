@@ -28,9 +28,13 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
             alt='profile'
             width={50}
             height={50}
-            className='mb-4 rounded-full'
+            className='mb-4 h-9 w-9 rounded-full border xs:h-11 xs:w-11 sm:h-14 sm:w-14'
           />
-          <h4 className='text-lg'>{user.username}</h4>
+          <h4 className='text-lg'>
+            {user?.firstname && user?.lastname
+              ? `${user.firstname} ${user.lastname}`
+              : user?.username}
+          </h4>
         </div>
         <div className='mx-4 border-b'></div>
         {user.role === 'ADMIN' && (

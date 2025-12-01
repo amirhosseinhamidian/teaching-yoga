@@ -13,7 +13,7 @@ const formatTime = (sec) => {
   return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 };
 
-const AudioPlayer = ({ src, duration, coverUrl, sessionId, userId }) => {
+const AudioPlayer = ({ src, duration, coverUrl, sessionId }) => {
   const soundRef = useRef(null);
   const intervalRef = useRef(null);
 
@@ -84,7 +84,7 @@ const AudioPlayer = ({ src, duration, coverUrl, sessionId, userId }) => {
 
     const newTime = Math.min(
       Math.max(soundRef.current.seek() + offset, 0),
-      duration,
+      duration
     );
     soundRef.current.seek(newTime);
     setCurrentTime(newTime);
@@ -96,12 +96,8 @@ const AudioPlayer = ({ src, duration, coverUrl, sessionId, userId }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            userId: userId,
-          },
           body: JSON.stringify({ completed: true }),
-        },
+        }
       );
       setIsCompleted(true);
     } catch (error) {
@@ -115,11 +111,7 @@ const AudioPlayer = ({ src, duration, coverUrl, sessionId, userId }) => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-progress/${sessionId}/complete`,
         {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            userId: userId,
-          },
-        },
+        }
       );
       const data = await response.json();
       if (data.isCompleted !== undefined) {
@@ -200,7 +192,6 @@ AudioPlayer.propTypes = {
   src: PropTypes.string.isRequired,
   coverUrl: PropTypes.string,
   sessionId: PropTypes.string,
-  userId: PropTypes.string,
   duration: PropTypes.number,
 };
 

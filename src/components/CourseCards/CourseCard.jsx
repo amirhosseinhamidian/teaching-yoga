@@ -6,20 +6,20 @@ import Price from '../Price/Price';
 import CardActions from './CardActions';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
 import Button from '../Ui/Button/Button';
 import { GrYoga } from 'react-icons/gr';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import Link from 'next/link';
 import { TiInfoLarge } from 'react-icons/ti';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
 export default function CourseCard({ course, className }) {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user } = useAuthUser();
   const [isEnterCourseLoading, setIsLoadingCourseLoading] = useState(false);
   const purchasedCourses = user?.courses || [];
   const isCoursePurchased = purchasedCourses.some(
-    (userCourse) => userCourse.courseId === course.id,
+    (userCourse) => userCourse.courseId === course.id
   );
 
   const detailClickHandler = () => {
@@ -30,7 +30,7 @@ export default function CourseCard({ course, className }) {
     try {
       setIsLoadingCourseLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`
       );
       if (response.ok) {
         const { sessionId } = await response.json();

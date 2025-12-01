@@ -1,45 +1,82 @@
 /* eslint-disable no-undef */
-import React from 'react'
-import PropTypes from 'prop-types'
-import Accordion from '../Ui/Accordion/Accordion'
-import { formatTime } from '@/utils/dateTimeHelper'
-import SessionRow from './SessionRow'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+'use client';
 
-const fetchTermsData = async (shortAddress, userId) => {
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+
+import Accordion from '../Ui/Accordion/Accordion';
+import { formatTime } from '@/utils/dateTimeHelper';
+import SessionRow from './SessionRow';
+
+// Redux User
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
+
+const fetchTermsData = async (shortAddress) => {
   try {
     const response = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}/terms`,
       {
         cache: 'no-cache',
         method: 'GET',
-        headers: {
-          userId: userId,
-        },
       }
-    )
-    if (!response.ok) {
-      throw new Error('Failed to fetch terms data')
-    }
-    const terms = await response.json()
-    return terms
-  } catch (error) {
-    console.error('Error fetching course data:', error)
-    return null
-  }
-}
+    );
 
-const CourseLessonsCard = async ({
+    if (!response.ok) throw new Error('Failed to fetch terms data');
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching course data:', error);
+    return null;
+  }
+};
+
+export default function CourseLessonsCard({
   shortAddress,
   activeSessionId,
   className,
-}) => {
-  const session = await getServerSession(authOptions)
-  const userId = session?.user?.userId ? session.user.userId : ''
+}) {
+  // 🟢 user از Redux (Client-Side)
+  const { isAuthenticated } = useAuthUser();
 
-  const data = await fetchTermsData(shortAddress, userId)
-  const terms = data?.courseTerms || []
+  const [terms, setTerms] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🟢 فقط اگر کاربر لاگین باشد، دیتای جلسات را بگیر
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
+      const data = await fetchTermsData(shortAddress);
+      setTerms(data?.courseTerms || []);
+      setLoading(false);
+    })();
+  }, [shortAddress, isAuthenticated]);
+
+  if (!isAuthenticated) {
+    return (
+      <div
+        className={`rounded-xl bg-surface-light p-6 shadow dark:bg-surface-dark ${className}`}
+      >
+        <h3 className='mb-4 font-semibold md:text-lg'>سرفصل‌ها</h3>
+        <p className='text-red-500 dark:text-red-300 text-sm'>
+          برای مشاهده جلسات، لطفاً ابتدا وارد حساب خود شوید.
+        </p>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div
+        className={`rounded-xl bg-surface-light p-6 shadow dark:bg-surface-dark ${className}`}
+      >
+        <h3 className='mb-4 font-semibold md:text-lg'>سرفصل‌ها</h3>
+        <p className='text-sm'>در حال بارگذاری...</p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -54,10 +91,8 @@ const CourseLessonsCard = async ({
       )}
 
       {terms.map((term) => {
-        const t = term.term
-
-        // اطمینان از اینکه sessions همیشه آرایه است
-        const sessions = Array.isArray(t.sessions) ? t.sessions : []
+        const t = term.term;
+        const sessions = Array.isArray(t.sessions) ? t.sessions : [];
 
         return (
           <Accordion
@@ -78,16 +113,14 @@ const CourseLessonsCard = async ({
               />
             ))}
           />
-        )
+        );
       })}
     </div>
-  )
+  );
 }
 
 CourseLessonsCard.propTypes = {
   shortAddress: PropTypes.string.isRequired,
   className: PropTypes.string,
   activeSessionId: PropTypes.string,
-}
-
-export default CourseLessonsCard
+};
