@@ -2,6 +2,8 @@ import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/utils/getAuthUser';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(req, { params }) {
   const { shortAddress } = params;
 
@@ -16,27 +18,22 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // بررسی مالکیت دوره
-    const userCourse = await prismadb.userCourse.findFirst({
-      where: {
-        userId,
-        course: { shortAddress },
-        status: 'ACTIVE',
-      },
-      include: {
-        course: {
+    // 1) خودِ دوره را پیدا کن
+    const course = await prismadb.course.findUnique({
+      where: { shortAddress },
+      select: {
+        id: true,
+        shortAddress: true,
+        activeStatus: true,
+        courseTerms: {
+          orderBy: { termId: 'asc' },
           include: {
-            courseTerms: {
-              orderBy: { termId: 'asc' },
+            term: {
               include: {
-                term: {
-                  include: {
-                    sessionTerms: {
-                      include: {
-                        session: true,
-                      },
-                    },
-                  },
+                sessionTerms: {
+                  include: { session: true },
+                  // اگر sessionTerms order دارد می‌توانی اینجا هم orderBy بذاری
+                  // ولی معمولاً سشن order روی خود session است
                 },
               },
             },
@@ -45,32 +42,74 @@ export async function GET(req, { params }) {
       },
     });
 
-    if (!userCourse) {
+    if (!course || !course.activeStatus) {
+      return NextResponse.json({ error: 'Course not found' }, { status: 404 });
+    }
+
+    const courseId = course.id;
+
+    // 2) دسترسی: خرید مستقیم (userCourse)
+    const directAccess = await prismadb.userCourse.findFirst({
+      where: {
+        userId,
+        courseId,
+        status: 'ACTIVE',
+      },
+      select: { id: true },
+    });
+
+    // 3) دسترسی: اشتراک فعال + دوره داخل پلن
+    const now = new Date();
+
+    const subscriptionAccess = await prismadb.userSubscription.findFirst({
+      where: {
+        userId,
+        status: 'ACTIVE', // اگر enum شما چیز دیگری است، مطابق اسکیمای خودت تغییر بده
+        startDate: { lte: now },
+        endDate: { gte: now },
+        plan: {
+          planCourses: {
+            some: { courseId },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    const hasAccess = !!directAccess || !!subscriptionAccess;
+
+    if (!hasAccess) {
       return NextResponse.json(
-        { error: 'User has not purchased this course.' },
+        { error: 'User has no access to this course.' },
         { status: 403 }
       );
     }
 
-    const terms = userCourse.course.courseTerms.map((ct) => ct.term);
+    // 4) پیدا کردن اولین جلسه معتبر (با ترتیب درست session.order)
+    // تبدیل sessionTerms -> sessions و sort
+    const terms = (course.courseTerms || [])
+      .map((ct) => ct.term)
+      .filter(Boolean);
 
-    // پیدا کردن اولین سشن معتبر
     let firstValidSession = null;
 
     for (const term of terms) {
-      for (const st of term.sessionTerms) {
-        const s = st.session;
+      const sessions = (term.sessionTerms || [])
+        .map((st) => st.session)
+        .filter(Boolean)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
 
-        if (
-          s &&
-          s.isActive &&
-          ((s.type === 'VIDEO' && s.videoId) ||
-            (s.type === 'AUDIO' && s.audioId))
-        ) {
+      for (const s of sessions) {
+        const hasMedia =
+          (s.type === 'VIDEO' && !!s.videoId) ||
+          (s.type === 'AUDIO' && !!s.audioId);
+
+        if (s.isActive && hasMedia) {
           firstValidSession = s;
           break;
         }
       }
+
       if (firstValidSession) break;
     }
 
@@ -81,10 +120,14 @@ export async function GET(req, { params }) {
       );
     }
 
-    return NextResponse.json({
-      sessionId: firstValidSession.id,
-      sessionType: firstValidSession.type,
-    });
+    return NextResponse.json(
+      {
+        sessionId: firstValidSession.id,
+        sessionType: firstValidSession.type,
+        access: directAccess ? 'DIRECT' : 'SUBSCRIPTION', // برای دیباگ/UI مفید است
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error fetching first session:', error);
     return NextResponse.json(
