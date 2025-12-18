@@ -27,6 +27,35 @@ async function getUserFromJWT(request) {
   }
 }
 
+function getBaseUrl(request) {
+  // 1) اگر خودت تو env ست کردی (پیشنهادی)
+  const envUrl =
+    process.env.SITE_URL ||
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.LIARA_URL
+      ? `https://${process.env.LIARA_URL.replace(/^https?:\/\//, '')}`
+      : null);
+
+  if (envUrl) return envUrl;
+
+  // 2) fallback: از هدرهای پروکسی بخون
+  const proto = (request.headers.get('x-forwarded-proto') || 'https')
+    .split(',')[0]
+    .trim();
+  let host = (
+    request.headers.get('x-forwarded-host') ||
+    request.headers.get('host') ||
+    ''
+  )
+    .split(',')[0]
+    .trim();
+
+  // اگر اشتباهاً پورت داخلی چسبیده بود، برای https حذفش کن
+  if (proto === 'https') host = host.replace(/:3000$/, '');
+
+  return `${proto}://${host}`;
+}
+
 // -------------------------------
 // 1) مسیرهای ادمین
 // -------------------------------
@@ -87,7 +116,7 @@ async function handleLessonMediaAccess(request, user) {
 
   try {
     // ✅ بهتره بجای NEXT_PUBLIC_API_BASE_URL از origin همین درخواست استفاده کنیم
-    const baseUrl = request.nextUrl.origin;
+    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     // ۱) سطح دسترسی رسانه را می‌گیریم
     const mediaResponse = await fetch(
