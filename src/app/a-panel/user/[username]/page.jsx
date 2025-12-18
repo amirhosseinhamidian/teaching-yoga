@@ -10,6 +10,7 @@ import Modal from '@/components/modules/Modal/Modal';
 import { LuTrash } from 'react-icons/lu';
 import AddCourseSection from '../../components/templates/userDetail/AddCourseSection';
 import AddEditUserModal from '../../components/modules/AddEditUserModal/AddEditUserModal';
+import AddSubscriptionSection from '../../components/templates/userDetail/AddSubscriptionSection';
 
 const DetailUserPage = () => {
   const { isDark } = useTheme();
@@ -30,7 +31,7 @@ const DetailUserPage = () => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`
       );
       if (!response.ok) {
         toast.showErrorToast('کاربر پیدا نشد');
@@ -59,7 +60,7 @@ const DetailUserPage = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/users/${username}`,
         {
           method: 'DELETE',
-        },
+        }
       );
 
       if (response.ok) {
@@ -95,6 +96,11 @@ const DetailUserPage = () => {
             onUpdateUser={handleShowEditModal}
           />
           <AddCourseSection userId={user.id} className='mt-8 sm:mt-12' />
+          <AddSubscriptionSection
+            userId={user.id}
+            username={user.username}
+            className='mt-8 sm:mt-12'
+          />
         </div>
       )}
 

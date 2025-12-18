@@ -34,6 +34,7 @@ import CoursePriceCard from '@/components/CourseCards/CoursePriceCard';
 import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
 import { formatTime } from '@/utils/dateTimeHelper';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import CourseSubscriptionCard from '@/components/CourseCards/CourseSubscriptionCard';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -115,23 +116,64 @@ const fetchCourseData = async (shortAddress) => {
 
 const checkUserBuyCourse = async (shortAddress, userId) => {
   try {
-    const purchaseResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${userId}&shortAddress=${shortAddress}`
-    );
-    if (!purchaseResponse.ok) {
-      const errorData = await purchaseResponse.json();
-      console.error('Error:', errorData);
-      return false;
+    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?shortAddress=${shortAddress}${
+      userId ? `&userId=${userId}` : ''
+    }`;
+
+    const purchaseResponse = await fetch(url, {
+      method: 'GET',
+    });
+
+    let data = null;
+    try {
+      data = await purchaseResponse.json();
+    } catch (e) {
+      // اگر بادی خالی بود، نذار کرش کنه
+      data = {};
     }
 
-    if (purchaseResponse.status === 200) {
-      return true;
-    } else {
-      return false;
+    // مقدارهای پیش‌فرض
+    const baseResult = {
+      hasAccess: false, // دسترسی نهایی (خرید یا اشتراک)
+      viaSubscription: false, // دسترسی از طریق اشتراک بوده؟
+      inSubscription: false, // خود دوره داخل پلن‌های اشتراک هست؟
+    };
+
+    // اگر 500 یا 400 و از این مدل‌ها بود
+    if (!purchaseResponse.ok && purchaseResponse.status !== 403) {
+      console.error('Error:', data);
+      return {
+        ...baseResult,
+        inSubscription: data?.inSubscription ?? false,
+      };
     }
+
+    // 200 یعنی دسترسی دارد
+    if (purchaseResponse.status === 200) {
+      return {
+        hasAccess: !!data?.purchased,
+        viaSubscription: !!data?.viaSubscription,
+        inSubscription: !!data?.inSubscription,
+      };
+    }
+
+    // 403 یعنی دسترسی ندارد، ولی ممکنه inSubscription برامون مهم باشد
+    if (purchaseResponse.status === 403) {
+      return {
+        ...baseResult,
+        inSubscription: !!data?.inSubscription,
+      };
+    }
+
+    // حالت‌های دیگه
+    return baseResult;
   } catch (error) {
     console.error('Error while checking user course:', error);
-    return false;
+    return {
+      hasAccess: false,
+      viaSubscription: false,
+      inSubscription: false,
+    };
   }
 };
 
@@ -141,7 +183,8 @@ async function page({ params }) {
   const { shortAddress } = params;
 
   const { course, videoLink } = await fetchCourseData(shortAddress);
-  const isUserPurchased = await checkUserBuyCourse(shortAddress, userId);
+  const { hasAccess, viaSubscription, inSubscription } =
+    await checkUserBuyCourse(shortAddress, userId);
 
   if (!course) {
     redirect('/not-found');
@@ -202,26 +245,44 @@ async function page({ params }) {
               <p className='mb-6 font-thin'>{course.shortDescription}</p>
             </div>
             <div className='flex w-full flex-col gap-4 sm:flex-row'>
-              {isUserPurchased ? (
-                <CourseWatchCard
-                  shortAddress={shortAddress}
-                  className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                />
-              ) : (
-                <CoursePriceCard
-                  price={course.price}
-                  discount={course.discount}
-                  finalPrice={course.finalPrice}
-                  courseId={course.id}
-                  className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                />
-              )}
-              {/* for smaller screen */}
-              <div className='self-stretch sm:basis-1/2 lg:hidden'>
-                <InstructorCard
-                  instructor={course.instructor}
-                  className='h-full justify-between'
-                />
+              <div className='flex w-full flex-col gap-4 sm:flex-row'>
+                {hasAccess ? (
+                  <CourseWatchCard
+                    shortAddress={shortAddress}
+                    className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                  />
+                ) : (
+                  <>
+                    {/* ✅ فقط وقتی خرید مستقیم مجازه، باکس قیمت رو نشون بده */}
+                    {course.pricingMode !== 'SUBSCRIPTION_ONLY' && (
+                      <CoursePriceCard
+                        price={course.price}
+                        discount={course.discount}
+                        finalPrice={course.finalPrice}
+                        courseId={course.id}
+                        className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                      />
+                    )}
+
+                    {/* ✅ وقتی دوره داخل پلن‌های اشتراک هست و مدلش اجازه اشتراک میده */}
+                    {(course.pricingMode === 'SUBSCRIPTION_ONLY' ||
+                      course.pricingMode === 'BOTH') &&
+                      inSubscription && (
+                        <CourseSubscriptionCard
+                          courseId={course.id}
+                          className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                        />
+                      )}
+                  </>
+                )}
+
+                {/* for smaller screen */}
+                <div className='self-stretch sm:basis-1/2 lg:hidden'>
+                  <InstructorCard
+                    instructor={course.instructor}
+                    className='h-full justify-between'
+                  />
+                </div>
               </div>
             </div>
           </div>

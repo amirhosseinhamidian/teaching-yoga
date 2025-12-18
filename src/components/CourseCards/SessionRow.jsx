@@ -2,14 +2,13 @@
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { formatTime } from '@/utils/dateTimeHelper';
-import { FiLock } from 'react-icons/fi';
+import { FiLock, FiCircle } from 'react-icons/fi';
 import { HiOutlinePlayCircle } from 'react-icons/hi2';
 import { AiOutlineLogin } from 'react-icons/ai';
 import Modal from '../modules/Modal/Modal';
 import { useRouter, usePathname } from 'next/navigation';
 import { LuLogIn, LuShoppingCart } from 'react-icons/lu';
 import { BsFillCheckCircleFill } from 'react-icons/bs';
-import { FiCircle } from 'react-icons/fi';
 
 const SessionRow = ({
   number,
@@ -17,11 +16,13 @@ const SessionRow = ({
   activeSessionId,
   className,
   courseShortAddress,
+  hasSubscriptionAccess = false, // آیا این دوره در پلن‌های اشتراک هست؟
+  isSubscriptionOnly = false, // آیا فقط از طریق اشتراک قابل دسترسی است؟
 }) => {
   const router = useRouter();
   const pathname = usePathname();
   const [showRegisterModal, setShowRegisterModal] = useState(false);
-  const [showAddToCartModal, setShowAddToCartModal] = useState(false);
+  const [showAccessModal, setShowAccessModal] = useState(false);
 
   const getMedia = () => {
     return session.type === 'VIDEO' ? session.video : session.audio;
@@ -31,21 +32,26 @@ const SessionRow = ({
     const media = getMedia();
     if (!media) return;
 
+    // اگر کاربر به این جلسه دسترسی دارد (عمومی یا مطابق سطح دسترسی)
     if (
       media.accessLevel === 'PUBLIC' ||
       session.access === media.accessLevel
     ) {
       router.push(`/courses/${courseShortAddress}/lesson/${session.id}`);
-    } else if (
+    }
+    // فقط برای کاربران ثبت‌نام کرده
+    else if (
       media.accessLevel === 'REGISTERED' &&
       session.access === 'NO_ACCESS'
     ) {
       setShowRegisterModal(true);
-    } else if (
+    }
+    // جلسات قفل شده برای خریداران/مشترکین
+    else if (
       media.accessLevel === 'PURCHASED' &&
       session.access === 'NO_ACCESS'
     ) {
-      setShowAddToCartModal(true);
+      setShowAccessModal(true);
     }
   };
 
@@ -55,7 +61,13 @@ const SessionRow = ({
   };
 
   const addToCartHandler = () => {
-    // این قسمت را در صورت نیاز تکمیل کن
+    // TODO: لاجیک افزودن دوره به سبد خرید
+    // مثلاً: dispatch(addCourseToCart(courseId))
+    console.log('add course to cart (implement me)');
+  };
+
+  const goToSubscriptions = () => {
+    router.push('/subscriptions');
   };
 
   const renderIcon = () => {
@@ -122,6 +134,52 @@ const SessionRow = ({
     }
   };
 
+  // متن‌ها و دکمه‌های مودال دسترسی (خرید / اشتراک)
+  const accessModalConfig = (() => {
+    // فقط از طریق اشتراک
+    if (isSubscriptionOnly) {
+      return {
+        title: 'دسترسی از طریق اشتراک',
+        desc: 'برای مشاهده این جلسه، لازم است یکی از پلن‌های اشتراک فعال سایت را تهیه کنید. این دوره فقط از طریق اشتراک در دسترس است.',
+        primaryText: 'مشاهده پلن‌های اشتراک',
+        secondaryText: 'لغو',
+        primaryAction: goToSubscriptions,
+        secondaryAction: () => setShowAccessModal(false),
+      };
+    }
+
+    // هم خرید دوره هم اشتراک ممکن است
+    if (hasSubscriptionAccess) {
+      return {
+        title: 'خرید دوره یا فعال‌سازی اشتراک',
+        desc: 'برای مشاهده این جلسه ابتدا دوره را تهیه کنید یا یکی از پلن‌های اشتراک را فعال نمایید. با خرید اشتراک، به مجموعه‌ای از دوره‌های انتخاب‌شده دسترسی خواهید داشت.',
+        primaryText: 'خرید این دوره',
+        secondaryText: 'مشاهده پلن‌های اشتراک',
+        primaryAction: () => {
+          addToCartHandler();
+          setShowAccessModal(false);
+        },
+        secondaryAction: () => {
+          setShowAccessModal(false);
+          goToSubscriptions();
+        },
+      };
+    }
+
+    // فقط خرید دوره (رفتار قدیمی)
+    return {
+      title: 'خرید دوره',
+      desc: 'برای مشاهده این جلسه ابتدا دوره را تهیه کنید. بعد از خرید، به تمام جلسات این دوره دسترسی کامل خواهید داشت.',
+      primaryText: 'افزودن به سبد خرید',
+      secondaryText: 'لغو',
+      primaryAction: () => {
+        addToCartHandler();
+        setShowAccessModal(false);
+      },
+      secondaryAction: () => setShowAccessModal(false),
+    };
+  })();
+
   return (
     <>
       <div
@@ -167,6 +225,7 @@ const SessionRow = ({
         </div>
       </div>
 
+      {/* مودال ثبت‌نام / ورود برای جلسات REGISTERED */}
       {showRegisterModal && (
         <Modal
           title='ثبت نام یا ورود به حساب کاربری'
@@ -179,16 +238,18 @@ const SessionRow = ({
           secondaryButtonText='لغو'
         />
       )}
-      {showAddToCartModal && (
+
+      {/* مودال دسترسی خرید / اشتراک برای جلسات PURCHASED */}
+      {showAccessModal && (
         <Modal
-          title='خرید دوره'
-          desc='برای مشاهده این جلسه ابتدا دوره را تهیه کنید. بعد از خرید شما به محتوای کامل این دوره و تمام جلسات آن دسترسی کامل دارید.'
+          title={accessModalConfig.title}
+          desc={accessModalConfig.desc}
           icon={LuShoppingCart}
           iconSize={36}
-          primaryButtonClick={addToCartHandler}
-          secondaryButtonClick={() => setShowAddToCartModal(false)}
-          primaryButtonText='افزودن به سبد خرید'
-          secondaryButtonText='لغو'
+          primaryButtonClick={accessModalConfig.primaryAction}
+          secondaryButtonClick={accessModalConfig.secondaryAction}
+          primaryButtonText={accessModalConfig.primaryText}
+          secondaryButtonText={accessModalConfig.secondaryText}
         />
       )}
     </>
@@ -201,6 +262,8 @@ SessionRow.propTypes = {
   courseShortAddress: PropTypes.string.isRequired,
   className: PropTypes.string,
   activeSessionId: PropTypes.string,
+  hasSubscriptionAccess: PropTypes.bool,
+  isSubscriptionOnly: PropTypes.bool,
 };
 
 export default SessionRow;

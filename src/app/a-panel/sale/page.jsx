@@ -19,12 +19,13 @@ function SalePage() {
   const [chartData, setChartData] = useState([]);
   const [isLoadingInfo, setIsLoadingInfo] = useState(false);
   const [saleInfo, setSaleInfo] = useState({});
+  const [searchText, setSearchText] = useState('');
 
   const fetchSaleInfo = async () => {
     try {
       setIsLoadingInfo(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/info`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/info`
       );
       if (response.ok) {
         const data = await response.json();
@@ -43,7 +44,7 @@ function SalePage() {
     try {
       setIsLoadingChart(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/daily-revenue`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/daily-revenue`
       );
 
       if (response.ok) {
@@ -66,12 +67,12 @@ function SalePage() {
     }
   };
 
-  const fetchSales = async (page) => {
+  const fetchSales = async (page, search = '') => {
     setIsLoading(true);
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales?page=${page}&perPage=10`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales?page=${page}&perPage=10&search=${encodeURIComponent(search)}`
       );
 
       if (response.ok) {
@@ -89,8 +90,13 @@ function SalePage() {
   };
 
   useEffect(() => {
-    fetchSales(page);
-  }, [page]);
+    fetchSales(page, searchText);
+  }, [page, searchText]);
+
+  const handleSearch = (text) => {
+    setPage(1); // مهم: با سرچ برو صفحه 1
+    setSearchText(text);
+  };
 
   useEffect(() => {
     fetchSaleInfo();
@@ -129,6 +135,7 @@ function SalePage() {
         sales={sales}
         setSales={setSales}
         className='mt-6'
+        onSearch={handleSearch}
       />
     </div>
   );

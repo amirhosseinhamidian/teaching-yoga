@@ -13,6 +13,7 @@ const DropDown = ({
   errorClassName = 'mr-3',
   label = '',
   fullWidth = false,
+  valueClassName = '',
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null); // Reference to the dropdown container
@@ -48,7 +49,7 @@ const DropDown = ({
       <div
         className={`relative rounded-xl border border-solid ${
           errorMessage ? 'border-red' : 'border-accent'
-        } bg-surface-light px-1 py-2 font-faNa font-medium text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 sm:px-4 dark:bg-surface-dark dark:text-subtext-dark ${
+        } bg-surface-light px-1 py-2 font-faNa text-subtext-light transition duration-200 ease-in focus-within:outline-none focus-within:ring-1 sm:px-4 dark:bg-surface-dark dark:text-subtext-dark ${
           isOpen ? 'ring-1 ring-accent' : ''
         } ${className}`}
         onClick={toggleDropdown}
@@ -57,7 +58,7 @@ const DropDown = ({
         <div
           className={`flex cursor-pointer items-center justify-between gap-1 text-xs transition-all sm:gap-2 sm:text-sm ${
             value
-              ? 'font-medium text-text-light dark:text-text-dark'
+              ? `{text-text-light dark:text-text-dark ${valueClassName}}`
               : 'text-subtext-light dark:text-subtext-dark'
           }`}
         >
@@ -109,13 +110,14 @@ DropDown.propTypes = {
       label: PropTypes.string.isRequired,
       value: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
         .isRequired,
-    }),
+    })
   ).isRequired,
   value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
   onChange: PropTypes.func.isRequired,
   placeholder: PropTypes.string,
   className: PropTypes.string,
   optionClassName: PropTypes.string,
+  valueClassName: PropTypes.string,
   errorMessage: PropTypes.string,
   errorClassName: PropTypes.string,
   label: PropTypes.string,

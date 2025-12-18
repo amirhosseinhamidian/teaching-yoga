@@ -12,10 +12,13 @@ const Modal = ({
   primaryButtonClick,
   secondaryButtonClick,
   primaryButtonText,
+  className,
   secondaryButtonText,
 }) => {
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm ${className}`}
+    >
       <div className='w-2/3 rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
         <div className='flex items-center gap-2 border-b border-subtext-light pb-3 dark:border-subtext-dark'>
           <Icon size={iconSize} color={iconColor} />
@@ -50,6 +53,7 @@ Modal.propTypes = {
   iconColor: PropTypes.string,
   primaryButtonText: PropTypes.string,
   secondaryButtonText: PropTypes.string,
+  className: PropTypes.string,
 };
 
 export default Modal;

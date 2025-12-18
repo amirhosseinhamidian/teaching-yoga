@@ -61,7 +61,7 @@ export async function GET(req, { params }) {
         .sort((a, b) => a.order - b.order);
     });
 
-    // بررسی خرید دوره
+    // بررسی خرید مستقیم دوره
     const userCourse = await prismadb.userCourse.findFirst({
       where: {
         userId,
@@ -70,7 +70,53 @@ export async function GET(req, { params }) {
       },
     });
 
-    // تعیین سطح دسترسی مانند قبل
+    const hasCoursePurchase = !!userCourse;
+
+    // بررسی این‌که این دوره در پلن‌های اشتراک وجود دارد یا نه
+    const courseHasAnySubscriptionPlan =
+      (await prismadb.subscriptionPlanCourse.findFirst({
+        where: {
+          courseId: course.id,
+          plan: {
+            isActive: true,
+          },
+        },
+        select: { id: true },
+      })) != null;
+
+    // بررسی این‌که این کاربر اشتراک فعال برای این دوره دارد یا نه
+    const now = new Date();
+    const userActiveSubscriptionForCourse =
+      (await prismadb.userSubscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+          startDate: { lte: now },
+          endDate: { gte: now },
+          plan: {
+            planCourses: {
+              some: {
+                courseId: course.id,
+              },
+            },
+          },
+        },
+        select: { id: true },
+      })) != null;
+
+    const hasSubscriptionAccess = userActiveSubscriptionForCourse;
+
+    // محاسبه مجموع قیمت ترم‌های این دوره (برای تشخیص فقط‌اشتراک بودن)
+    const totalTermPrice =
+      course.courseTerms?.reduce((sum, ct) => {
+        const p = ct.term?.price || 0;
+        return sum + p;
+      }, 0) || 0;
+
+    const isSubscriptionOnly =
+      courseHasAnySubscriptionPlan && totalTermPrice <= 0;
+
+    // تعیین سطح دسترسی مانند قبل + در نظر گرفتن اشتراک
     course.courseTerms.forEach((ct) => {
       ct.term.sessions.forEach((session) => {
         const media = session.video || session.audio;
@@ -85,12 +131,22 @@ export async function GET(req, { params }) {
         } else if (media.accessLevel === 'REGISTERED') {
           session.access = userId ? 'REGISTERED' : 'NO_ACCESS';
         } else if (media.accessLevel === 'PURCHASED') {
-          session.access = userCourse ? 'PURCHASED' : 'NO_ACCESS';
+          const hasAccess = hasCoursePurchase || hasSubscriptionAccess;
+          session.access = hasAccess ? 'PURCHASED' : 'NO_ACCESS';
+        } else {
+          session.access = 'NO_ACCESS';
         }
       });
     });
 
-    return NextResponse.json(course, { status: 200 });
+    // 🔹 فلگ‌های جدید برای استفاده در فرانت
+    const result = {
+      ...course,
+      hasSubscriptionPlan: courseHasAnySubscriptionPlan,
+      isSubscriptionOnly,
+    };
+
+    return NextResponse.json(result, { status: 200 });
   } catch (error) {
     console.error('Error in course detail API:', error);
     return NextResponse.json(

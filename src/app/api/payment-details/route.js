@@ -15,7 +15,7 @@ export const GET = async (request) => {
     }
 
     const tokenNumber = parseInt(token, 10);
-    if (isNaN(tokenNumber)) {
+    if (Number.isNaN(tokenNumber)) {
       return NextResponse.json(
         { error: 'Invalid token format.' },
         { status: 400 }
@@ -40,6 +40,26 @@ export const GET = async (request) => {
                 },
               },
             },
+            // ✅ اضافه شدن اطلاعات اشتراک‌ها
+            cartSubscriptions: {
+              select: {
+                id: true,
+                price: true,
+                discount: true,
+                subscriptionPlan: {
+                  select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    durationInDays: true,
+                    intervalLabel: true,
+                    price: true,
+                    discountAmount: true,
+                    isActive: true,
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -53,11 +73,11 @@ export const GET = async (request) => {
     }
 
     // ----------------------------------------
-    //  اگر پرداخت موفق بوده → discount bind
+    //  اگر پرداخت موفق بوده → bind کردن تخفیف
     // ----------------------------------------
     if (
       paymentRecord.status === 'SUCCESSFUL' &&
-      paymentRecord.cart.discountCodeId
+      paymentRecord.cart?.discountCodeId
     ) {
       const discountCodeId = paymentRecord.cart.discountCodeId;
 
@@ -81,7 +101,7 @@ export const GET = async (request) => {
 
       const userId = authUser.id;
 
-      // ثبت استفاده کاربر از تخفیف
+      // ثبت استفاده کاربر از تخفیف (اگر قبلاً استفاده نکرده)
       await prismadb.userDiscount.create({
         data: {
           userId,

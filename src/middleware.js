@@ -14,7 +14,6 @@ async function getUserFromJWT(request) {
     if (!token) return null;
 
     const secret = new TextEncoder().encode(JWT_SECRET);
-
     const { payload } = await jwtVerify(token, secret);
 
     return {
@@ -33,7 +32,6 @@ async function getUserFromJWT(request) {
 // -------------------------------
 async function handleAdminRoutes(request, user) {
   const path = request.nextUrl.pathname;
-
   const isAdminRoute = path.startsWith('/a-panel');
 
   if (isAdminRoute && (!user || user.role !== 'ADMIN')) {
@@ -48,7 +46,6 @@ async function handleAdminRoutes(request, user) {
 // -------------------------------
 async function handleProtectedRoutes(request, user) {
   const protectedRoutes = ['/profile'];
-
   const path = request.nextUrl.pathname;
 
   const isProtected = protectedRoutes.some((route) => path.startsWith(route));
@@ -61,7 +58,7 @@ async function handleProtectedRoutes(request, user) {
 }
 
 // -------------------------------
-// 3) مسیرهای ممنوع برای مهمان‌ها
+// 3) مسیرهایی که مهمان نباید ببیند (مثل payment)
 // -------------------------------
 async function handleAccessDeniedRoutes(request, user) {
   const path = request.nextUrl.pathname;
@@ -75,10 +72,12 @@ async function handleAccessDeniedRoutes(request, user) {
 
 // -------------------------------
 // 4) بررسی مجوز دسترسی به ویدیوهای درس
+//    (خرید دوره + اشتراک)
 // -------------------------------
 async function handleLessonMediaAccess(request, user) {
   const { pathname } = request.nextUrl;
 
+  // فقط برای مسیرهای /courses/[shortAddress]/lesson/[sessionId]
   if (!pathname.startsWith('/courses/') || !pathname.includes('/lesson/')) {
     return null;
   }
@@ -87,9 +86,13 @@ async function handleLessonMediaAccess(request, user) {
   const sessionId = pathname.split('/')[4];
 
   try {
-    // سطح دسترسی رسانه
+    // ✅ بهتره بجای NEXT_PUBLIC_API_BASE_URL از origin همین درخواست استفاده کنیم
+    const baseUrl = request.nextUrl.origin;
+
+    // ۱) سطح دسترسی رسانه را می‌گیریم
     const mediaResponse = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-media-access?sessionId=${sessionId}`
+      `${baseUrl}/api/check-media-access?sessionId=${sessionId}`,
+      { cache: 'no-store' }
     );
 
     if (mediaResponse.status !== 200) {
@@ -100,24 +103,49 @@ async function handleLessonMediaAccess(request, user) {
 
     const media = await mediaResponse.json();
 
+    // جلسه عمومی → دسترسی برای همه
     if (media.accessLevel === PUBLIC) return null;
 
+    // فقط کاربران ثبت‌نام کرده
     if (media.accessLevel === REGISTERED && !user) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
+    // جلسات فقط برای خریداران/مشترکین
     if (media.accessLevel === PURCHASED) {
-      if (!user) return NextResponse.redirect(new URL('/login', request.url));
+      if (!user) {
+        return NextResponse.redirect(new URL('/login', request.url));
+      }
 
+      // ۲) چک دسترسی بر اساس خرید دوره یا اشتراک
       const purchaseResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?userId=${user.userId}&shortAddress=${shortAddress}`
+        `${baseUrl}/api/check-purchase?userId=${user.userId}&shortAddress=${shortAddress}`,
+        { cache: 'no-store' }
       );
 
-      if (purchaseResponse.status !== 200) {
+      const data = await purchaseResponse.json().catch(() => null);
+
+      // ✅ خروجی جدید: hasAccess
+      if (purchaseResponse.status === 200 && data?.hasAccess) {
+        return null; // اجازه ورود به صفحه lesson
+      }
+
+      // اگر دسترسی ندارد → برگرد به صفحه دوره
+      if (purchaseResponse.status === 403) {
+        // چون گفتی inSubscription رو حذف کنیم، دیگه ریدایرکت به /subscriptions نداریم
         return NextResponse.redirect(
           new URL(`/courses/${shortAddress}`, request.url)
         );
       }
+
+      // خطاهای سرور
+      if (purchaseResponse.status >= 500) {
+        return NextResponse.redirect(new URL('/error', request.url));
+      }
+
+      return NextResponse.redirect(
+        new URL(`/courses/${shortAddress}`, request.url)
+      );
     }
   } catch (err) {
     console.error('media access error:', err);

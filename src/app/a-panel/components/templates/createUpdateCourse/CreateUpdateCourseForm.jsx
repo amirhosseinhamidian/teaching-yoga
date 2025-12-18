@@ -14,7 +14,7 @@ import {
   INTERMEDIATE,
   INTERMEDIATE_ADVANCED,
 } from '@/constants/courseLevels';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FiPlus } from 'react-icons/fi';
 import FileUploadModal from '../../modules/FileUploadModal/FileUploadModal';
 import { createToastHandler } from '@/utils/toastHandler';
@@ -26,6 +26,7 @@ import { getStringTime } from '@/utils/dateTimeHelper';
 import { FaCircleCheck } from 'react-icons/fa6';
 import { ImSpinner2 } from 'react-icons/im';
 import { IoIosCloseCircle } from 'react-icons/io';
+import { IoClose } from 'react-icons/io5';
 
 function CreateCourseUpdateForm({ courseToUpdate }) {
   const { isDark } = useTheme();
@@ -34,28 +35,40 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
 
   const [coverLink, setCoverLink] = useState(courseToUpdate?.cover || '');
   const [introLink, setIntroLink] = useState(
-    courseToUpdate?.introVideoUrl || '',
+    courseToUpdate?.introVideoUrl || ''
   );
   const [title, setTitle] = useState(courseToUpdate?.title || '');
   const [shortDesc, setShortDesc] = useState(courseToUpdate?.subtitle || '');
   const [level, setLevel] = useState(courseToUpdate?.level || '');
   const [status, setStatus] = useState(courseToUpdate?.status || '');
   const [sessionsCount, setSessionsCount] = useState(
-    courseToUpdate?.sessionCount || '',
+    courseToUpdate?.sessionCount || ''
   );
   const [time, setTime] = useState(courseToUpdate?.duration || '');
 
   const [shortAddress, setShortAddress] = useState(
-    courseToUpdate?.shortAddress || '',
+    courseToUpdate?.shortAddress || ''
   );
   const [highPriority, setHighPriority] = useState(
-    courseToUpdate?.isHighPriority || false,
+    courseToUpdate?.isHighPriority || false
   );
   const [firstDesc, setFirstDesc] = useState(
-    courseToUpdate?.shortDescription || '',
+    courseToUpdate?.shortDescription || ''
   );
   const [completeDesc, setCompleteDesc] = useState(
-    courseToUpdate?.description || '',
+    courseToUpdate?.description || ''
+  );
+
+  const [pricingMode, setPricingMode] = useState(
+    courseToUpdate?.pricingMode || 'TERM_ONLY'
+  );
+
+  const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(false);
+
+  const [selectedPlanId, setSelectedPlanId] = useState(undefined);
+  const [selectedPlanIds, setSelectedPlanIds] = useState(
+    courseToUpdate?.subscriptionPlanCourses?.map((x) => x.planId) || []
   );
 
   const [errorMessages, setErrorMessages] = useState({
@@ -68,6 +81,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     shortAddress: '',
     coverLink: '',
     introLink: '',
+    subscriptionPlans: '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -88,6 +102,17 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     { label: 'کامل شده', value: COMPLETED },
     { label: 'در حال تکمیل', value: IN_PROGRESS },
   ];
+
+  const pricingModeOptions = [
+    { label: 'فقط فروش بر اساس ترم‌ها', value: 'TERM_ONLY' },
+    { label: 'فقط با اشتراک', value: 'SUBSCRIPTION_ONLY' },
+    { label: 'فروش + اشتراک', value: 'BOTH' },
+  ];
+
+  const planOptions = plans.map((plan) => ({
+    value: plan.id,
+    label: `${plan.name} - ${plan.finalPrice?.toLocaleString('fa-IR') || plan.price?.toLocaleString('fa-IR')} تومان`,
+  }));
 
   const [openUploadImageModal, setOpenUploadImageModal] = useState(false);
   const [openUploadIntroModal, setOpenUploadIntroModal] = useState(false);
@@ -121,7 +146,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
         {
           method: 'POST',
           body: formData,
-        },
+        }
       );
 
       if (!response.ok) {
@@ -169,7 +194,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
         {
           method: 'POST',
           body: formData,
-        },
+        }
       );
 
       if (!response.ok) {
@@ -203,7 +228,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     if (/[^a-zA-Z0-9\\-]/.test(shortAddress)) {
       setShortAddressStatus('invalid');
       setShortAddressError(
-        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.',
+        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.'
       );
       return;
     }
@@ -216,7 +241,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
 
     setShortAddressStatus('loading');
     const response = await fetch(
-      `/api/admin/validate-course-short-address?shortAddress=${encodeURIComponent(shortAddress)}`,
+      `/api/admin/validate-course-short-address?shortAddress=${encodeURIComponent(shortAddress)}`
     );
     const data = await response.json();
 
@@ -228,6 +253,58 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       setShortAddressError(data.message);
     }
   };
+
+  useEffect(() => {
+    const needPlans =
+      pricingMode === 'SUBSCRIPTION_ONLY' || pricingMode === 'BOTH';
+    if (!needPlans) return;
+
+    (async () => {
+      try {
+        setPlansLoading(true);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/subscription/plans`,
+          { method: 'GET', cache: 'no-store' }
+        );
+
+        if (!res.ok) {
+          setPlans([]);
+          return;
+        }
+
+        const data = await res.json();
+        // اگر API تو آرایه خام می‌ده:
+        const list = Array.isArray(data) ? data : data?.plans || [];
+        setPlans(list);
+      } catch (e) {
+        console.error(e);
+        setPlans([]);
+      } finally {
+        setPlansLoading(false);
+      }
+    })();
+  }, [pricingMode]);
+
+  const addSelectedPlan = () => {
+    if (!selectedPlanId) return;
+
+    const pid = Number(selectedPlanId);
+    if (selectedPlanIds.includes(pid)) return;
+
+    setSelectedPlanIds((prev) => [...prev, pid]);
+    setSelectedPlanId(undefined);
+  };
+
+  const removePlan = (pid) => {
+    setSelectedPlanIds((prev) => prev.filter((x) => x !== pid));
+  };
+
+  useEffect(() => {
+    if (pricingMode === 'TERM_ONLY') {
+      setSelectedPlanIds([]);
+      setSelectedPlanId(undefined);
+    }
+  }, [pricingMode]);
 
   const validateInputs = () => {
     let errors = {};
@@ -290,6 +367,25 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       errors.introLink = 'لینک ویدیو باید با فرمت .m3u8 باشد.';
     }
 
+    const modeNeedsPlans =
+      pricingMode === 'SUBSCRIPTION_ONLY' || pricingMode === 'BOTH';
+
+    if (modeNeedsPlans && !plansLoading && (!plans || plans.length === 0)) {
+      errors.subscriptionPlans =
+        'ابتدا یک پلن اشتراک تعریف کنید، سپس دوره را به پلن‌ها اضافه کنید.';
+    }
+
+    // (اختیاری ولی توصیه‌شده) اگر پلن وجود دارد ولی چیزی انتخاب نشده
+    if (
+      modeNeedsPlans &&
+      !plansLoading &&
+      plans?.length > 0 &&
+      selectedPlanIds.length === 0
+    ) {
+      errors.subscriptionPlans =
+        'حداقل یک پلن اشتراک را برای این دوره انتخاب کنید.';
+    }
+
     setErrorMessages(errors);
 
     // Return true if no errors exist
@@ -333,6 +429,11 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       status,
       instructorId: 1, // Update with actual instructor ID
       introVideoUrl: introLink,
+      pricingMode,
+      subscriptionPlanIds:
+        pricingMode === 'SUBSCRIPTION_ONLY' || pricingMode === 'BOTH'
+          ? selectedPlanIds
+          : [],
     };
 
     try {
@@ -347,7 +448,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
-          },
+          }
         );
       } else {
         // Create course
@@ -359,7 +460,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
-          },
+          }
         );
       }
 
@@ -368,7 +469,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
         toast.showSuccessToast(
           courseToUpdate
             ? 'دوره با موفقیت به‌روزرسانی شد'
-            : 'دوره با موفقیت ثبت شد',
+            : 'دوره با موفقیت ثبت شد'
         );
         router.replace('/a-panel/course');
       } else {
@@ -461,6 +562,107 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
           errorMessage={errorMessages.status}
           className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
         />
+
+        <div>
+          <DropDown
+            label='مدل دسترسی / قیمت‌گذاری دوره'
+            options={pricingModeOptions}
+            placeholder='یک گزینه انتخاب کنید'
+            value={pricingMode}
+            onChange={(val) => setPricingMode(val)}
+            fullWidth
+            className='bg-surface-light text-text-light dark:bg-surface-dark dark:text-text-dark'
+          />
+          <p className='mr-2 mt-2 text-xs text-subtext-light dark:text-subtext-dark'>
+            - «فقط ترم‌ها»: دسترسی فقط با خرید ترم‌ها/دوره <br />
+            - «فقط اشتراک»: این دوره فقط با اشتراک فعال قابل مشاهده است <br />-
+            «هر دو»: هم خرید مستقیم و هم اشتراک
+          </p>
+        </div>
+
+        {(pricingMode === 'SUBSCRIPTION_ONLY' || pricingMode === 'BOTH') && (
+          <div
+            className={`rounded-2xl border ${errorMessages.subscriptionPlans ? 'border-red' : 'border-accent'} bg-surface-light p-4 dark:bg-surface-dark`}
+          >
+            <h3 className='mb-3 text-sm font-semibold'>
+              افزودن دوره به پلن‌های اشتراک
+            </h3>
+
+            {plansLoading ? (
+              <p className='text-sm text-subtext-light dark:text-subtext-dark'>
+                در حال دریافت پلن‌ها...
+              </p>
+            ) : plans.length === 0 ? (
+              <div className='flex flex-col items-center justify-center rounded-lg bg-foreground-light p-3 text-sm dark:bg-foreground-dark'>
+                <p>هیچ پلن اشتراکی ثبت نشده است.</p>
+                <div className='mt-3'>
+                  <Button
+                    shadow
+                    className='text-xs'
+                    onClick={() => router.push('/a-panel/subscriptions')}
+                  >
+                    مدیریت پلن‌های اشتراک
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className='flex flex-col gap-3 sm:flex-row sm:items-end'>
+                  <div className='flex-1'>
+                    <DropDown
+                      label='انتخاب پلن'
+                      options={planOptions}
+                      placeholder='یک پلن انتخاب کنید'
+                      value={selectedPlanId ?? undefined}
+                      onChange={(val) => setSelectedPlanId(Number(val))}
+                      fullWidth
+                    />
+                  </div>
+
+                  <Button
+                    shadow
+                    className='whitespace-nowrap text-xs'
+                    onClick={addSelectedPlan}
+                    disabled={!selectedPlanId}
+                  >
+                    افزودن به لیست
+                  </Button>
+                </div>
+
+                {/* لیست پلن‌های انتخاب‌شده */}
+                <div className='mt-4 space-y-2'>
+                  {selectedPlanIds.length === 0 ? (
+                    <p className='text-xs text-subtext-light dark:text-subtext-dark'>
+                      هنوز پلنی انتخاب نشده است.
+                    </p>
+                  ) : (
+                    selectedPlanIds.map((pid) => {
+                      const plan = plans.find((p) => p.id === pid);
+                      return (
+                        <div
+                          key={pid}
+                          className='flex w-fit items-center justify-between gap-3 rounded-lg bg-foreground-light px-3 py-2 text-xs dark:bg-foreground-dark'
+                        >
+                          <span>{plan?.name || `Plan #${pid}`}</span>
+                          <button
+                            type='button'
+                            onClick={() => removePlan(pid)}
+                            className='text-red hover:opacity-80'
+                          >
+                            <IoClose size={20} />
+                          </button>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </>
+            )}
+            <p className='mt-2 text-xs text-red'>
+              {errorMessages.subscriptionPlans}
+            </p>
+          </div>
+        )}
         <Input
           label='تعداد جلسات'
           placeholder='تعداد جلسات را وارد کنید'

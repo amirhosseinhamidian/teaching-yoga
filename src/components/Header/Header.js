@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Logo from '../Logo/Logo';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import {
@@ -19,6 +19,7 @@ import ProfileModal from '../modules/ProfileModal/ProfileModal';
 import Modal from '../modules/Modal/Modal';
 import { LuLogOut } from 'react-icons/lu';
 import CartModal from '../modules/CartModal/CartModal';
+import { PiClockCountdownBold, PiCrownSimple } from 'react-icons/pi';
 
 import { useRouter, usePathname } from 'next/navigation';
 
@@ -45,6 +46,63 @@ export default function Header() {
   const [isShowCartModal, setIsShowCartModal] = useState(false);
   const [showSignOutModal, setShowSignOutModal] = useState(false);
 
+  const [subscriptionInfo, setSubscriptionInfo] = useState({
+    loading: false,
+    hasActiveSubscription: false,
+    remainingDays: 0,
+    planName: null,
+  });
+
+  useEffect(() => {
+    // اگر لاگین نیست، نیازی به چک کردن نیست
+    if (!user) {
+      setSubscriptionInfo({
+        loading: false,
+        hasActiveSubscription: false,
+        remainingDays: 0,
+        planName: null,
+      });
+      return;
+    }
+
+    let ignore = false;
+
+    const fetchSubscriptionStatus = async () => {
+      try {
+        setSubscriptionInfo((prev) => ({ ...prev, loading: true }));
+
+        const res = await fetch('/api/subscription/status', {
+          method: 'GET',
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch subscription status');
+        }
+
+        const data = await res.json();
+
+        if (!ignore) {
+          setSubscriptionInfo({
+            loading: false,
+            hasActiveSubscription: !!data.hasActiveSubscription,
+            remainingDays: data.remainingDays || 0,
+            planName: data.planName || null,
+          });
+        }
+      } catch (error) {
+        console.error('[SUBSCRIPTION_STATUS_ERROR]', error);
+        if (!ignore) {
+          setSubscriptionInfo((prev) => ({ ...prev, loading: false }));
+        }
+      }
+    };
+
+    fetchSubscriptionStatus();
+
+    return () => {
+      ignore = true;
+    };
+  }, [user]);
   // 🔥 Logout handler
   const signOutHandler = async () => {
     try {
@@ -78,6 +136,47 @@ export default function Header() {
 
         {/* Desktop */}
         <div className='hidden items-center gap-2 md:flex'>
+          {/* Subscription status */}
+          {user && (
+            <>
+              {subscriptionInfo.loading ? (
+                <IconButton loading></IconButton>
+              ) : subscriptionInfo.hasActiveSubscription ? (
+                (() => {
+                  const isExpiringSoon = subscriptionInfo.remainingDays <= 7;
+
+                  return (
+                    <button
+                      type='button'
+                      onClick={() => router.push('/subscriptions')}
+                      className={`hidden flex-nowrap items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 font-faNa text-xs transition duration-300 ease-in md:flex ${
+                        isExpiringSoon
+                          ? 'bg-red bg-opacity-15 text-red hover:bg-opacity-100 hover:text-white'
+                          : 'bg-emerald-100 text-emerald-700 hover:bg-green hover:text-white'
+                      } `}
+                    >
+                      <PiClockCountdownBold size={22} />
+                      <span className='text-xs font-bold'>
+                        اشتراک:{' '}
+                        <span className='text-sm'>
+                          {subscriptionInfo.remainingDays}
+                        </span>{' '}
+                        روز
+                      </span>
+                    </button>
+                  );
+                })()
+              ) : (
+                <button
+                  onClick={() => router.push('/subscriptions')}
+                  className='hidden flex-nowrap items-center gap-1 whitespace-nowrap rounded-xl bg-background-light p-2 text-xs text-secondary transition duration-300 ease-in hover:bg-secondary hover:text-background-light sm:px-2 md:flex dark:bg-background-dark hover:dark:text-background-dark'
+                >
+                  <PiCrownSimple size={24} />
+                  <span className='font-semibold'>مشترک شوید</span>
+                </button>
+              )}
+            </>
+          )}
           <IconButton
             icon={isDark ? MdOutlineLightMode : MdOutlineDarkMode}
             onClick={toggleTheme}

@@ -1,3 +1,4 @@
+// components/templates/complete-payment/PaymentCompleteMain.jsx
 /* eslint-disable no-undef */
 'use client';
 import React, { useEffect, useState } from 'react';
@@ -24,6 +25,7 @@ async function fetchPaymentDetails(token) {
     throw error;
   }
 }
+
 const PaymentCompleteMain = ({ token, status }) => {
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState(null);
@@ -65,6 +67,7 @@ const PaymentCompleteMain = ({ token, status }) => {
       <PageCheckoutTitle icon={IoBagCheckOutline} isSuccess={status === 'OK'}>
         {status === 'OK' ? 'تکمیل خرید' : 'پرداخت ناموفق'}
       </PageCheckoutTitle>
+
       {loading ? (
         <div className='my-12 flex h-56 w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light dark:bg-surface-dark'>
           <ImSpinner2 size={46} className='animate-spin text-secondary' />
@@ -72,9 +75,9 @@ const PaymentCompleteMain = ({ token, status }) => {
         </div>
       ) : (
         <>
-          {status === 'OK' ? (
+          {status === 'OK' && paymentDetails ? (
             <PaymentSuccessfully
-              data={paymentDetails.cart.cartCourses}
+              paymentDetails={paymentDetails}
               transactionId={paymentDetails.transactionId}
             />
           ) : (

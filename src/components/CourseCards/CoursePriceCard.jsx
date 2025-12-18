@@ -69,29 +69,26 @@ const CoursePriceCard = ({
 
   return (
     <div
-      className={`mx-auto rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark ${className}`}
+      className={`flex flex-col justify-between gap-10 rounded-xl bg-surface-light p-4 shadow sm:gap-6 dark:bg-surface-dark ${className}`}
     >
       <h4 className='mr-4 text-xs font-semibold text-subtext-light sm:text-sm dark:text-subtext-dark'>
-        هزینه و ثبت نام
+        هزینه و ثبت نام همیشگی
       </h4>
+      <Price
+        className='ml-4'
+        discount={discount}
+        finalPrice={finalPrice}
+        price={price}
+      />
 
-      <div className='mb-2 mt-2 flex w-full flex-col-reverse flex-wrap items-end justify-between gap-6 md:mt-4 lg:flex-row lg:gap-1'>
-        <Button
-          shadow
-          className='w-3/4 self-center text-xs xs:text-base sm:py-3 lg:w-2/4'
-          onClick={handleAddCourseToCart}
-          isLoading={isLoading}
-        >
-          ثبت نام
-        </Button>
-
-        <Price
-          className='ml-4'
-          discount={discount}
-          finalPrice={finalPrice}
-          price={price}
-        />
-      </div>
+      <Button
+        shadow
+        className='w-full self-end text-xs xs:text-base'
+        onClick={handleAddCourseToCart}
+        isLoading={isLoading}
+      >
+        ثبت نام
+      </Button>
 
       {showLoginModal && (
         <Modal

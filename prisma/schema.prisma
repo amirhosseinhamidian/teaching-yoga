@@ -51,6 +51,7 @@ model User {
   courses         UserCourse[]      @relation("UserCourses")
   userDiscount    UserDiscount[]
   terms           UserTerm[]        @relation("UserTerms")
+  subscriptions   UserSubscription[]
 }
 
 model Course {
@@ -82,6 +83,8 @@ model Course {
   questions        Question[]
   tickets          Ticket[]
   users            UserCourse[]   @relation("UserCourses")
+  pricingMode      CoursePricingMode @default(TERM_ONLY)
+  subscriptionPlanCourses SubscriptionPlanCourse[]
 }
 
 model UserCourse {
@@ -246,6 +249,7 @@ model Cart {
   cartCourses        CartCourse[] @relation("CartToCourses")
   cartTerms          CartTerm[]   @relation("CartToCartTerms")
   payment            Payment?     @relation("CartToPayment")
+  cartSubscriptions  CartSubscription[] @relation("CartToCartSubscriptions")
 }
 
 model CartCourse {
@@ -520,6 +524,67 @@ model SupportMessage {
   user        User?            @relation(fields: [userId], references: [id])
 }
 
+model SubscriptionPlan {
+  id                Int                       @id @default(autoincrement())
+  name              String
+  description       String?
+  features          Json?
+  price             Int
+  discountAmount    Int?                     @default(0)
+  durationInDays    Int
+  intervalLabel     String
+  isActive          Boolean                   @default(true)
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  planCourses       SubscriptionPlanCourse[]
+  userSubscriptions UserSubscription[]
+  cartSubscriptions CartSubscription[]
+}
+
+model SubscriptionPlanCourse {
+  id       Int              @id @default(autoincrement())
+  planId   Int
+  courseId Int
+
+  plan     SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  course   Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([planId, courseId])
+}
+
+model UserSubscription {
+  id        Int                 @id @default(autoincrement())
+  userId    String
+  planId    Int
+  status    SubscriptionStatus  @default(ACTIVE)
+  startDate DateTime            @default(now())
+  endDate   DateTime            // تاریخ پایان اشتراک
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  meta      Json?
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan      SubscriptionPlan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([planId])
+}
+
+model CartSubscription {
+  id                 Int              @id @default(autoincrement())
+  cartId             Int
+  subscriptionPlanId Int
+  price              Int              // قیمت نهایی (بعد از اعمال تخفیف‌ها)
+  discount           Int?             // مبلغ یا درصد تخفیف، بسته به منطق خودت
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  cart               Cart             @relation("CartToCartSubscriptions", fields: [cartId], references: [id], onDelete: Cascade)
+  subscriptionPlan   SubscriptionPlan @relation(fields: [subscriptionPlanId], references: [id], onDelete: Cascade)
+
+  @@unique([cartId, subscriptionPlanId])
+}
+
+
 enum Sender {
   USER
   SUPPORT
@@ -604,4 +669,16 @@ enum VideoAccessLevel {
 enum VideoStatus {
   AVAILABLE
   UNAVAILABLE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELED
+}
+
+enum CoursePricingMode {
+  TERM_ONLY
+  SUBSCRIPTION_ONLY
+  BOTH
 }

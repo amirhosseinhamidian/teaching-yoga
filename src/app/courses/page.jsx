@@ -66,7 +66,7 @@ async function CoursesPage() {
       method: 'GET',
       headers: headers(),
       next: {
-        revalidate: 7200, // 2 hours
+        revalidate: 1, // 2 hours
       },
     }
   );

@@ -1,6 +1,7 @@
+/* eslint-disable no-undef */
 'use client';
 /* eslint-disable react/prop-types */
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import Price from '../Price/Price';
 import CardActions from './CardActions';
 import { useRouter } from 'next/navigation';
@@ -11,63 +12,88 @@ import Button from '../Ui/Button/Button';
 import Link from 'next/link';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import { TiInfoLarge } from 'react-icons/ti';
-import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import SubscriptionBadge from './SubscriptionBadge';
 
 export default function CourseHighCard({ course }) {
-  const route = useRouter();
-  const { user } = useAuthUser();
-  const purchasedCourses = user?.courses || [];
-  const isCoursePurchased = purchasedCourses.some(
-    (userCourse) => userCourse.courseId === course.id
-  );
-  const [isEnterCourseLoading, setIsLoadingCourseLoading] = useState(false);
+  const router = useRouter();
+
+  const [isEnterCourseLoading, setIsEnterCourseLoading] = useState(false);
   const [countdown, setCountdown] = useState('');
+
+  const isSubscriptionOnly = course?.pricingMode === 'SUBSCRIPTION_ONLY';
+  const isBoth = course?.pricingMode === 'BOTH';
+
+  // ✅ از API جدید
+  const hasAccess = !!course?.hasAccess;
+  const viaSubscription = !!course?.viaSubscription;
+  const hasDirectCourseAccess = !!course?.hasDirectCourseAccess;
+
+  // ✅ badge
+  const showSubscriptionBadgeOnly = isSubscriptionOnly;
+  const showSubscriptionBadgeAlso = isBoth && !!course?.isInSubscription;
+
+  const accessText = useMemo(() => {
+    if (!hasAccess) return null;
+    if (viaSubscription) return 'شما از طریق اشتراک به این دوره دسترسی دارید.';
+    if (hasDirectCourseAccess) return 'شما هنرجوی این دوره هستید.';
+    // fallback: مثلا اگر بعداً دسترسی از روش دیگری اضافه شد
+    return 'شما به این دوره دسترسی دارید.';
+  }, [hasAccess, viaSubscription, hasDirectCourseAccess]);
+
   const detailCourseClickHandler = () => {
-    route.push(`/courses/${course.shortAddress}`);
+    router.push(`/courses/${course.shortAddress}`);
   };
+
   useEffect(() => {
     setCountdown(prizeCountdown());
-    const timer = setInterval(() => {
-      setCountdown(prizeCountdown());
-    }, 1000);
-
+    const timer = setInterval(() => setCountdown(prizeCountdown()), 1000);
     return () => clearInterval(timer);
   }, []);
 
   const courseClickHandler = async () => {
     try {
-      setIsLoadingCourseLoading(true);
-      const response = await fetch(
+      setIsEnterCourseLoading(true);
+
+      const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`
       );
-      if (response.ok) {
-        const { sessionId } = await response.json();
-        route.push(`/courses/${course.shortAddress}/lesson/${sessionId}`);
+
+      if (!res.ok) return;
+
+      const { sessionId } = await res.json();
+      if (sessionId) {
+        router.push(`/courses/${course.shortAddress}/lesson/${sessionId}`);
       }
     } catch (error) {
       console.error(error);
     } finally {
-      setIsLoadingCourseLoading(false);
+      setIsEnterCourseLoading(false);
     }
   };
+
   return (
     <div className='flex w-full flex-col-reverse rounded-xl bg-surface-light shadow-md md:flex-row dark:bg-surface-dark'>
       <div className='flex flex-1 flex-col p-5'>
-        <h2 className='text-lg font-semibold text-text-light md:text-xl dark:text-text-dark'>
-          {course.title}
-        </h2>
-        <p className='mt-2 text-xs text-subtext-light md:mt-4 md:text-sm dark:text-subtext-dark'>
-          {course.subtitle}
-        </p>
-        {/* <div className='mt-4 flex w-fit items-baseline justify-between gap-2 self-end rounded-full bg-slate-700 bg-opacity-70 px-4 py-2 xl:mt-10'>
-          <span className='font-fancy text-sm text-white sm:text-lg'>
-            پیشنهاد ویژه:
-          </span>
-          <span className='pt-1 font-fancy text-sm text-white sm:text-lg'>
-            {countdown}
-          </span>
-        </div> */}
-        {isCoursePurchased ? (
+        <div className='flex items-start justify-between gap-3'>
+          <div>
+            <h2 className='text-lg font-semibold text-text-light md:text-xl dark:text-text-dark'>
+              {course.title}
+            </h2>
+            <p className='mt-2 text-xs text-subtext-light md:mt-4 md:text-sm dark:text-subtext-dark'>
+              {course.subtitle}
+            </p>
+          </div>
+
+          {/* ✅ Badge اشتراک */}
+          {(showSubscriptionBadgeOnly || showSubscriptionBadgeAlso) && (
+            <div className='shrink-0'>
+              {showSubscriptionBadgeOnly && <SubscriptionBadge type='ONLY' />}
+              {showSubscriptionBadgeAlso && <SubscriptionBadge type='ALSO' />}
+            </div>
+          )}
+        </div>
+
+        {hasAccess ? (
           <div className='mt-6'>
             <div className='flex items-center gap-4'>
               <Button
@@ -78,13 +104,15 @@ export default function CourseHighCard({ course }) {
               >
                 ورود به دوره
               </Button>
+
               <Link href={`/courses/${course.shortAddress}`}>
                 <IconButton icon={TiInfoLarge} size={28} />
               </Link>
             </div>
+
             <div className='mt-4 flex gap-1 text-green md:mt-8'>
               <GrYoga className='min-h-6 min-w-6' />
-              <p className='text-sm lg:text-base'>شما هنرجوی این دوره هستید.</p>
+              <p className='text-sm'>{accessText}</p>
             </div>
           </div>
         ) : (
@@ -92,15 +120,23 @@ export default function CourseHighCard({ course }) {
             <CardActions
               mainBtnClick={detailCourseClickHandler}
               courseId={course.id}
+              subscriptionMode={course.pricingMode}
+              // اگر CardActions نیاز داشت می‌تونی اینا رو هم پاس بدی:
+              // isInSubscription={course.isInSubscription}
             />
-            <Price
-              finalPrice={course.finalPrice}
-              price={course.price}
-              discount={course.discount}
-            />
+
+            {/* ✅ اگر فقط اشتراک است، Price نمایش داده نشود */}
+            {!isSubscriptionOnly && (
+              <Price
+                finalPrice={course.finalPrice}
+                price={course.price}
+                discount={course.discount}
+              />
+            )}
           </div>
         )}
       </div>
+
       <Image
         src={course.cover}
         alt={course.title}

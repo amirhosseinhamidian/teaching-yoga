@@ -39,6 +39,10 @@ export default function CourseLessonsCard({
 
   const [terms, setTerms] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [courseMeta, setCourseMeta] = useState({
+    hasSubscriptionPlan: false,
+    isSubscriptionOnly: false,
+  });
 
   // 🟢 فقط اگر کاربر لاگین باشد، دیتای جلسات را بگیر
   useEffect(() => {
@@ -50,6 +54,10 @@ export default function CourseLessonsCard({
     (async () => {
       const data = await fetchTermsData(shortAddress);
       setTerms(data?.courseTerms || []);
+      setCourseMeta({
+        hasSubscriptionPlan: data?.hasSubscriptionPlan || false,
+        isSubscriptionOnly: data?.isSubscriptionOnly || false,
+      });
       setLoading(false);
     })();
   }, [shortAddress, isAuthenticated]);
@@ -110,6 +118,8 @@ export default function CourseLessonsCard({
                 number={index + 1}
                 activeSessionId={activeSessionId}
                 courseShortAddress={shortAddress}
+                hasSubscriptionAccess={courseMeta.hasSubscriptionPlan}
+                isSubscriptionOnly={courseMeta.isSubscriptionOnly}
               />
             ))}
           />

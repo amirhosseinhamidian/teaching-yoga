@@ -16,25 +16,72 @@ export async function GET(req, { params }) {
   }
 
   try {
-    // بررسی خرید دوره
-    const userCourse = await prismadb.userCourse.findFirst({
-      where: {
-        userId,
-        course: { shortAddress },
-      },
+    // 1) دوره را پیدا کن (برای courseId لازم داریم)
+    const course = await prismadb.course.findUnique({
+      where: { shortAddress },
+      select: { id: true, shortAddress: true },
+    });
+
+    if (!course) {
+      return NextResponse.json({ error: 'Course not found.' }, { status: 404 });
+    }
+
+    const courseId = course.id;
+
+    // 2) دسترسی کاربر: خرید مستقیم یا اشتراک فعال که دوره داخل پلن‌اش هست
+    const now = new Date();
+
+    const [hasPurchasedDirect, hasSubscriptionAccess] = await Promise.all([
+      prismadb.userCourse.findFirst({
+        where: {
+          userId,
+          courseId,
+          // اگر می‌خوای فقط اکتیوها:
+          status: 'ACTIVE',
+        },
+        select: { id: true },
+      }),
+
+      prismadb.userSubscription.findFirst({
+        where: {
+          userId,
+          status: 'ACTIVE',
+          endDate: { gte: now },
+          plan: {
+            planCourses: {
+              some: { courseId },
+            },
+          },
+        },
+        select: { id: true },
+      }),
+    ]);
+
+    const hasAccess = !!hasPurchasedDirect || !!hasSubscriptionAccess;
+
+    if (!hasAccess) {
+      return NextResponse.json(
+        {
+          error:
+            'User has no access to this course (purchase or subscription required).',
+        },
+        { status: 403 }
+      );
+    }
+
+    // 3) کل ساختار ترم‌ها و جلسات دوره را بگیر
+    const courseWithTerms = await prismadb.course.findUnique({
+      where: { id: courseId },
       include: {
-        course: {
+        courseTerms: {
+          // اگر ترتیب خاصی می‌خوای (مثلاً جدیدتر اول/آخر) تنظیم کن
+          orderBy: { termId: 'desc' },
           include: {
-            courseTerms: {
-              orderBy: { termId: 'desc' },
+            term: {
               include: {
-                term: {
-                  include: {
-                    sessionTerms: {
-                      include: { session: true },
-                      orderBy: { session: { order: 'asc' } },
-                    },
-                  },
+                sessionTerms: {
+                  include: { session: true },
+                  orderBy: { session: { order: 'asc' } },
                 },
               },
             },
@@ -43,38 +90,41 @@ export async function GET(req, { params }) {
       },
     });
 
-    if (!userCourse) {
-      return NextResponse.json(
-        { error: 'User has not purchased this course.' },
-        { status: 403 }
-      );
-    }
+    const courseTerms = courseWithTerms?.courseTerms || [];
 
-    const courseTerms = userCourse.course.courseTerms;
-
-    // تبدیل sessionTerms به sessions[]
+    // تبدیل sessionTerms → sessions[]
     for (const ct of courseTerms) {
       const term = ct.term;
 
-      term.sessions = term.sessionTerms
+      term.sessions = (term.sessionTerms || [])
         .map((st) => st.session)
-        .sort((a, b) => a.order - b.order);
+        .filter(Boolean)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
     }
 
-    // پیدا کردن اولین جلسه‌ای که کامل نشده
+    // 4) بهینه: همه جلسات این دوره را یکجا جمع کن و progress های completed را یکجا بگیر
+    const allSessionIds = courseTerms
+      .flatMap((ct) => ct.term?.sessions || [])
+      .map((s) => s.id);
+
+    const completed = await prismadb.sessionProgress.findMany({
+      where: {
+        userId,
+        sessionId: { in: allSessionIds },
+        isCompleted: true,
+      },
+      select: { sessionId: true },
+    });
+
+    const completedSet = new Set(completed.map((x) => x.sessionId));
+
+    // 5) پیدا کردن اولین جلسه‌ای که کامل نشده و فعال است
     let nextSession = null;
 
     for (const courseTerm of courseTerms) {
       for (const session of courseTerm.term.sessions) {
-        const isCompleted = await prismadb.sessionProgress.findFirst({
-          where: {
-            userId,
-            sessionId: session.id,
-            isCompleted: true,
-          },
-        });
-
-        if (!isCompleted && session.isActive) {
+        if (!session?.isActive) continue;
+        if (!completedSet.has(session.id)) {
           nextSession = session;
           break;
         }
@@ -82,11 +132,11 @@ export async function GET(req, { params }) {
       if (nextSession) break;
     }
 
-    // fallback در صورت نبود جلسه کامل نشده
+    // 6) fallback اگر همه کامل شده بودند یا پیدا نشد
     if (!nextSession) {
       // ۱) اولین جلسه فعال از آخرین ترم
       for (const courseTerm of [...courseTerms].reverse()) {
-        const active = courseTerm.term.sessions.find((s) => s.isActive);
+        const active = courseTerm.term.sessions.find((s) => s?.isActive);
         if (active) {
           nextSession = active;
           break;
@@ -100,9 +150,14 @@ export async function GET(req, { params }) {
       }
     }
 
-    return NextResponse.json({
-      sessionId: nextSession.id,
-    });
+    if (!nextSession?.id) {
+      return NextResponse.json(
+        { error: 'No session found for this course.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ sessionId: nextSession.id }, { status: 200 });
   } catch (error) {
     console.error('Next session error:', error);
     return NextResponse.json(

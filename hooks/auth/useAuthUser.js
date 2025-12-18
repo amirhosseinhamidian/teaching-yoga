@@ -1,4 +1,5 @@
 'use client';
+
 import { useSelector } from 'react-redux';
 
 export function useAuthUser() {

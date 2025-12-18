@@ -3,7 +3,13 @@ import React, { useEffect, useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { usePathname } from 'next/navigation'; // هوک برای گرفتن مسیر فعلی
 import { RxDashboard } from 'react-icons/rx';
-import { TbSchool, TbRosetteDiscount, TbSettings, TbSeo } from 'react-icons/tb';
+import {
+  TbSchool,
+  TbRosetteDiscount,
+  TbSettings,
+  TbSeo,
+  TbCrown,
+} from 'react-icons/tb';
 import { PiUsersBold } from 'react-icons/pi';
 import { GrBlog } from 'react-icons/gr';
 import { BsCart } from 'react-icons/bs';
@@ -57,6 +63,12 @@ function NavRoutes({ onLinkClick }) {
         href: '/a-panel/user',
         label: 'مدیریت کاربران',
         icon: PiUsersBold,
+        statusNumber: 0,
+      },
+      {
+        href: '/a-panel/subscriptions',
+        label: 'مدیریت پلن‌های اشتراک',
+        icon: TbCrown,
         statusNumber: 0,
       },
       {

@@ -8,9 +8,9 @@ export async function GET(req, { params }) {
     const { shortAddress } = params;
 
     // Fetch course details from the database
-    const course = await prismadb.course.findUnique({
+    const course = await prismadb.course.findFirst({
       where: {
-        shortAddress: shortAddress,
+        shortAddress,
         activeStatus: true,
       },
       include: {
@@ -38,37 +38,56 @@ export async function GET(req, { params }) {
     if (!course) {
       return NextResponse.json(
         { message: 'Course not found' },
-        { status: 400 },
+        { status: 404 }
       );
     }
 
     // 🔄 تبدیل sessionTerms → sessions[] مانند ساختار قدیم
     course.courseTerms.forEach((ct) => {
       const term = ct.term;
+      if (!term) return;
 
-      term.sessions = term.sessionTerms
+      term.sessions = (term.sessionTerms || [])
         .map((st) => st.session)
         .filter(Boolean)
-        .sort((a, b) => a.order - b.order);
+        .sort((a, b) => (a.order || 0) - (b.order || 0));
     });
 
-    // استخراج ترم‌ها برای محاسبه قیمت
-    const terms = course.courseTerms.map((courseTerm) => courseTerm.term) || [];
+    // -----------------------------
+    // ✅ محاسبه قیمت بر اساس همه ترم‌های دوره
+    // (بدون توجه به isOptional)
+    // -----------------------------
+    const courseTerms = Array.isArray(course.courseTerms)
+      ? course.courseTerms
+      : [];
 
-    const totalPrice = terms.reduce((sum, term) => sum + (term.price || 0), 0);
+    // قیمت کل = جمع price ترم‌ها
+    const totalPrice = courseTerms.reduce((sum, ct) => {
+      const price = Number(ct?.term?.price ?? 0);
+      return sum + (Number.isFinite(price) ? price : 0);
+    }, 0);
 
-    const totalDiscount = terms.reduce(
-      (sum, term) => sum + (term.discount || 0),
-      0,
-    );
+    // مجموع درصد تخفیف‌ها (برای محاسبه میانگین نمایشی)
+    const totalDiscountPercent = courseTerms.reduce((sum, ct) => {
+      const discount = Number(ct?.term?.discount ?? 0);
+      return sum + (Number.isFinite(discount) ? discount : 0);
+    }, 0);
 
+    // میانگین درصد تخفیف (نمایشی)
     const averageDiscount =
-      terms.length > 0 ? Math.ceil(totalDiscount / terms.length) : 0;
+      courseTerms.length > 0
+        ? Math.ceil(totalDiscountPercent / courseTerms.length)
+        : 0;
 
-    const finalPrice = terms.reduce((sum, term) => {
-      const termPrice = term.price || 0;
-      const termDiscount = term.discount || 0;
-      const discountedPrice = termPrice - (termPrice * termDiscount) / 100;
+    // قیمت نهایی = جمع قیمت هر ترم بعد از اعمال درصد تخفیف همان ترم
+    const finalPrice = courseTerms.reduce((sum, ct) => {
+      const termPrice = Number(ct?.term?.price ?? 0);
+      const termDiscount = Number(ct?.term?.discount ?? 0);
+
+      const safePrice = Number.isFinite(termPrice) ? termPrice : 0;
+      const safeDiscount = Number.isFinite(termDiscount) ? termDiscount : 0;
+
+      const discountedPrice = safePrice - (safePrice * safeDiscount) / 100;
       return sum + discountedPrice;
     }, 0);
 
@@ -91,7 +110,7 @@ export async function GET(req, { params }) {
     console.error(error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

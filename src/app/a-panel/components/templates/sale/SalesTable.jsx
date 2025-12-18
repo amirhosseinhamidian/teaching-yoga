@@ -9,6 +9,7 @@ import clsx from 'clsx';
 import ActionButtonIcon from '@/components/Ui/ActionButtonIcon/ActionButtonIcon';
 import { TbShoppingCartCog } from 'react-icons/tb';
 import OrderDetailsModal from './OrderDetailsModal';
+import SearchBox from '../../modules/SearchBox/SearchBox';
 
 const SalesTable = ({
   className,
@@ -18,9 +19,15 @@ const SalesTable = ({
   totalPages,
   isLoading,
   onPageChange,
+  onSearch,
 }) => {
   const [showOrderDetailsModal, setShowOrderDetailsModal] = useState(false);
   const [saleTemp, setSaleTemp] = useState({});
+  const [searchText, setSearchText] = useState('');
+
+  const handleSearch = (text) => {
+    onSearch?.(text);
+  };
 
   const handleDetailClick = (sale) => {
     setSaleTemp(sale);
@@ -123,7 +130,7 @@ const SalesTable = ({
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
               statusStyle.bg,
-              statusStyle.text,
+              statusStyle.text
             )}
           >
             {statusStyle.label}
@@ -171,9 +178,17 @@ const SalesTable = ({
 
   return (
     <div className={className}>
-      <h2 className='mb-5 text-base font-semibold md:text-lg lg:text-xl xl:text-2xl'>
-        آخرین سفارشات
-      </h2>
+      <div className='flex flex-wrap items-start justify-between gap-2'>
+        <h2 className='mb-5 text-base font-semibold md:text-lg lg:text-xl xl:text-2xl'>
+          آخرین سفارشات
+        </h2>
+        <SearchBox
+          placeholder='نام کاربری یا شماره موبایل'
+          value={searchText}
+          onChange={setSearchText}
+          onSearch={handleSearch}
+        />
+      </div>
       <Table
         columns={columns}
         data={data}
@@ -209,6 +224,7 @@ SalesTable.propTypes = {
   totalPages: PropTypes.number.isRequired,
   isLoading: PropTypes.bool.isRequired,
   onPageChange: PropTypes.func.isRequired,
+  onSearch: PropTypes.func,
 };
 
 export default SalesTable;
