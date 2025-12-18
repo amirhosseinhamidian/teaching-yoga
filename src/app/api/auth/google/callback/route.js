@@ -99,6 +99,7 @@ export async function GET(req) {
       httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       path: '/',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60,
     });
 

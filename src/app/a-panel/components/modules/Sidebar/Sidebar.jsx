@@ -10,9 +10,9 @@ const Sidebar = () => {
   return (
     <aside className='h-full min-h-screen w-64 bg-surface-light dark:bg-surface-dark'>
       <div className='flex items-center gap-1 p-4 md:p-6'>
-        {user.avatar ? (
+        {user?.avatar ? (
           <Image
-            src={user.avatar}
+            src={user?.avatar}
             alt='profile'
             width={50}
             height={50}
@@ -23,7 +23,7 @@ const Sidebar = () => {
         )}
 
         <div>
-          <h4 className='-mb-2 text-sm md:text-base'>{user.username}</h4>
+          <h4 className='-mb-2 text-sm md:text-base'>{user?.username}</h4>
           <h4 className='text-2xs text-subtext-light md:text-xs dark:text-subtext-dark'>
             مدیر سایت
           </h4>

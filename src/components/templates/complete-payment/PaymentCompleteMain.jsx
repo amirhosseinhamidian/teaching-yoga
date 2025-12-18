@@ -1,6 +1,7 @@
 // components/templates/complete-payment/PaymentCompleteMain.jsx
 /* eslint-disable no-undef */
 'use client';
+
 import React, { useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { IoBagCheckOutline } from 'react-icons/io5';
@@ -9,58 +10,77 @@ import PaymentSuccessfully from '@/components/templates/complete-payment/Payment
 import PaymentFailed from '@/components/templates/complete-payment/PaymentFailed';
 import { ImSpinner2 } from 'react-icons/im';
 import { updateUser } from '@/app/actions/updateUser';
+import { useRouter } from 'next/navigation';
 
 async function fetchPaymentDetails(token) {
-  try {
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-details?token=${token}`
-    );
-    if (!res.ok) {
-      throw new Error(`Failed to fetch payment details: ${res.status}`);
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-details?token=${token}`,
+    {
+      method: 'GET',
+      cache: 'no-store',
+      credentials: 'include',
     }
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    console.error('Error fetching payment details:', error);
-    throw error;
+  );
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      data?.error || `Failed to fetch payment details: ${res.status}`
+    );
   }
+
+  return res.json();
 }
 
 const PaymentCompleteMain = ({ token, status }) => {
+  const router = useRouter();
+
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState(null);
 
   const fetchDetails = async () => {
-    try {
-      if (!token || isNaN(Number(token))) {
-        throw new Error('Invalid token: Token must be a valid number.');
-      }
-      const data = await fetchPaymentDetails(token);
-      setPaymentDetails(data);
-    } catch (err) {
-      console.error(err);
+    if (!token || isNaN(Number(token))) {
+      throw new Error('Invalid token: Token must be a valid number.');
     }
+    const data = await fetchPaymentDetails(token);
+    setPaymentDetails(data);
   };
 
   useEffect(() => {
-    const fetchData = async () => {
-      if (status === 'OK') {
-        setLoading(true);
-        try {
-          await fetchDetails();
-          await updateUser();
-        } catch (error) {
-          console.error('Error fetching details or updating user:', error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
+    let isMounted = true;
+
+    const run = async () => {
+      // پرداخت ناموفق
+      if (status !== 'OK') {
+        if (isMounted) setLoading(false);
+        return;
+      }
+
+      if (isMounted) setLoading(true);
+
+      try {
+        // 1) جزئیات پرداخت
+        await fetchDetails();
+
+        // 2) آپدیت یوزر (سرور اکشن)
+        // اگر این اکشن کوکی/یوزر رو sync می‌کنه، بعدش باید RSC refresh بشه
+        await updateUser();
+
+        // 3) مهم‌ترین بخش برای حل مشکل هدر/لاگین در SSR
+        router.refresh();
+      } catch (error) {
+        console.error('Error fetching details or updating user:', error);
+      } finally {
+        if (isMounted) setLoading(false);
       }
     };
 
-    fetchData();
-  }, [token, status]);
+    run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, status, router]);
 
   return (
     <div className='container'>
@@ -90,8 +110,8 @@ const PaymentCompleteMain = ({ token, status }) => {
 };
 
 PaymentCompleteMain.propTypes = {
-  token: PropTypes.string.isRequired,
-  status: PropTypes.string.isRequired,
+  token: PropTypes.string, // ممکنه null هم بیاد
+  status: PropTypes.string,
 };
 
 export default PaymentCompleteMain;
