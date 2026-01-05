@@ -2,18 +2,31 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 /* -----------------------------------
- * Helper — Normalize API Response
+ * Helper — Normalize API Response (ROBUST)
  * ----------------------------------- */
 const normalizeCart = (data) => {
-  const cart = data?.cart || {};
+  // حالت‌های مختلف پاسخ:
+  // 1) { cart: {...} }
+  // 2) { courseCart: {...} }  (اگر بعداً خواستی جدا کنی)
+  // 3) خود cart مستقیم برگشته باشد: { id, courses, ... }
+  const cart = data?.cart || data?.courseCart || data || {};
 
   return {
-    cartId: cart.id || null,
-    items: cart.courses || [],
-    totalPrice: cart.totalPrice || 0,
-    totalDiscount: cart.totalDiscount || 0,
-    totalPriceWithoutDiscount: cart.totalPriceWithoutDiscount || 0,
-    discountAmount: cart.discountAmount || 0,
+    cartId: cart.id ?? null,
+
+    // گاهی API ممکنه اسم رو items بذاره
+    items: Array.isArray(cart.courses)
+      ? cart.courses
+      : Array.isArray(cart.items)
+        ? cart.items
+        : [],
+
+    totalPrice: cart.totalPrice ?? 0,
+    totalDiscount: cart.totalDiscount ?? 0,
+    totalPriceWithoutDiscount: cart.totalPriceWithoutDiscount ?? 0,
+
+    // بعضی جاها discountCodeAmount ذخیره میشه
+    discountAmount: cart.discountAmount ?? cart.discountCodeAmount ?? 0,
   };
 };
 
@@ -33,7 +46,7 @@ export const fetchCart = createAsyncThunk(
       );
 
       const data = await res.json();
-      if (!res.ok) return rejectWithValue(data.message);
+      if (!res.ok) return rejectWithValue(data?.message || 'خطا در دریافت سبد');
 
       return normalizeCart(data);
     } catch (error) {
@@ -59,10 +72,9 @@ export const addToCart = createAsyncThunk(
         }
       );
 
-      console.log('add to cart is complete');
-
       const data = await res.json();
-      if (!res.ok) return rejectWithValue(data.message);
+      if (!res.ok)
+        return rejectWithValue(data?.message || 'خطا در افزودن دوره');
 
       return normalizeCart(data);
     } catch (err) {
@@ -89,7 +101,7 @@ export const removeFromCart = createAsyncThunk(
       );
 
       const data = await res.json();
-      if (!res.ok) return rejectWithValue(data.message);
+      if (!res.ok) return rejectWithValue(data?.message || 'خطا در حذف دوره');
 
       return normalizeCart(data);
     } catch (err) {
@@ -114,9 +126,19 @@ export const clearServerCart = createAsyncThunk(
       );
 
       const data = await res.json();
-      if (!res.ok) return rejectWithValue(data.message);
+      if (!res.ok)
+        return rejectWithValue(data?.message || 'خطا در پاکسازی سبد');
 
-      return normalizeCart({ cart: { courses: [] } });
+      return normalizeCart({
+        cart: {
+          id: null,
+          courses: [],
+          totalPrice: 0,
+          totalDiscount: 0,
+          totalPriceWithoutDiscount: 0,
+          discountAmount: 0,
+        },
+      });
     } catch (err) {
       return rejectWithValue(err.message);
     }
@@ -141,8 +163,10 @@ export const applyDiscount = createAsyncThunk(
       );
 
       const data = await res.json();
-      if (!res.ok) return rejectWithValue(data.message);
+      if (!res.ok)
+        return rejectWithValue(data?.message || 'کد تخفیف معتبر نیست');
 
+      // ✅ خیلی مهم: normalize روی پاسخ واقعی
       return normalizeCart(data);
     } catch (err) {
       return rejectWithValue(err.message);
@@ -180,71 +204,39 @@ const cartSlice = createSlice({
   },
 
   extraReducers: (builder) => {
+    const pending = (state) => {
+      state.loading = true;
+      state.error = null;
+    };
+    const rejected = (state, action) => {
+      state.loading = false;
+      state.error = action.payload || 'خطا';
+    };
+    const fulfilled = (state, action) => {
+      state.loading = false;
+      Object.assign(state, action.payload);
+    };
+
     builder
-      /* fetchCart */
-      .addCase(fetchCart.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(fetchCart.fulfilled, (state, action) => {
-        state.loading = false;
-        Object.assign(state, action.payload);
-      })
-      .addCase(fetchCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+      .addCase(fetchCart.pending, pending)
+      .addCase(fetchCart.fulfilled, fulfilled)
+      .addCase(fetchCart.rejected, rejected)
 
-      /* addToCart */
-      .addCase(addToCart.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(addToCart.fulfilled, (state, action) => {
-        state.loading = false;
-        Object.assign(state, action.payload);
-      })
-      .addCase(addToCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+      .addCase(addToCart.pending, pending)
+      .addCase(addToCart.fulfilled, fulfilled)
+      .addCase(addToCart.rejected, rejected)
 
-      /* removeFromCart */
-      .addCase(removeFromCart.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(removeFromCart.fulfilled, (state, action) => {
-        state.loading = false;
-        Object.assign(state, action.payload);
-      })
-      .addCase(removeFromCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+      .addCase(removeFromCart.pending, pending)
+      .addCase(removeFromCart.fulfilled, fulfilled)
+      .addCase(removeFromCart.rejected, rejected)
 
-      /* clearServerCart */
-      .addCase(clearServerCart.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(clearServerCart.fulfilled, (state, action) => {
-        state.loading = false;
-        Object.assign(state, action.payload);
-      })
-      .addCase(clearServerCart.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      })
+      .addCase(clearServerCart.pending, pending)
+      .addCase(clearServerCart.fulfilled, fulfilled)
+      .addCase(clearServerCart.rejected, rejected)
 
-      /* applyDiscount */
-      .addCase(applyDiscount.pending, (state) => {
-        state.loading = true;
-      })
-      .addCase(applyDiscount.fulfilled, (state, action) => {
-        state.loading = false;
-        Object.assign(state, action.payload);
-      })
-      .addCase(applyDiscount.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload;
-      });
+      .addCase(applyDiscount.pending, pending)
+      .addCase(applyDiscount.fulfilled, fulfilled)
+      .addCase(applyDiscount.rejected, rejected);
   },
 });
 

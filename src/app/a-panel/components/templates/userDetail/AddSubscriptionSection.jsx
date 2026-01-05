@@ -135,7 +135,7 @@ export default function AddSubscriptionSection({
         <div>
           <h3 className='text-base font-semibold'>مدیریت اشتراک</h3>
           {activeSub ? (
-            <p className='mt-1 font-faNa text-xs text-green'>
+            <p className='text-green-light dark:text-green-dark mt-1 font-faNa text-xs'>
               اشتراک فعال دارد (تا {toFaDate(activeSub.endDate)} |{' '}
               {diffDays(activeSub.endDate)} روز باقی مانده)
             </p>
@@ -269,7 +269,7 @@ export default function AddSubscriptionSection({
                       <span className='text-slate-500 dark:text-slate-400'>
                         قیمت نهایی:{' '}
                       </span>
-                      <span className='text-green'>
+                      <span className='text-green-light dark:text-green-dark'>
                         {toFaMoney(finalPrice)}
                       </span>{' '}
                       تومان

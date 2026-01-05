@@ -12,18 +12,85 @@ async function fetchUserPayment() {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/profile/payment`,
       {
-        cache: 'no-store', // Ensures SSR by disabling caching
+        cache: 'no-store',
         method: 'GET',
-      },
+      }
     );
-    if (!res.ok) {
+    if (!res.ok)
       throw new Error(`Failed to fetch payment data: ${res.statusText}`);
-    }
     return await res.json();
   } catch (error) {
     console.error('Error fetching data:', error);
-    return []; // Return an empty array on error
+    return [];
   }
+}
+
+const purchaseTypeMap = {
+  COURSE: {
+    label: 'دوره',
+    bg: 'bg-indigo-500',
+    text: 'text-indigo-600 whitespace-nowrap',
+  },
+  SUBSCRIPTION: {
+    label: 'اشتراک',
+    bg: 'bg-emerald-500',
+    text: 'text-emerald-600 whitespace-nowrap',
+  },
+  SHOP: {
+    label: 'فروشگاه',
+    bg: 'bg-sky-500',
+    text: 'text-sky-600 whitespace-nowrap',
+  },
+  MIXED: {
+    label: 'ترکیبی',
+    bg: 'bg-purple-500',
+    text: 'text-purple-600 whitespace-nowrap',
+  },
+  UNKNOWN: {
+    label: 'نامشخص',
+    bg: 'bg-gray-500',
+    text: 'text-gray-600 whitespace-nowrap',
+  },
+};
+
+function groupItems(items = []) {
+  const g = { SUBSCRIPTION: [], COURSE: [], PRODUCT: [] };
+  for (const it of items || []) {
+    const title = it?.title || '—';
+    if (it?.type === 'SUBSCRIPTION') g.SUBSCRIPTION.push(title);
+    else if (it?.type === 'COURSE') g.COURSE.push(title);
+    else if (it?.type === 'PRODUCT') g.PRODUCT.push(title);
+  }
+  return g;
+}
+
+function renderItems(items = []) {
+  if (!items?.length) return 'نامشخص';
+
+  const g = groupItems(items);
+  const lines = [];
+
+  if (g.SUBSCRIPTION.length) {
+    lines.push(`اشتراک: ${g.SUBSCRIPTION.join('، ')}`);
+  }
+
+  if (g.COURSE.length) {
+    lines.push(
+      g.COURSE.length > 1
+        ? `دوره‌ها:\n${g.COURSE.map((t, i) => `${i + 1}. ${t}`).join('\n')}`
+        : `دوره: ${g.COURSE[0]}`
+    );
+  }
+
+  if (g.PRODUCT.length) {
+    lines.push(
+      g.PRODUCT.length > 1
+        ? `محصولات:\n${g.PRODUCT.map((t, i) => `${i + 1}. ${t}`).join('\n')}`
+        : `محصول: ${g.PRODUCT[0]}`
+    );
+  }
+
+  return <div className='whitespace-pre-wrap'>{lines.join('\n')}</div>;
 }
 
 const SectionPaymentOrder = () => {
@@ -34,9 +101,7 @@ const SectionPaymentOrder = () => {
     setIsLoading(true);
     try {
       const data = await fetchUserPayment();
-      if (data) {
-        setPayments(data);
-      }
+      setPayments(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error('Error in getUserPayment:', error);
     } finally {
@@ -55,20 +120,29 @@ const SectionPaymentOrder = () => {
       render: (transactionId) => (transactionId === '0' ? '-' : transactionId),
     },
     {
-      key: 'courses',
-      label: 'دوره‌ها',
-      minWidth: '180px',
-      render: (courses) => (
-        <div className='whitespace-pre-wrap'>
-          {courses && courses.length > 0
-            ? courses.length > 1
-              ? courses
-                  .map((course, index) => `${index + 1}. ${course}`)
-                  .join('\n')
-              : courses[0] // نمایش بدون شماره برای تنها یک دوره
-            : 'نامشخص'}
-        </div>
-      ),
+      key: 'purchaseType',
+      label: 'نوع خرید',
+      minWidth: '120px',
+      render: (purchaseType) => {
+        const s = purchaseTypeMap[purchaseType] || purchaseTypeMap.UNKNOWN;
+        return (
+          <span
+            className={clsx(
+              'rounded-full bg-opacity-10 px-3 py-1',
+              s.bg,
+              s.text
+            )}
+          >
+            {s.label}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'items',
+      label: 'آیتم‌ها',
+      minWidth: '220px',
+      render: (items) => renderItems(items),
     },
     {
       key: 'updatedAt',
@@ -87,8 +161,8 @@ const SectionPaymentOrder = () => {
           },
           SUCCESSFUL: {
             label: 'تکمیل‌شده',
-            bg: 'bg-green',
-            text: 'text-accent text-green dark:text-accent  whitespace-nowrap',
+            bg: 'bg-green-light',
+            text: 'text-accent text-green-light dark:text-green-dark dark:text-accent whitespace-nowrap',
           },
           FAILED: {
             label: 'ناموفق',
@@ -96,7 +170,7 @@ const SectionPaymentOrder = () => {
             text: 'text-red whitespace-nowrap',
           },
         };
-        const statusStyle = statusMap[status] || {
+        const s = statusMap[status] || {
           label: 'نامشخص',
           bg: 'bg-gray-100',
           text: 'text-gray-600 whitespace-nowrap',
@@ -105,11 +179,11 @@ const SectionPaymentOrder = () => {
           <span
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
-              statusStyle.bg,
-              statusStyle.text,
+              s.bg,
+              s.text
             )}
           >
-            {statusStyle.label}
+            {s.label}
           </span>
         );
       },
@@ -135,7 +209,7 @@ const SectionPaymentOrder = () => {
             text: 'text-orange-600 whitespace-nowrap',
           },
         };
-        const methodStyle = methodMap[method] || {
+        const s = methodMap[method] || {
           label: 'نامشخص',
           bg: 'bg-gray-600',
           text: 'text-gray-600 whitespace-nowrap',
@@ -144,20 +218,22 @@ const SectionPaymentOrder = () => {
           <span
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
-              methodStyle.bg,
-              methodStyle.text,
+              s.bg,
+              s.text
             )}
           >
-            {methodStyle.label}
+            {s.label}
           </span>
         );
       },
     },
     {
-      key: 'amount',
+      key: 'amountToman',
       label: 'مبلغ (تومان)',
-      render: (amount) =>
-        amount === 0 ? 'رایگان' : amount.toLocaleString('fa-IR'),
+      render: (amountToman) => {
+        const n = Number(amountToman || 0);
+        return n === 0 ? 'رایگان' : n.toLocaleString('fa-IR');
+      },
     },
   ];
 

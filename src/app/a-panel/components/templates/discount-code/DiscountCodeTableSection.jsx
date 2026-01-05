@@ -17,12 +17,13 @@ const DiscountCodeTableSection = () => {
   const [searchDebounce, setSearchDebounce] = useState('');
   const [filter, setFilter] = useState(undefined);
   const [courseOptions, setCourseOptions] = useState(null);
+  const [categoryOptions, setCategoryOptions] = useState(null);
 
   const fetchDiscountCodes = async (page, search) => {
     setIsLoading(true);
     try {
       const response = await fetch(
-        `/api/admin/discount-code?&page=${page}&perPage=10${filter && `&isActive=${filter}`}${search && `&search=${search}`}`,
+        `/api/admin/discount-code?&page=${page}&perPage=10${filter && `&isActive=${filter}`}${search && `&search=${search}`}`
       );
 
       if (response.ok) {
@@ -52,6 +53,18 @@ const DiscountCodeTableSection = () => {
     }
   };
 
+  // ✅ NEW: گرفتن دسته‌بندی‌های محصولات برای scope = PRODUCT_CATEGORY
+  const fetchCategoryOptions = async () => {
+    try {
+      const response = await fetch(`/api/admin/product-categories/filter`);
+      if (!response.ok) throw new Error('Error to fetch categories options!');
+      const data = await response.json();
+      setCategoryOptions(data.categoryOptions);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // اجرای جستجو با debounce
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -69,6 +82,7 @@ const DiscountCodeTableSection = () => {
 
   useEffect(() => {
     fetchCourseOptions();
+    fetchCategoryOptions();
   }, []);
 
   const addDiscountCodeSuccessfully = (newDiscountCode) => {
@@ -82,6 +96,7 @@ const DiscountCodeTableSection = () => {
     <div>
       <HeadAction
         courseOptions={courseOptions}
+        categoryOptions={categoryOptions}
         addDiscountCodeSuccessfully={(newDiscountCode) =>
           addDiscountCodeSuccessfully(newDiscountCode)
         }
@@ -102,6 +117,7 @@ const DiscountCodeTableSection = () => {
           page={page}
           totalPages={totalPages}
           courseOptions={courseOptions}
+          categoryOptions={categoryOptions}
           updateHandle={(updateDiscountCode) =>
             addDiscountCodeSuccessfully(updateDiscountCode)
           }

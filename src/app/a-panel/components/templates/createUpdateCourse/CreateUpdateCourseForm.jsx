@@ -681,7 +681,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
             thousandSeparator={true}
             className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
-          <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
+          <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
             {time && getStringTime(time)}
           </p>
         </div>
@@ -704,7 +704,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
             {shortAddressStatus === 'valid' && (
               <FaCircleCheck
                 size={20}
-                className='absolute left-2 top-11 text-green'
+                className='text-green-light dark:text-green-dark absolute left-2 top-11'
               />
             )}
             {shortAddressStatus === 'invalid' && (

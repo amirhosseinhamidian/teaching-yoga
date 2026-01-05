@@ -27,7 +27,7 @@ const TicketPageContent = ({ ticketId }) => {
         {
           cache: 'no-cache',
           method: 'GET',
-        },
+        }
       );
 
       if (!response.ok) {
@@ -52,7 +52,7 @@ const TicketPageContent = ({ ticketId }) => {
             headers: {
               status: OPEN,
             },
-          },
+          }
         );
         if (!response.ok) {
           throw new Error('Filed to update ticket status');
@@ -101,7 +101,7 @@ const TicketPageContent = ({ ticketId }) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Filed to update ticket status');
@@ -132,7 +132,7 @@ const TicketPageContent = ({ ticketId }) => {
           headers: {
             status: CLOSED,
           },
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Filed to update ticket status');
@@ -163,7 +163,7 @@ const TicketPageContent = ({ ticketId }) => {
       case 'ANSWERED':
       case 'OPEN':
         return (
-          <h5 className='rounded-full bg-green bg-opacity-10 px-3 py-1 text-center text-2xs text-green sm:text-xs md:text-sm dark:text-accent'>
+          <h5 className='rounded-full bg-green-light bg-opacity-10 px-3 py-1 text-center text-2xs text-green-light sm:text-xs md:text-sm dark:text-green-dark'>
             باز
           </h5>
         );

@@ -45,7 +45,7 @@ const TicketTable = ({
           headers: {
             id: ticketTempId,
           },
-        },
+        }
       );
 
       const data = await response.json();
@@ -77,8 +77,8 @@ const TicketTable = ({
         toast.showSuccessToast('وضعیت با موفقیت بروز شد.');
         setTickets((prev) =>
           prev.map((ticket) =>
-            ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket,
-          ),
+            ticket.id === ticketId ? { ...ticket, status: newStatus } : ticket
+          )
         );
       } else {
         toast.showErrorToast('خطا در تغییر وضعیت تیکت');
@@ -143,7 +143,7 @@ const TicketTable = ({
       label: 'وضعیت',
       render: (_, row) => (
         <SimpleDropdown
-          className={` ${row.status === 'OPEN' && 'text-blue'} ${row.status === 'ANSWERED' && 'text-green dark:text-accent'} ${row.status === 'IN_PROGRESS' && 'text-secondary'} ${row.status === 'PENDING' && 'text-red'}`}
+          className={` ${row.status === 'OPEN' && 'text-blue'} ${row.status === 'ANSWERED' && 'text-green-light dark:text-green-dark'} ${row.status === 'IN_PROGRESS' && 'text-secondary'} ${row.status === 'PENDING' && 'text-red'}`}
           options={[
             { label: 'در انتظار بررسی', value: 'PENDING' },
             { label: 'در حال بررسی', value: 'IN_PROGRESS' },

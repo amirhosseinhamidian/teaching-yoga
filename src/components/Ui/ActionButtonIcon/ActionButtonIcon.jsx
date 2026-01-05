@@ -7,7 +7,7 @@ const colors = {
   red: 'bg-red shadow-[1px_3px_8px_rgba(248,37,37,0.4)]',
   blue: 'bg-blue shadow-[1px_3px_8px_rgba(37,164,248,0.4)]',
   accent: 'bg-accent shadow-[1px_3px_8px_rgba(100,244,171,0.4)]',
-  green: 'bg-green shadow-[1px_3px_8px_rgba(50,122,86,0.4)]',
+  green: 'bg-green-light shadow-[1px_3px_8px_rgba(50,122,86,0.4)]',
 };
 
 const ActionButtonIcon = ({

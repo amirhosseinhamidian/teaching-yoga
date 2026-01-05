@@ -1,11 +1,12 @@
- 'use client';
+'use client';
 import React, { useState } from 'react';
 import NotificationItem from './NotificationItem';
 import { useNotifications } from '@/contexts/NotificationContext';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 
-const ADMIN_PUSH_KEY = process.env.NEXT_PUBLIC_ADMIN_PUSH_KEY || 'ADMIN_SUPPORT';
+const ADMIN_PUSH_KEY =
+  process.env.NEXT_PUBLIC_ADMIN_PUSH_KEY || 'ADMIN_SUPPORT';
 
 function urlBase64ToUint8Array(base64String) {
   if (!base64String) return new Uint8Array(0);
@@ -74,8 +75,8 @@ const NotificationSection = () => {
   }
 
   return (
-    <div className="rounded-xl border border-black/5 bg-white p-4 dark:bg-surface-dark">
-      <div className="mb-3 text-sm font-semibold text-gray-800 dark:text-gray-100">
+    <div className='rounded-xl border border-black/5 bg-white p-4 dark:bg-surface-dark'>
+      <div className='mb-3 text-sm font-semibold text-gray-800 dark:text-gray-100'>
         اعلان‌ها
       </div>
 
@@ -93,15 +94,16 @@ const NotificationSection = () => {
       ))}
 
       {/* دکمه فعال‌سازی اعلان */}
-      <div className="mt-4 flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40">
-        <div className="text-xs text-gray-600 dark:text-gray-300">
-          با فعال‌سازی اعلان، هنگام دریافت پیام جدید و سوالات از کاربران نوتیف دریافت می‌کنید.
+      <div className='mt-4 flex items-center justify-between rounded-lg border border-dashed border-gray-300 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800/40'>
+        <div className='text-xs text-gray-600 dark:text-gray-300'>
+          با فعال‌سازی اعلان، هنگام دریافت پیام جدید و سوالات از کاربران نوتیف
+          دریافت می‌کنید.
         </div>
         <button
-          type="button"
+          type='button'
           disabled={isSubscribing}
           onClick={enableAdminPush}
-          className="rounded-md bg-green px-3 py-1.5 text-xs font-medium text-white hover:bg-green/90 cursor-pointer disabled:opacity-60"
+          className='hover:bg-green-light/90cursor-pointer rounded-md bg-green-light px-3 py-1.5 text-xs font-medium text-white disabled:opacity-60'
         >
           {isSubscribing ? 'در حال فعال‌سازی…' : 'فعالسازی اعلان'}
         </button>

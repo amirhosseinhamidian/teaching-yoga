@@ -17,7 +17,10 @@ module.exports = {
         accent: '#64F4AB',
         red: '#F82525',
         blue: '#25A4F8',
-        green: '#327A56',
+        green: {
+          light: '#327A56',
+          dark: '#10b981',
+        },
         background: {
           light: '#f3f4f6',
           dark: '#2D2E32',
@@ -82,8 +85,12 @@ module.exports = {
       },
     },
     container: {
-      padding: '2rem',
       center: true,
+      padding: {
+        DEFAULT: '1rem', // موبایل (کمتر از sm)
+        sm: '2rem', // از sm به بالا = حالت نرمال
+        xs: '0.5rem',
+      },
     },
   },
   variants: {

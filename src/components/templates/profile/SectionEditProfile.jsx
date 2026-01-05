@@ -120,7 +120,7 @@ const SectionEditProfile = () => {
 
       <Button
         onClick={handleFormSubmit}
-        className='mt-8 text-xs sm:w-1/3 sm:text-base'
+        className='mt-8 text-xs sm:w-1/3 sm:text-sm'
         isLoading={isLoading}
       >
         ویرایش

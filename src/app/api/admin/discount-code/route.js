@@ -1,56 +1,140 @@
+// /app/api/admin/discount-code/route.js
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+
+const allowedAppliesTo = new Set([
+  'ALL',
+  'COURSE',
+  'PRODUCT',
+  'PRODUCT_CATEGORY',
+]);
+
+const toIntOrNull = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : null;
+};
+
+const toFloatOrNull = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+};
+
+const toBool = (v, def = true) => {
+  if (v === null || v === undefined) return def;
+  return Boolean(v);
+};
+
+const asDateOrNull = (v) => {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const normalizeAppliesTo = (v) => {
+  const s = String(v || '')
+    .trim()
+    .toUpperCase();
+  return allowedAppliesTo.has(s) ? s : null;
+};
+
+const validatePayload = async ({
+  title,
+  code,
+  discountPercent,
+  appliesTo,
+  courseId,
+  productCategoryId,
+}) => {
+  if (
+    !title ||
+    !code ||
+    discountPercent === null ||
+    discountPercent === undefined
+  ) {
+    return 'عنوان، کد و درصد تخفیف اجباری هستند.';
+  }
+
+  const dp = Number(discountPercent);
+  if (!Number.isFinite(dp) || dp < 0 || dp > 100) {
+    return 'درصد تخفیف باید عددی بین ۰ تا ۱۰۰ باشد.';
+  }
+
+  if (!appliesTo) return 'نوع تخفیف (appliesTo) نامعتبر است.';
+
+  // قوانین target بر اساس appliesTo
+  if (appliesTo === 'PRODUCT_CATEGORY') {
+    if (!productCategoryId)
+      return 'برای PRODUCT_CATEGORY باید productCategoryId ارسال شود.';
+    // validate category exists
+    const cat = await prismadb.productCategory.findUnique({
+      where: { id: Number(productCategoryId) },
+      select: { id: true },
+    });
+    if (!cat) return 'دسته‌بندی محصول نامعتبر است.';
+  }
+
+  if (appliesTo === 'COURSE') {
+    // courseId اختیاری: اگر ارسال شد، باید معتبر باشد
+    if (courseId) {
+      const course = await prismadb.course.findUnique({
+        where: { id: Number(courseId) },
+        select: { id: true },
+      });
+      if (!course) return 'دوره نامعتبر است.';
+    }
+  }
+
+  // در سایر حالت‌ها نباید target داشته باشیم (می‌تونیم نال کنیم)
+  return null;
+};
 
 export async function GET(request) {
   try {
     const { searchParams } = request.nextUrl;
 
-    // گرفتن پارامترها از Query String
-    const page = parseInt(searchParams.get('page')) || 1; // شماره صفحه
-    const perPage = parseInt(searchParams.get('perPage')) || 10; // تعداد رکوردها در هر صفحه
-    const search = searchParams.get('search') || ''; // جستجو بر اساس عنوان
-    const isActive = searchParams.get('isActive'); // فیلتر بر اساس فعال بودن (true/false/null)
+    const page = parseInt(searchParams.get('page')) || 1;
+    const perPage = parseInt(searchParams.get('perPage')) || 10;
+    const search = searchParams.get('search') || '';
+    const isActive = searchParams.get('isActive');
 
-    // محاسبه مقادیر برای صفحه‌بندی
-    const skip = (page - 1) * perPage; // تعداد رکوردهایی که باید نادیده گرفته شوند
-    const take = perPage; // تعداد رکوردهایی که باید بازگردانده شوند
+    const skip = (page - 1) * perPage;
+    const take = perPage;
 
-    // ساخت شرط جستجو
     const whereClause = {
       AND: [
         search
           ? {
-              title: {
-                contains: search,
-                mode: 'insensitive', // جستجوی غیرحساس به حروف بزرگ و کوچک
-              },
+              OR: [
+                { title: { contains: search, mode: 'insensitive' } },
+                { code: { contains: search, mode: 'insensitive' } },
+              ],
             }
-          : {}, // اگر پارامتر جستجو خالی باشد، شرطی اعمال نشود
-        isActive !== null
-          ? { isActive: isActive === 'true' } // اگر isActive مشخص باشد
-          : {}, // اگر isActive خالی باشد، شرطی اعمال نشود
+          : {},
+        isActive !== null && isActive !== undefined
+          ? { isActive: isActive === 'true' }
+          : {},
       ],
     };
 
-    // دریافت داده‌ها از دیتابیس
     const discountCodes = await prismadb.discountCode.findMany({
       where: whereClause,
-      orderBy: {
-        createdAt: 'desc', // مرتب‌سازی بر اساس تاریخ ایجاد (جدیدترین به قدیمی‌ترین)
-      },
+      orderBy: { createdAt: 'desc' },
       skip,
       take,
+      include: {
+        // برای نمایش در جدول پنل
+        course: { select: { id: true, title: true } },
+        productCategory: { select: { id: true, title: true } },
+      },
     });
 
-    // محاسبه تعداد کل رکوردها برای صفحه‌بندی
     const totalRecords = await prismadb.discountCode.count({
       where: whereClause,
     });
-
-    // محاسبه تعداد صفحات
     const totalPages = Math.ceil(totalRecords / perPage);
 
-    // پاسخ نهایی
     return NextResponse.json({
       success: true,
       data: discountCodes,
@@ -65,7 +149,7 @@ export async function GET(request) {
     console.error('خطا در دریافت کدهای تخفیف:', error);
     return NextResponse.json(
       { success: false, message: 'خطا در دریافت کدهای تخفیف.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -74,43 +158,62 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    // داده‌های اجباری و اعتبارسنجی ساده
-    const {
+    const title = body?.title?.trim();
+    const code = body?.code?.trim();
+
+    const discountPercent = toFloatOrNull(body?.discountPercent);
+
+    const maxDiscountAmount = toFloatOrNull(body?.maxDiscountAmount);
+    const usageLimit = toIntOrNull(body?.usageLimit);
+    const minPurchaseAmount = toFloatOrNull(body?.minPurchaseAmount);
+    const expiryDate = asDateOrNull(body?.expiryDate);
+    const description = body?.description ?? null;
+
+    const appliesTo = normalizeAppliesTo(body?.appliesTo) || 'COURSE'; // default
+    const courseId = toIntOrNull(body?.courseId);
+    const productCategoryId = toIntOrNull(body?.productCategoryId);
+
+    const isActive = toBool(body?.isActive, true);
+
+    const err = await validatePayload({
       title,
       code,
       discountPercent,
-      maxDiscountAmount,
-      usageLimit,
-      minPurchaseAmount,
-      expiryDate,
-      description,
+      appliesTo,
       courseId,
-      isActive,
-    } = body;
-
-    if (!title || !code || !discountPercent) {
+      productCategoryId,
+    });
+    if (err) {
       return NextResponse.json(
-        { success: false, message: 'عنوان، کد و درصد تخفیف اجباری هستند.' },
-        { status: 400 },
+        { success: false, message: err },
+        { status: 400 }
       );
     }
+
+    // نرمال‌سازی target ها بر اساس appliesTo
+    const finalCourseId = appliesTo === 'COURSE' ? courseId : null;
+    const finalProductCategoryId =
+      appliesTo === 'PRODUCT_CATEGORY' ? productCategoryId : null;
 
     const newDiscountCode = await prismadb.discountCode.create({
       data: {
         title,
         code,
-        discountPercent: parseFloat(discountPercent),
-        maxDiscountAmount: maxDiscountAmount
-          ? parseFloat(maxDiscountAmount)
-          : null,
-        usageLimit: usageLimit ? parseInt(usageLimit) : null,
-        minPurchaseAmount: minPurchaseAmount
-          ? parseFloat(minPurchaseAmount)
-          : null,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        discountPercent,
+        maxDiscountAmount,
+        usageLimit,
+        minPurchaseAmount,
+        expiryDate,
         description,
-        courseId: courseId ? parseInt(courseId) : null,
-        isActive: isActive ?? true,
+        isActive,
+
+        appliesTo,
+        courseId: finalCourseId,
+        productCategoryId: finalProductCategoryId,
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        productCategory: { select: { id: true, title: true } },
       },
     });
 
@@ -123,54 +226,81 @@ export async function POST(request) {
     console.error('خطا در ایجاد کد تخفیف:', error);
     return NextResponse.json(
       { success: false, message: 'خطا در ایجاد کد تخفیف.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function PUT(request) {
   const { searchParams } = request.nextUrl;
-  const id = searchParams.get('id'); // دریافت id از Query Params
+  const id = searchParams.get('id');
 
   if (!id) {
     return NextResponse.json(
       { success: false, message: 'شناسه کد تخفیف الزامی است.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   try {
     const body = await request.json();
-    const {
+
+    const title = body?.title?.trim();
+    const code = body?.code?.trim();
+
+    const discountPercent = toFloatOrNull(body?.discountPercent);
+
+    const maxDiscountAmount = toFloatOrNull(body?.maxDiscountAmount);
+    const usageLimit = toIntOrNull(body?.usageLimit);
+    const minPurchaseAmount = toFloatOrNull(body?.minPurchaseAmount);
+    const expiryDate = asDateOrNull(body?.expiryDate);
+    const description = body?.description ?? null;
+
+    const appliesTo = normalizeAppliesTo(body?.appliesTo) || 'COURSE';
+    const courseId = toIntOrNull(body?.courseId);
+    const productCategoryId = toIntOrNull(body?.productCategoryId);
+
+    const isActive = toBool(body?.isActive, true);
+
+    const err = await validatePayload({
       title,
       code,
       discountPercent,
-      maxDiscountAmount,
-      usageLimit,
-      minPurchaseAmount,
-      expiryDate,
-      description,
+      appliesTo,
       courseId,
-      isActive,
-    } = body;
+      productCategoryId,
+    });
+    if (err) {
+      return NextResponse.json(
+        { success: false, message: err },
+        { status: 400 }
+      );
+    }
+
+    const finalCourseId = appliesTo === 'COURSE' ? courseId : null;
+    const finalProductCategoryId =
+      appliesTo === 'PRODUCT_CATEGORY' ? productCategoryId : null;
 
     const updatedDiscountCode = await prismadb.discountCode.update({
       where: { id: parseInt(id) },
       data: {
         title,
         code,
-        discountPercent: parseFloat(discountPercent),
-        maxDiscountAmount: maxDiscountAmount
-          ? parseFloat(maxDiscountAmount)
-          : null,
-        usageLimit: usageLimit ? parseInt(usageLimit) : null,
-        minPurchaseAmount: minPurchaseAmount
-          ? parseFloat(minPurchaseAmount)
-          : null,
-        expiryDate: expiryDate ? new Date(expiryDate) : null,
+        discountPercent,
+        maxDiscountAmount,
+        usageLimit,
+        minPurchaseAmount,
+        expiryDate,
         description,
-        courseId: courseId ? parseInt(courseId) : null,
-        isActive: isActive ?? true,
+        isActive,
+
+        appliesTo,
+        courseId: finalCourseId,
+        productCategoryId: finalProductCategoryId,
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        productCategory: { select: { id: true, title: true } },
       },
     });
 
@@ -183,19 +313,19 @@ export async function PUT(request) {
     console.error('خطا در به‌روزرسانی کد تخفیف:', error);
     return NextResponse.json(
       { success: false, message: 'خطا در به‌روزرسانی کد تخفیف.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function DELETE(request) {
   const { searchParams } = request.nextUrl;
-  const id = searchParams.get('id'); // دریافت id از Query Params
+  const id = searchParams.get('id');
 
   if (!id) {
     return NextResponse.json(
       { success: false, message: 'شناسه کد تخفیف الزامی است.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -212,7 +342,7 @@ export async function DELETE(request) {
     console.error('خطا در حذف کد تخفیف:', error);
     return NextResponse.json(
       { success: false, message: 'خطا در حذف کد تخفیف.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

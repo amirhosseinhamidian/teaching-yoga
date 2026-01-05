@@ -52,6 +52,10 @@ model User {
   userDiscount    UserDiscount[]
   terms           UserTerm[]        @relation("UserTerms")
   subscriptions   UserSubscription[]
+  shopCarts       ShopCart[]
+  shopOrders      ShopOrder[]
+  addresses       UserAddress[]
+  shopReturnRequests ShopReturnRequest[]
 }
 
 model Course {
@@ -250,6 +254,7 @@ model Cart {
   cartTerms          CartTerm[]   @relation("CartToCartTerms")
   payment            Payment?     @relation("CartToPayment")
   cartSubscriptions  CartSubscription[] @relation("CartToCartSubscriptions")
+  discountCode DiscountCode? @relation("DiscountToCourseCarts", fields: [discountCodeId], references: [id], onDelete: SetNull)
 }
 
 model CartCourse {
@@ -277,7 +282,7 @@ model CartTerm {
 model Payment {
   id            Int           @id @unique @default(autoincrement())
   userId        String
-  cartId        Int           @unique
+  cartId        Int?          @unique
   amount        Int
   status        PaymentStatus
   method        PaymentMethod
@@ -285,8 +290,11 @@ model Payment {
   createAt      DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   transactionId BigInt?
-  cart          Cart          @relation("CartToPayment", fields: [cartId], references: [id])
+  cart          Cart?         @relation("CartToPayment", fields: [cartId], references: [id])
   user          User          @relation("UserToPayments", fields: [userId], references: [id], onDelete: Cascade)
+  shopOrderId   Int?          @unique
+  shopOrder     ShopOrder? @relation("ShopOrderToPayment", fields: [shopOrderId], references: [id], onDelete: Cascade)
+  kind          PaymentKind   @default(DIGITAL)
 }
 
 model Comment {
@@ -396,6 +404,14 @@ model SiteInfo {
   companyPhone     String?
   heroImage        String?
   rules            String?
+
+  // 🔥 جدید
+  shopVisibility   ShopVisibility @default(ALL)
+
+  shopLeadTimeDays Int      @default(1)
+
+  postFallbackBaseCost       Int?
+  postFallbackCostPerKg      Int?
 }
 
 model SeoSetting {
@@ -427,15 +443,20 @@ model DiscountCode {
   maxDiscountAmount Float?
   usageLimit        Int?
   usageCount        Int            @default(0)
+  appliesTo         DiscountScope  @default(ALL)
   minPurchaseAmount Float?
   expiryDate        DateTime?
   description       String?
   courseId          Int?
+  productCategoryId Int?
   isActive          Boolean        @default(true)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   course            Course?        @relation(fields: [courseId], references: [id], onDelete: Cascade)
   userDiscount      UserDiscount[]
+  productCategory   ProductCategory? @relation(fields: [productCategoryId], references: [id])
+  shopCarts         ShopCart[]     @relation("DiscountToShopCarts")
+  carts             Cart[]         @relation("DiscountToCourseCarts")
 }
 
 model UserDiscount {
@@ -584,6 +605,339 @@ model CartSubscription {
   @@unique([cartId, subscriptionPlanId])
 }
 
+model ProductCategory {
+  id        Int       @id @default(autoincrement())
+  title     String
+  slug      String    @unique
+  parentId  Int?
+  parent    ProductCategory? @relation("CategoryParent", fields: [parentId], references: [id], onDelete: SetNull)
+  children  ProductCategory[] @relation("CategoryParent")
+
+  products  Product[]
+  discountCodes    DiscountCode[]
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([parentId])
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  urlSlug     String      
+  description String?
+
+  coverImage  String?      // کاور محصول
+  images      String[]     @default([]) 
+    
+  isActive    Boolean  @default(true)
+
+  // قیمت‌ها (تومان/ریال را مثل سیستم فعلی با Int نگه دار)
+  price       Int
+  compareAt   Int?     // قیمت قبل تخفیف (اختیاری)
+
+  // انبار
+  stock       Int      @default(0)
+
+  // ارسال (اختیاری ولی مفید)
+  weightGram  Int?     // وزن برای محاسبه ارسال
+  details     Json?
+  categoryId  Int?
+  category    ProductCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  packageBoxTypeId Int?
+  packageBoxType   PostexBoxCache? @relation("ProductToPostexBox", fields: [packageBoxTypeId], references: [id])
+
+  cartItems   ShopCartItem[]
+  orderItems  ShopOrderItem[]
+  colors      ProductColor[]
+  sizes       ProductSize[] 
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([categoryId])
+}
+
+model ShopCart {
+  id        Int          @id @default(autoincrement())
+  userId    String
+  status    ShopCartStatus @default(PENDING)
+  isActive  Boolean        @default(true)
+
+  discountCodeId     Int?
+  discountCodeAmount Int?
+  discountAppliedAt  DateTime?
+
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  orders    ShopOrder[]
+
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ShopCartItem[]
+  discountCode DiscountCode? @relation("DiscountToShopCarts", fields: [discountCodeId], references: [id], onDelete: SetNull)
+
+
+  @@index([userId])
+  @@index([userId, isActive])
+  @@index([discountCodeId])
+}
+
+model ShopCartItem {
+  id        Int  @id @default(autoincrement())
+  cartId    Int
+  productId Int
+  qty       Int  @default(1)
+  unitPrice Int
+  colorId   Int?
+  sizeId    Int?
+
+  color     Color? @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  size      Size?  @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+
+  cart      ShopCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  // color/size relations...
+
+  @@unique([cartId, productId, colorId, sizeId])
+  @@index([productId])
+}
+
+model ShopOrder {
+  id               Int              @id @default(autoincrement())
+  userId           String
+
+  shopCartId       Int?             @unique
+  postOptionKey    String?
+  shippingMeta     Json?
+
+  status           ShopOrderStatus  @default(PENDING_PAYMENT)
+  paymentStatus    PaymentStatus    @default(PENDING)
+
+  fullName         String
+  phone            String
+  province         String
+  city             String
+  address1         String
+  postalCode       String?
+  notes            String?
+
+  subtotal         Int              @default(0)
+  discountAmount   Int              @default(0)
+  payableOnline    Int              @default(0)
+  payableCOD       Int              @default(0)
+
+  shippingCost     Int              @default(0)
+  shippingMethod   ShippingMethod   @default(POST)
+  trackingCode     String?
+  deliveryDate     DateTime?
+  deliverySlot     String?
+  shippingTitle    String           @default("")
+
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items            ShopOrderItem[]
+  payment          Payment?         @relation("ShopOrderToPayment")
+
+  shopCart         ShopCart?        @relation(fields: [shopCartId], references: [id], onDelete: SetNull)
+  returnRequests   ShopReturnRequest[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+
+model ShopOrderItem {
+  id         Int      @id @default(autoincrement())
+  orderId    Int
+  productId  Int
+  qty        Int
+
+  // snapshot
+  title      String
+  unitPrice  Int
+  colorId    Int?
+  sizeId     Int?
+  coverImage String?   // اختیاری ولی برای نمایش فاکتور عالیه
+  slug       String?   // اختیاری
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  order      ShopOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product    Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  color   Color? @relation(fields: [colorId], references: [id], onDelete: SetNull)
+  size    Size?  @relation(fields: [sizeId], references: [id], onDelete: SetNull)
+  returnRequest ShopReturnRequest?
+
+  @@index([productId])
+  @@index([orderId])
+}
+
+model UserAddress {
+  id          Int      @id @default(autoincrement())
+  userId      String
+  fullName    String
+  phone       String
+  province    String
+  city        String
+  address1    String
+  postalCode  String?
+  notes       String?
+  isDefault   Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Color {
+  id        Int      @id @default(autoincrement())
+  name      String
+  hex       String   // مثل #ffffff
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products  ProductColor[]
+  shopCartItems ShopCartItem[]
+  shopOrderItems ShopOrderItem[]
+
+  @@unique([name])
+  @@index([isActive])
+}
+
+model ProductColor {
+  productId Int
+  colorId   Int
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  color     Color   @relation(fields: [colorId], references: [id], onDelete: Cascade)
+
+  @@id([productId, colorId])
+  @@index([colorId])
+}
+
+model Size {
+  id        Int      @id @default(autoincrement())
+  name      String
+  slug      String   @unique
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  shopCartItems ShopCartItem[]
+  shopOrderItems ShopOrderItem[]
+  products  ProductSize[]
+
+  @@unique([name])
+  @@index([isActive])
+}
+model ProductSize {
+  productId Int
+  sizeId    Int
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  size      Size    @relation(fields: [sizeId], references: [id], onDelete: Cascade)
+
+  @@id([productId, sizeId])
+  @@index([sizeId])
+}
+
+model PostexBoxCache {
+  id          Int    @id // همون box id پستکس
+  name        String
+  height      Int
+  width       Int
+  length      Int
+  products    Product[] @relation("ProductToPostexBox")
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+}
+
+model ShopReturnRequest {
+  id          Int                 @id @default(autoincrement())
+  userId      String
+  orderId     Int
+  orderItemId Int                 @unique 
+
+  qty         Int                 @default(1)
+  reason      ReturnReason
+  description String?
+
+  adminNote   String?
+
+  status      ReturnRequestStatus @default(PENDING)
+
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  order       ShopOrder           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem   ShopOrderItem       @relation(fields: [orderItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([orderId])
+  @@unique([orderId, orderItemId]) // ✅ برای هر آیتم یک درخواست
+}
+
+enum ShopVisibility {
+  OFF
+  ADMIN_ONLY
+  ALL
+}
+
+enum ReturnRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+}
+
+enum ReturnReason {
+  DAMAGED
+  WRONG_ITEM
+  SIZE_ISSUE
+  COLOR_ISSUE
+  NOT_AS_DESCRIBED
+  OTHER
+}
+
+enum ShopOrderStatus {
+  PENDING_PAYMENT
+  PROCESSING
+  PACKED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED
+}
+
+enum ShopCartStatus {
+  PENDING
+  CHECKED_OUT
+  ABANDONED
+}
+
+enum PaymentKind {
+  DIGITAL
+  SHOP
+  BOTH
+}
+
+enum ShippingMethod {
+  POST
+  COURIER_COD
+}
 
 enum Sender {
   USER
@@ -681,4 +1035,11 @@ enum CoursePricingMode {
   TERM_ONLY
   SUBSCRIPTION_ONLY
   BOTH
+}
+
+enum DiscountScope {
+  ALL
+  COURSE
+  PRODUCT
+  PRODUCT_CATEGORY
 }

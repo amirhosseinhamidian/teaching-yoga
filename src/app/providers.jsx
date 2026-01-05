@@ -8,6 +8,7 @@ import ClientSideAOS from '@/components/ClientSideAOS';
 import ClientWrapper from '@/components/ClientWrapper';
 import { PushLinkOnLogin } from '@/components/PushLinkOnLogin';
 import CartBootstrapper from '@/components/Bootstrap/CartBootstrapper';
+import { UiOverlayProvider } from '@/contexts/UiOverlayContext';
 
 export function AppProviders({ children }) {
   return (
@@ -15,7 +16,9 @@ export function AppProviders({ children }) {
       <CartBootstrapper />
       <VisitLogger />
       <ClientSideAOS />
-      <ClientWrapper>{children}</ClientWrapper>
+      <UiOverlayProvider>
+        <ClientWrapper>{children}</ClientWrapper>
+      </UiOverlayProvider>
       <PushLinkOnLogin />
       <Toaster />
     </ThemeProvider>

@@ -16,7 +16,7 @@ async function fetchQuestions() {
       {
         cache: 'no-store', // Ensures SSR by disabling caching
         method: 'GET',
-      },
+      }
     );
 
     // اگر پاسخ از سرور موفقیت‌آمیز نبود، خطا پرتاب می‌شود
@@ -38,7 +38,7 @@ async function markQuestionAsRead(questionId) {
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/questions/${questionId}`,
       {
         method: 'PUT',
-      },
+      }
     );
     if (!res.ok) {
       throw new Error('Failed to update question status');
@@ -85,7 +85,7 @@ const SectionQuestion = () => {
       setQuestions((prevQuestions) => ({
         ...prevQuestions,
         [activeTab]: prevQuestions[activeTab].map((q) =>
-          q.id === currentQuestion.id ? { ...q, isReadByUser: true } : q,
+          q.id === currentQuestion.id ? { ...q, isReadByUser: true } : q
         ),
       }));
     }
@@ -106,7 +106,7 @@ const SectionQuestion = () => {
         setQuestions((prevQuestions) => ({
           ...prevQuestions,
           [activeTab]: prevQuestions[activeTab].map((q) =>
-            q.id === currentQuestion.id ? { ...q, isReadByUser: true } : q,
+            q.id === currentQuestion.id ? { ...q, isReadByUser: true } : q
           ),
         }));
       }
@@ -134,7 +134,7 @@ const SectionQuestion = () => {
       </div>
 
       {/* اسلایدر */}
-      <div className='my-6 max-w-[368px] rounded-xl border border-accent p-2 md:max-w-[488px] md:p-4 lg:max-w-[748px] xl:max-w-[996px] 2xl:max-w-[1240px]'>
+      <div className='my-6 max-w-[544px] rounded-xl border border-accent p-2 md:max-w-[668px] md:p-4 lg:max-w-[766px] xl:max-w-[996px] 2xl:max-w-[1240px]'>
         {isLoading ? (
           <div className='flex min-h-64 w-full items-center justify-center'>
             <ImSpinner2 size={42} className='animate-spin text-secondary' />

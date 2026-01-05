@@ -8,7 +8,7 @@ const colors = {
   red: 'bg-red text-background-light',
   blue: 'bg-blue text-background-light',
   accent: 'bg-accent text-background-light',
-  green: 'bg-green text-background-light',
+  green: 'bg-green-light text-background-light',
 };
 
 const Button = ({

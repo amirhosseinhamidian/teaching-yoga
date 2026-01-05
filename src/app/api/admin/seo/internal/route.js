@@ -1,6 +1,22 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+function toValues(settings) {
+  return settings.reduce((acc, item) => {
+    acc[item.key] = item.value;
+    return acc;
+  }, {});
+}
+
+function normalizePage(p) {
+  const s = String(p || '').trim();
+  if (!s) return '';
+  // page باید مثل /courses/mat-yoga باشد
+  return s.startsWith('/') ? s : `/${s}`;
+}
+
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
   try {
     const data = await request.json();
@@ -63,7 +79,7 @@ export async function POST(request) {
           key: item.key,
           value: item.value,
         },
-      }),
+      })
     );
 
     await Promise.all(promises);
@@ -88,48 +104,52 @@ export async function POST(request) {
     console.error('Error saving SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to save SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
-export async function GET() {
+export async function GET(request) {
   try {
-    // واکشی تنظیمات از پایگاه داده
-    const settings = await prismadb.seoSetting.findMany({});
+    const { searchParams } = new URL(request.url);
+    const pageRaw = searchParams.get('page') || '';
+    const page = normalizePage(pageRaw);
 
-    // فیلتر کردن صفحاتی که نامشان 'general' نیست
-    const filteredSettings = settings.filter((item) => item.page !== 'general');
+    if (!page) {
+      return NextResponse.json(
+        { success: false, message: 'page is required.' },
+        { status: 400 }
+      );
+    }
 
-    // گروه‌بندی داده‌ها بر اساس page
-    const groupedSettings = filteredSettings.reduce((acc, item) => {
-      if (!acc[item.page]) {
-        acc[item.page] = {};
-      }
-      acc[item.page][item.key] = item.value;
-      return acc;
-    }, {});
-
-    // تبدیل آبجکت نهایی به یک آرایه
-    const result = Object.entries(groupedSettings).map(([page, values]) => ({
-      page,
-      values,
-    }));
-
-    // مرتب‌سازی از آخر به اول (descending order)
-    const sortedResult = result.sort((a, b) => {
-      // مثال: اگر بخواهید بر اساس نام صفحه (page) معکوس مرتب کنید
-      if (a.page > b.page) return -1; // `b.page` باید قبل از `a.page` بیاید
-      if (a.page < b.page) return 1; // `a.page` باید قبل از `b.page` بیاید
-      return 0; // مساوی
+    // 1) تلاش: exact match (اگر برای هر دوره جدا ذخیره کرده باشی)
+    let rows = await prismadb.seoSetting.findMany({
+      where: { page: pageRaw },
+      select: { key: true, value: true },
     });
 
-    return NextResponse.json({ success: true, data: sortedResult });
+    if (rows.length) {
+      return NextResponse.json({
+        success: true,
+        data: toValues(rows),
+        meta: { resolvedBy: 'exact', page },
+      });
+    }
+
+    // 3) اگر هیچکدوم نبود
+    return NextResponse.json(
+      {
+        success: false,
+        message: 'SEO not found for this page.',
+        meta: { page },
+      },
+      { status: 404 }
+    );
   } catch (error) {
-    console.error('Error fetching SEO settings:', error);
+    console.error('Error fetching internal SEO:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to fetch SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -178,7 +198,7 @@ export async function PUT(request) {
     // فیلتر کردن آیتم‌های خالی
     const filteredSeoData = seoData.filter(
       (item) =>
-        item.value !== undefined && item.value !== null && item.value !== '',
+        item.value !== undefined && item.value !== null && item.value !== ''
     );
 
     const promises = filteredSeoData.map(async (item) => {
@@ -221,7 +241,7 @@ export async function PUT(request) {
     console.error('Error updating SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to update SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -236,7 +256,7 @@ export async function DELETE(request) {
     if (!page) {
       return NextResponse.json(
         { success: false, message: 'Page parameter is required.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -253,7 +273,7 @@ export async function DELETE(request) {
     console.error('Error deleting SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to delete SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -582,7 +582,7 @@ const SubscriptionsAdminClient = ({ plans: initialPlans, courses }) => {
                   <span
                     className={`rounded-full px-2 py-0.5 text-[10px] ${
                       plan.isActive
-                        ? 'bg-green bg-opacity-10 text-green'
+                        ? 'bg-green-light bg-opacity-10 text-green-light dark:text-green-dark'
                         : 'bg-red bg-opacity-10 text-red'
                     }`}
                   >

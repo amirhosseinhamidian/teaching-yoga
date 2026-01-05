@@ -22,7 +22,7 @@ export default function AdminPage() {
     try {
       setInfosLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/info`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/info`
       );
       if (response.ok) {
         const data = await response.json();
@@ -41,7 +41,7 @@ export default function AdminPage() {
     try {
       setIsLoadingVisitChart(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/daily-visit`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/daily-visit`
       );
 
       if (response.ok) {
@@ -68,7 +68,7 @@ export default function AdminPage() {
     try {
       setIsLoadingSaleChart(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/daily-revenue`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sales/daily-revenue`
       );
 
       if (response.ok) {
@@ -95,7 +95,7 @@ export default function AdminPage() {
     try {
       setIsLoadingCourseSale(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/course-sale`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/dashboard/course-sale`
       );
       if (response.ok) {
         const data = await response.json();
@@ -156,7 +156,7 @@ export default function AdminPage() {
         data={chartSaleData}
         xAxisKey='date'
         yAxisKey='revenue'
-        title='آمار فروش دوره‌های آفلاین'
+        title='آمار فروش'
         subtitle='۳۰ روز گذشته'
         className='my-10 md:my-14'
         labelY='میلیون تومان'

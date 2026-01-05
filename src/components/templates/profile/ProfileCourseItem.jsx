@@ -14,7 +14,7 @@ const ProfileCourseItem = ({ course, className }) => {
     try {
       setLoading(true);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${course.shortAddress}/next-session`
       );
       if (response.ok) {
         const { sessionId } = await response.json();
@@ -31,19 +31,23 @@ const ProfileCourseItem = ({ course, className }) => {
       className={`flex flex-col items-center justify-between rounded-xl bg-background-light dark:bg-background-dark ${className}`}
     >
       <div>
-        <Image
-          src={course.courseCover}
-          alt={course.courseTitle}
-          width={512}
-          height={364}
-          className='h-32 w-full overflow-hidden rounded-t-lg object-cover xs:h-44 sm:h-28 xl:h-48'
-        />
-        <h5 className='mx-3 mt-4 text-center'>{course.courseTitle}</h5>
+        <div className='h-32 w-full overflow-hidden rounded-t-lg xs:h-44 sm:h-28 xl:h-48'>
+          <Image
+            src={course.courseCover}
+            alt={course.courseTitle}
+            width={512}
+            height={364}
+            className='object-cover'
+          />
+        </div>
+        <h5 className='mx-3 mt-4 text-center text-xs xs:text-sm lg:text-base'>
+          {course.courseTitle}
+        </h5>
       </div>
       <div className='flex w-full flex-col items-center'>
         <ProgressBar progress={course.progress} className='my-4' />
         <Button
-          className='mb-4'
+          className='mb-4 text-xs sm:text-sm'
           onClick={handleNextSessionClick}
           isLoading={isLoading}
         >

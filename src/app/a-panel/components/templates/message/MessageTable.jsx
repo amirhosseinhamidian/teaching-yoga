@@ -43,14 +43,14 @@ const MessageTable = ({
           headers: {
             id: sessionTempId,
           },
-        },
+        }
       );
 
       const data = await response.json();
       if (response.ok) {
         toast.showSuccessToast(data.message);
         setSessions((prevSessions) =>
-          prevSessions.filter((session) => session.sessionId !== sessionTempId),
+          prevSessions.filter((session) => session.sessionId !== sessionTempId)
         );
         setSessionTempId(null);
         setShowSessionDeleteModal(false);
@@ -103,7 +103,7 @@ const MessageTable = ({
       label: 'وضعیت',
       render: (_, row) => (
         <p
-          className={`${row.isSeen ? 'text-green dark:text-accent' : 'text-red'} `}
+          className={`${row.isSeen ? 'text-green-light dark:text-green-dark' : 'text-red'} `}
         >
           {row.isSeen ? 'دیده شده' : 'دیده نشده'}
         </p>

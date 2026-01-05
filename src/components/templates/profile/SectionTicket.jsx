@@ -25,7 +25,7 @@ const SectionTicket = () => {
   const fetchTickets = async (page) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ticket?page=${page}&perPage=10}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/ticket?page=${page}&perPage=10}`
       );
       if (response.ok) {
         const data = await response.json();
@@ -84,7 +84,7 @@ const SectionTicket = () => {
           OPEN: {
             label: 'باز',
             bg: 'bg-green',
-            text: 'text-green dark:text-accent whitespace-nowrap',
+            text: 'text-green-light dark:text-green-dark dark:text-accent whitespace-nowrap',
           },
           CLOSED: {
             label: 'بسته',
@@ -102,7 +102,7 @@ const SectionTicket = () => {
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
               statusStyle.bg,
-              statusStyle.text,
+              statusStyle.text
             )}
           >
             {statusStyle.label}
@@ -129,7 +129,10 @@ const SectionTicket = () => {
   return (
     <div>
       <Link href='/ticket/create'>
-        <Button shadow className='flex items-center justify-center gap-1'>
+        <Button
+          shadow
+          className='flex items-center justify-center gap-1 text-xs sm:text-sm'
+        >
           <FaPlus />
           ایجاد تیکت
         </Button>
@@ -138,7 +141,7 @@ const SectionTicket = () => {
       <Table
         columns={columns}
         data={data}
-        className='mb-3 mt-6 sm:mb-4 lg:w-4/5 xl:w-2/3'
+        className='mb-3 mt-6 sm:mb-4'
         loading={isLoading}
         empty={tickets.length === 0}
         emptyText='تا کنون تیکتی ثبت نکرده اید.'

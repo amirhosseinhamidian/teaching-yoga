@@ -82,7 +82,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
         {
           method: 'POST',
           body: formData,
-        },
+        }
       );
 
       if (!response.ok) {
@@ -136,7 +136,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
     if (/[^a-zA-Z0-9\\-]/.test(shortAddress)) {
       setShortAddressStatus('invalid');
       setShortAddressError(
-        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.',
+        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.'
       );
       return;
     }
@@ -149,7 +149,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
 
     setShortAddressStatus('loading');
     const response = await fetch(
-      `/api/admin/validate-article-short-address?shortAddress=${encodeURIComponent(shortAddress)}`,
+      `/api/admin/validate-article-short-address?shortAddress=${encodeURIComponent(shortAddress)}`
     );
     const data = await response.json();
 
@@ -227,7 +227,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
       });
       if (response.ok) {
         toast.showSuccessToast(
-          article ? 'مقاله با موفقیت ویرایش شد.' : 'مقاله با موفقیت ساخته شد',
+          article ? 'مقاله با موفقیت ویرایش شد.' : 'مقاله با موفقیت ساخته شد'
         );
         router.replace('/a-panel/blog');
       } else {
@@ -324,7 +324,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
                     {shortAddressStatus === 'valid' && (
                       <FaCircleCheck
                         size={20}
-                        className='absolute left-2 top-11 text-green'
+                        className='text-green-light dark:text-green-dark absolute left-2 top-11'
                       />
                     )}
                     {shortAddressStatus === 'invalid' && (

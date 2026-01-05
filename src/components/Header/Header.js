@@ -1,7 +1,7 @@
 /* eslint-disable react/prop-types */
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Logo from '../Logo/Logo';
 import IconButton from '../Ui/ButtonIcon/ButtonIcon';
 import {
@@ -27,6 +27,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useUserActions } from '@/hooks/auth/useUserActions';
 import { useCart } from '@/hooks/cart/useCart';
+import { useShopCart } from '@/hooks/shopCart/useShopCart';
 
 export default function Header() {
   const router = useRouter();
@@ -38,9 +39,18 @@ export default function Header() {
   const { user } = useAuthUser();
   const { logout } = useUserActions();
 
-  // Redux cart (جایگزین useSelector)
-  const { items } = useCart();
-  const cartCount = items?.length || 0;
+  // Redux carts
+  const { items: courseItems } = useCart();
+  const { items: shopItems } = useShopCart();
+
+  const courseCount = Array.isArray(courseItems) ? courseItems.length : 0;
+  const shopCount = useMemo(() => {
+    if (!Array.isArray(shopItems)) return 0;
+    // تعداد آیتم‌های فروشگاه (بر اساس qty) — اگر میخوای فقط تعداد ردیف‌ها باشد، این reduce را حذف کن و .length بگذار
+    return shopItems.reduce((sum, it) => sum + Number(it.qty || 0), 0);
+  }, [shopItems]);
+
+  const cartCount = courseCount + shopCount;
 
   const [isShowProfileModal, setShowProfileModal] = useState(false);
   const [isShowCartModal, setIsShowCartModal] = useState(false);
@@ -54,7 +64,6 @@ export default function Header() {
   });
 
   useEffect(() => {
-    // اگر لاگین نیست، نیازی به چک کردن نیست
     if (!user) {
       setSubscriptionInfo({
         loading: false,
@@ -71,13 +80,8 @@ export default function Header() {
       try {
         setSubscriptionInfo((prev) => ({ ...prev, loading: true }));
 
-        const res = await fetch('/api/subscription/status', {
-          method: 'GET',
-        });
-
-        if (!res.ok) {
-          throw new Error('Failed to fetch subscription status');
-        }
+        const res = await fetch('/api/subscription/status', { method: 'GET' });
+        if (!res.ok) throw new Error('Failed to fetch subscription status');
 
         const data = await res.json();
 
@@ -98,19 +102,16 @@ export default function Header() {
     };
 
     fetchSubscriptionStatus();
-
     return () => {
       ignore = true;
     };
   }, [user]);
-  // 🔥 Logout handler
+
   const signOutHandler = async () => {
     try {
       await fetch('/api/logout', { method: 'POST' });
-
-      logout(); // پاک کردن user از Redux
+      logout();
       setShowSignOutModal(false);
-
       router.refresh();
     } catch (err) {
       console.error('Logout Error:', err);
@@ -152,7 +153,7 @@ export default function Header() {
                       className={`hidden flex-nowrap items-center gap-2 whitespace-nowrap rounded-xl px-3 py-2 font-faNa text-xs transition duration-300 ease-in md:flex ${
                         isExpiringSoon
                           ? 'bg-red bg-opacity-15 text-red hover:bg-opacity-100 hover:text-white'
-                          : 'bg-emerald-100 text-emerald-700 hover:bg-green hover:text-white'
+                          : 'hover:bg-green-light bg-emerald-100 text-emerald-700 hover:text-white'
                       } `}
                     >
                       <PiClockCountdownBold size={22} />
@@ -177,6 +178,7 @@ export default function Header() {
               )}
             </>
           )}
+
           <IconButton
             icon={isDark ? MdOutlineLightMode : MdOutlineDarkMode}
             onClick={toggleTheme}
@@ -185,10 +187,11 @@ export default function Header() {
           {/* Cart Button */}
           <div className='relative' onClick={() => setIsShowCartModal(true)}>
             <IconButton icon={BsCart3} />
+
             {cartCount > 0 && (
-              <div className='absolute -right-1 -top-3 flex h-5 w-5 items-center justify-center rounded-full bg-red pt-1'>
+              <div className='absolute -right-1 -top-3 flex h-5 min-w-5 items-center justify-center rounded-full bg-red px-1 pt-1'>
                 <span className='font-faNa text-xs text-white'>
-                  {cartCount}
+                  {cartCount.toLocaleString('fa-IR')}
                 </span>
               </div>
             )}
@@ -216,9 +219,9 @@ export default function Header() {
             <IconButton icon={BsCart3} size={20} />
 
             {cartCount > 0 && (
-              <div className='absolute -right-1 -top-2 flex h-4 w-4 items-center justify-center rounded-full bg-red pt-1'>
+              <div className='absolute -right-1 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-red px-1 pt-1'>
                 <span className='font-faNa text-xs text-white'>
-                  {cartCount}
+                  {cartCount.toLocaleString('fa-IR')}
                 </span>
               </div>
             )}

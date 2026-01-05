@@ -2,39 +2,95 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 
+function normalizeBaseUrl(baseUrl) {
+  return String(baseUrl || '').replace(/\/+$/, ''); // remove trailing slashes
+}
+
+function normalizePath(path) {
+  const p = String(path || '').trim();
+  if (!p) return '/';
+  return p.startsWith('/') ? p : `/${p}`;
+}
+
+function joinUrl(baseUrl, path) {
+  const base = normalizeBaseUrl(baseUrl);
+  const p = normalizePath(path);
+  return `${base}${p}`;
+}
+
+function isDynamicSection(section) {
+  const s = String(section || '');
+  return s.includes('[slug]') || s.includes('[shortAddress]');
+}
+
+function buildLocFromSetting(item, baseUrl) {
+  const section = String(item.section || '');
+  const shortAddress = String(item.shortAddress || '').trim();
+
+  // اگر section خودش '/' باشه => صفحه اصلی
+  if (section === '/' || section === 'home') {
+    return normalizeBaseUrl(baseUrl);
+  }
+
+  // اگر داینامیکه باید جایگزین کنیم
+  if (isDynamicSection(section)) {
+    if (!shortAddress) {
+      throw new Error(`shortAddress/slug is required for section ${section}`);
+    }
+
+    const filled = section
+      .replace('[slug]', shortAddress)
+      .replace('[shortAddress]', shortAddress);
+
+    return joinUrl(baseUrl, filled);
+  }
+
+  // مسیر ثابت
+  return joinUrl(baseUrl, section);
+}
+
 export async function POST(request) {
   try {
-    // دریافت داده‌های ارسال‌شده از سمت کلاینت
-    const body = await request.json();
+    const body = await request.json().catch(() => ({}));
     const { section, changefreq, priority, shortAddress } = body;
 
-    // اعتبارسنجی داده‌های ورودی
-    if (!section || !changefreq || !priority) {
+    if (!section || !changefreq || priority == null) {
       return NextResponse.json(
         { success: false, message: 'تمامی فیلدها الزامی هستند.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
-    // ذخیره یا به‌روزرسانی رکورد
+    const cleanSection = normalizePath(section); // '/shop/products/[slug]' ...
+    const needsSlug = isDynamicSection(cleanSection);
+
+    const cleanShort = String(shortAddress || '').trim();
+
+    if (needsSlug && !cleanShort) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'برای صفحات جزئیات، slug/آدرس کوتاه الزامی است.',
+        },
+        { status: 400 }
+      );
+    }
+
     const result = await prismadb.sitemapSetting.upsert({
-      where: {
-        section,
-      },
+      where: { section: cleanSection },
       update: {
         changefreq,
-        priority,
-        shortAddress,
+        priority: Number(priority),
+        shortAddress: needsSlug ? cleanShort : '', // برای مسیرهای ثابت خالی
       },
       create: {
-        section,
+        section: cleanSection,
         changefreq,
-        priority,
-        shortAddress,
+        priority: Number(priority),
+        shortAddress: needsSlug ? cleanShort : '',
       },
     });
 
-    // پاسخ موفقیت‌آمیز
     return NextResponse.json({
       success: true,
       message: 'تنظیمات سایت‌مپ با موفقیت ذخیره شد.',
@@ -44,64 +100,70 @@ export async function POST(request) {
     console.error('Error saving sitemap settings:', error);
     return NextResponse.json(
       { success: false, message: 'خطایی در ذخیره تنظیمات سایت‌مپ رخ داد.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
 
 export async function GET() {
   try {
-    // واکشی تنظیمات سایت‌مپ از دیتابیس
-    const settings = await prismadb.sitemapSetting.findMany();
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000';
 
-    // ایجاد لیست URLها از داده‌ها
+    const settings = await prismadb.sitemapSetting.findMany({
+      orderBy: { updatedAt: 'desc' },
+    });
+
     const urls = settings.map((item) => {
-      const loc = (() => {
-        if (item.section === 'home') {
-          return process.env.NEXT_PUBLIC_API_BASE_URL;
-        } else if (item.section === 'course' || item.section === 'article') {
-          if (!item.shortAddress) {
-            throw new Error(
-              `shortAddress is required for section ${item.section}`,
-            );
-          }
-          return `${process.env.NEXT_PUBLIC_API_BASE_URL}/${item.section}/${item.shortAddress}`;
-        } else {
-          return `${process.env.NEXT_PUBLIC_API_BASE_URL}/${item.section}`;
-        }
-      })();
+      const loc = buildLocFromSetting(item, baseUrl);
 
-      const lastmod = item.updatedAt.toISOString().split('T')[0];
+      const lastmod = item.updatedAt
+        ? item.updatedAt.toISOString().split('T')[0]
+        : new Date().toISOString().split('T')[0];
+
       const changefreq = item.changefreq;
       const priority = item.priority;
 
       return `
-        <url>
-          <loc>${loc}</loc>
-          <lastmod>${lastmod}</lastmod>
-          <changefreq>${changefreq}</changefreq>
-          <priority>${priority}</priority>
-        </url>
-      `;
+  <url>
+    <loc>${loc}</loc>
+    <lastmod>${lastmod}</lastmod>
+    <changefreq>${changefreq}</changefreq>
+    <priority>${priority}</priority>
+  </url>`;
     });
 
-    // تولید ساختار XML
     const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
-      <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-        ${urls.join('')}
-      </urlset>`;
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join('\n')}
+</urlset>`;
 
-    // بازگشت سایت‌مپ به عنوان پاسخ
     return new Response(sitemap, {
-      headers: {
-        'Content-Type': 'application/xml',
-      },
+      headers: { 'Content-Type': 'application/xml; charset=utf-8' },
     });
   } catch (error) {
     console.error('Error generating sitemap:', error);
     return NextResponse.json(
-      { success: false, message: 'خطایی در تولید سایت‌ مپ رخ داد.' },
-      { status: 500 },
+      { success: false, message: 'خطایی در تولید سایت‌مپ رخ داد.' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE() {
+  try {
+    // 🔥 حذف کامل رکوردهای sitemap
+    await prismadb.sitemapSetting.deleteMany();
+
+    return NextResponse.json({
+      success: true,
+      message: 'تمام اطلاعات سایت‌مپ با موفقیت حذف شد.',
+    });
+  } catch (error) {
+    console.error('[SITEMAP_DELETE_ERROR]', error);
+    return NextResponse.json(
+      { success: false, error: 'خطا در حذف اطلاعات سایت‌مپ.' },
+      { status: 500 }
     );
   }
 }

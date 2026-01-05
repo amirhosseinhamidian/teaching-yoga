@@ -12,7 +12,7 @@ export async function generateMetadata({ params }) {
   const { shortAddress } = params;
   // درخواست برای اطلاعات سئو
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/articles/${shortAddress}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=${shortAddress}`,
     {
       method: 'GET',
     }

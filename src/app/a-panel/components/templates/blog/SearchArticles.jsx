@@ -11,7 +11,7 @@ const SearchArticles = ({ className, searchText, setSearchText }) => {
       </h2>
       <SearchBox
         value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
+        onChange={setSearchText}
         placeholder=' جست و جو براساس عنوان مقاله'
       />
     </div>

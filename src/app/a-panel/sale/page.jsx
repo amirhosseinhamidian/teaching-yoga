@@ -120,7 +120,7 @@ function SalePage() {
         data={chartData}
         xAxisKey='date'
         yAxisKey='revenue'
-        title='آمار فروش دوره‌های آفلاین'
+        title='آمار فروش '
         subtitle='۳۰ روز گذشته'
         className='my-10 md:my-14'
         labelY='میلیون تومان'

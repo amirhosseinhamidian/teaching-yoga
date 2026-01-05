@@ -40,7 +40,7 @@ export async function generateMetadata({ params }) {
   const { shortAddress } = params;
   // درخواست برای اطلاعات سئو
   const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/courses/${shortAddress}`,
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=${shortAddress}`,
     {
       method: 'GET',
       headers: headers(),
@@ -115,65 +115,66 @@ const fetchCourseData = async (shortAddress) => {
 };
 
 const checkUserBuyCourse = async (shortAddress, userId) => {
+  const baseResult = {
+    hasAccess: false,
+    viaSubscription: false,
+    inSubscription: false,
+  };
+
   try {
-    const url = `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/check-purchase?shortAddress=${shortAddress}${
-      userId ? `&userId=${userId}` : ''
-    }`;
+    if (!shortAddress) return baseResult;
 
-    const purchaseResponse = await fetch(url, {
-      method: 'GET',
-    });
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+    const url = new URL(`${base}/api/check-purchase`);
 
-    let data = null;
-    try {
-      data = await purchaseResponse.json();
-    } catch (e) {
-      // اگر بادی خالی بود، نذار کرش کنه
+    url.searchParams.set('shortAddress', String(shortAddress)); // URL خودش encode می‌کنه
+    if (userId) url.searchParams.set('userId', String(userId));
+
+    const res = await fetch(url.toString(), { method: 'GET' });
+
+    // امن‌تر: ممکنه body خالی یا غیر JSON باشه
+    let data = {};
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      data = await res.json().catch(() => ({}));
+    } else {
+      // اگر html/text بود، ignore
       data = {};
     }
 
-    // مقدارهای پیش‌فرض
-    const baseResult = {
-      hasAccess: false, // دسترسی نهایی (خرید یا اشتراک)
-      viaSubscription: false, // دسترسی از طریق اشتراک بوده؟
-      inSubscription: false, // خود دوره داخل پلن‌های اشتراک هست؟
-    };
+    // ✅ 200: از دیتا استفاده کن، ولی اگر فیلد purchased نبود، به 200 اعتماد کن
+    if (res.status === 200) {
+      const purchased =
+        typeof data?.purchased === 'boolean' ? data.purchased : true;
 
-    // اگر 500 یا 400 و از این مدل‌ها بود
-    if (!purchaseResponse.ok && purchaseResponse.status !== 403) {
-      console.error('Error:', data);
       return {
-        ...baseResult,
-        inSubscription: data?.inSubscription ?? false,
-      };
-    }
-
-    // 200 یعنی دسترسی دارد
-    if (purchaseResponse.status === 200) {
-      return {
-        hasAccess: !!data?.purchased,
+        hasAccess: purchased || !!data?.viaSubscription,
         viaSubscription: !!data?.viaSubscription,
-        inSubscription: !!data?.inSubscription,
+        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
       };
     }
 
-    // 403 یعنی دسترسی ندارد، ولی ممکنه inSubscription برامون مهم باشد
-    if (purchaseResponse.status === 403) {
+    // ✅ 403: دسترسی ندارد ولی inSubscription ممکنه مهم باشد
+    if (res.status === 403) {
       return {
         ...baseResult,
-        inSubscription: !!data?.inSubscription,
+        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
       };
     }
 
-    // حالت‌های دیگه
+    // ✅ بقیه status ها: خطای سرور/بدنه
+    if (!res.ok) {
+      console.error('check-purchase failed:', res.status, data);
+      return {
+        ...baseResult,
+        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
+      };
+    }
+
     return baseResult;
   } catch (error) {
     console.error('Error while checking user course:', error);
-    return {
-      hasAccess: false,
-      viaSubscription: false,
-      inSubscription: false,
-    };
+    return baseResult;
   }
 };
 

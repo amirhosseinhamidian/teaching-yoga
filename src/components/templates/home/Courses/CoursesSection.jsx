@@ -3,25 +3,20 @@ import { headers } from 'next/headers';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
-import AutoCarousel from './AutoCarousel';
+import CoursesSwiperCarousel from './CoursesSwiperCarousel';
 
 const fetchCourseData = async () => {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
-      {
-        method: 'GET',
-        headers: headers(),
-        next: { revalidate: 7200 },
-      },
-    );
-    if (!response.ok) throw new Error('Failed to fetch course data');
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses`,
+    {
+      method: 'GET',
+      headers: headers(),
+      next: { revalidate: 7200 },
+    }
+  );
 
-    const courses = await response.json();
-    return courses;
-  } catch (error) {
-    console.error('Error fetching course data:', error);
-  }
+  if (!response.ok) throw new Error('Failed to fetch course data');
+  return response.json();
 };
 
 async function CoursesSection() {
@@ -39,7 +34,6 @@ async function CoursesSection() {
             viewBox='0 0 1440 120'
             preserveAspectRatio='none'
           >
-            {/* تعریف فیلتر سایه */}
             <defs>
               <filter
                 id='wave-shadow'
@@ -56,19 +50,16 @@ async function CoursesSection() {
                 />
               </filter>
             </defs>
-
-            {/* مسیر موج + فیلتر سایه */}
             <path
               d='M-27.061,842.561s131.514,66.5,394.19,68.626,239.4-32.05,535.326,0,363.031,2.126,562.229,0,358.107,67.378,576.45,4.991c82.534-23.582,251.476-25.408,297.475,0-2.337,182.333,0,131.876,0,131.876H-27.061Z'
               transform='translate(27.061 -842.561)'
               fill='currentColor'
               className='text-surface-light dark:text-surface-dark'
-              filter='url(#wave-shadow)' // ← اعمال فیلتر سایه
+              filter='url(#wave-shadow)'
             />
           </svg>
         </div>
 
-        {/* سمبل چپ */}
         <Image
           src='/images/yoga.png'
           alt='Yoga Symbol Left'
@@ -77,7 +68,6 @@ async function CoursesSection() {
           height={800}
         />
 
-        {/* سمبل راست */}
         <Image
           src='/images/yoga.png'
           alt='Yoga Symbol Right'
@@ -86,7 +76,6 @@ async function CoursesSection() {
           height={800}
         />
 
-        {/* محتوای اصلی */}
         <div className='flex skew-y-6 flex-col items-center justify-center gap-8 py-12 md:gap-12 md:py-16'>
           <h2
             className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
@@ -98,7 +87,7 @@ async function CoursesSection() {
           </h2>
 
           <div className='container my-5 sm:my-7 xl:px-32'>
-            <AutoCarousel courses={data} />
+            <CoursesSwiperCarousel courses={data || []} />
           </div>
 
           <Link
@@ -110,7 +99,6 @@ async function CoursesSection() {
         </div>
 
         {/* موج پایینی */}
-
         <div className='absolute -bottom-14 -z-50 w-full skew-y-[6]'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
@@ -135,7 +123,6 @@ async function CoursesSection() {
                 />
               </filter>
             </defs>
-
             <path
               d='M0,211.9s131.514-66.5,394.19-68.626,239.4,32.05,535.326,0,363.031-2.126,562.229,0,358.107-67.378,576.45-4.991c82.534,23.582,251.476,56.627,297.475,31.219-2.337-182.333,0-163.1,0-163.1H0Z'
               transform='translate(0 -20)'

@@ -6,6 +6,7 @@ const nextConfig = {
       'samane-yoga.storage.c2.liara.space',
       'trustseal.enamad.ir',
       'lh3.googleusercontent.com',
+      'static.postex.ir',
     ],
   },
   webpack(config) {

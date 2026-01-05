@@ -2,7 +2,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 
-const Pagination = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination = ({ currentPage, totalPages, onPageChange, className }) => {
   const generatePageNumbers = () => {
     const pageNumbers = [];
     const range = 1; // تعداد صفحات اطراف صفحه فعلی
@@ -39,7 +39,9 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
   const pageNumbers = generatePageNumbers();
 
   return (
-    <div className='mx-auto flex w-fit items-center justify-center rounded-2xl bg-surface-light text-2xs sm:text-xs md:text-base dark:bg-surface-dark'>
+    <div
+      className={`mx-auto flex w-fit items-center justify-center rounded-2xl bg-surface-light text-2xs sm:text-xs md:text-base dark:bg-surface-dark ${className}`}
+    >
       {/* دکمه بعدی */}
       <button
         onClick={() => onPageChange(currentPage + 1)}
@@ -83,6 +85,7 @@ Pagination.propTypes = {
   currentPage: PropTypes.number.isRequired,
   totalPages: PropTypes.number.isRequired,
   onPageChange: PropTypes.func.isRequired,
+  className: PropTypes.string,
 };
 
 export default Pagination;

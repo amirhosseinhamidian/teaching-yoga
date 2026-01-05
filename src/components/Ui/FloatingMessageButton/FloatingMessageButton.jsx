@@ -355,7 +355,7 @@ export default function FloatingMessageButton() {
                           <button
                             onClick={requestAndSubscribe}
                             disabled={subscribing || pushEnabled}
-                            className='rounded-md bg-green px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60'
+                            className='rounded-md bg-green-light px-3 py-1.5 text-[12px] font-medium text-white disabled:opacity-60'
                           >
                             {pushEnabled
                               ? 'فعال است'

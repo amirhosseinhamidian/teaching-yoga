@@ -110,7 +110,7 @@ export default function CourseHighCard({ course }) {
               </Link>
             </div>
 
-            <div className='mt-4 flex gap-1 text-green md:mt-8'>
+            <div className='text-green-light dark:text-green-dark mt-4 flex gap-1 md:mt-8'>
               <GrYoga className='min-h-6 min-w-6' />
               <p className='text-sm'>{accessText}</p>
             </div>

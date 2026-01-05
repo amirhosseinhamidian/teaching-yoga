@@ -21,7 +21,7 @@ const SeoInternalTable = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/admin/seo/internal');
+      const response = await fetch('/api/admin/seo/internal/list');
       if (!response.ok) {
         throw new Error('Error to fetch seo internal data!');
       }
@@ -51,13 +51,13 @@ const SeoInternalTable = () => {
         `/api/admin/seo/internal?page=${deleteTempPage}`,
         {
           method: 'DELETE',
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Error to Delete seo infos!');
       }
       setSeoData((prev) =>
-        prev.filter((seoData) => seoData.page !== deleteTempPage),
+        prev.filter((seoData) => seoData.page !== deleteTempPage)
       );
       toast.showSuccessToast('اطلاعات با موفقیت حذف شد.');
     } catch (error) {
@@ -85,8 +85,8 @@ const SeoInternalTable = () => {
           },
           true: {
             label: 'بله',
-            bg: 'bg-green',
-            text: 'text-green dark:text-accent whitespace-nowrap',
+            bg: 'bg-green-light',
+            text: 'text-green-light dark:text-green-dark whitespace-nowrap',
           },
         };
         const indexStyle = indexMap[index] || {
@@ -99,7 +99,7 @@ const SeoInternalTable = () => {
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
               indexStyle.bg,
-              indexStyle.text,
+              indexStyle.text
             )}
           >
             {indexStyle.label}
@@ -120,8 +120,8 @@ const SeoInternalTable = () => {
           },
           true: {
             label: 'بله',
-            bg: 'bg-green',
-            text: 'text-green dark:text-accent whitespace-nowrap',
+            bg: 'bg-green-light',
+            text: 'text-green-light dark:text-green-dark whitespace-nowrap',
           },
         };
         const followStyle = followMap[follow] || {
@@ -134,7 +134,7 @@ const SeoInternalTable = () => {
             className={clsx(
               'rounded-full bg-opacity-10 px-3 py-1',
               followStyle.bg,
-              followStyle.text,
+              followStyle.text
             )}
           >
             {followStyle.label}
@@ -157,7 +157,7 @@ const SeoInternalTable = () => {
             icon={LuPencil}
             onClick={() =>
               router.push(
-                `/a-panel/seo/internal/edit/${encodeURIComponent(row.page)}`,
+                `/a-panel/seo/internal/edit/${encodeURIComponent(row.page)}`
               )
             }
           />

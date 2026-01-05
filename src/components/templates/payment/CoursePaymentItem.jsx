@@ -27,7 +27,7 @@ const CoursePaymentItem = ({ data }) => {
               <h3 className='font-faNa text-sm font-semibold sm:text-base'>
                 {data.finalPrice.toLocaleString('fa-IR')}
               </h3>
-              <h6 className='text-2xs sm:text-xs'>تومان</h6>
+              <h6 className='text-2xs'>تومان</h6>
             </>
           )}
         </div>

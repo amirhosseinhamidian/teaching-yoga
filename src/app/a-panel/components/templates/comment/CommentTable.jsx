@@ -47,7 +47,7 @@ const CommentTable = ({
           headers: {
             id: commentTempId,
           },
-        },
+        }
       );
 
       const data = await response.json();
@@ -82,8 +82,8 @@ const CommentTable = ({
           prevComments.map((comment) =>
             comment.id === commentId
               ? { ...comment, status: newStatus }
-              : comment,
-          ),
+              : comment
+          )
         );
       } else {
         toast.showErrorToast('خطا در تغییر وضعیت نظر');
@@ -183,7 +183,7 @@ const CommentTable = ({
       label: 'وضعیت',
       render: (_, row) => (
         <SimpleDropdown
-          className={`${row.status === 'APPROVED' && 'text-green dark:text-accent'} ${row.status === 'REJECTED' && 'text-red'} ${row.status === 'PENDING' && 'text-secondary'}`}
+          className={`${row.status === 'APPROVED' && 'text-green-light dark:text-green-dark'} ${row.status === 'REJECTED' && 'text-red'} ${row.status === 'PENDING' && 'text-secondary'}`}
           options={[
             { label: 'تایید شده', value: 'APPROVED' },
             { label: 'رد شده', value: 'REJECTED' },

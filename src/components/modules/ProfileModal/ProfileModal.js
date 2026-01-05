@@ -9,6 +9,7 @@ import { IoChatbubblesOutline } from 'react-icons/io5';
 import { IoPersonOutline } from 'react-icons/io5';
 import { LuLogOut } from 'react-icons/lu';
 import { MdOutlineAdminPanelSettings } from 'react-icons/md';
+import { HiOutlineTruck } from 'react-icons/hi2';
 
 const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
   const signOutModalHandler = () => {
@@ -59,12 +60,20 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
           href='/profile?active=1'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
+          <HiOutlineTruck className='text-xl' size={22} />
+          سفارشات
+        </Link>
+
+        <Link
+          href='/profile?active=2'
+          className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
+        >
           <TbMessageCircleQuestion className='text-xl' />
           سوالات
         </Link>
 
         <Link
-          href='/profile?active=3'
+          href='/profile?active=4'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
           <IoChatbubblesOutline className='text-xl' />
@@ -72,7 +81,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
         </Link>
 
         <Link
-          href='/profile?active=4'
+          href='/profile?active=5'
           className='flex w-full items-center gap-2 px-4 py-4 transition-all duration-200 ease-in hover:bg-background-light dark:hover:bg-surface-dark'
         >
           <IoPersonOutline className='text-xl' />

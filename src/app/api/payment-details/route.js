@@ -22,11 +22,20 @@ export const GET = async (request) => {
       );
     }
 
+    // ✅ اگر پرداخت موفق شد و قرار است bind discount انجام شود
+    // باید یوزر لاگین باشد (همان رفتار قبلی)
+    const authUser = getAuthUser(); // اگر async هست، await بگذار
+    const authUserId = authUser?.id || null;
+
     const paymentRecord = await prismadb.payment.findUnique({
       where: { id: tokenNumber },
       include: {
+        // -------------------
+        // Courses/Subscriptions
+        // -------------------
         cart: {
           select: {
+            id: true,
             discountCodeId: true,
             cartCourses: {
               select: {
@@ -40,7 +49,6 @@ export const GET = async (request) => {
                 },
               },
             },
-            // ✅ اضافه شدن اطلاعات اشتراک‌ها
             cartSubscriptions: {
               select: {
                 id: true,
@@ -62,6 +70,50 @@ export const GET = async (request) => {
             },
           },
         },
+
+        // -------------------
+        // Shop order
+        // -------------------
+        shopOrder: {
+          select: {
+            id: true,
+            status: true,
+            paymentStatus: true,
+            trackingCode: true,
+            shippingTitle: true,
+            shippingMethod: true,
+            shippingCost: true,
+            subtotal: true,
+            discountAmount: true,
+            payableOnline: true,
+            payableCOD: true,
+            createdAt: true,
+
+            fullName: true,
+            phone: true,
+            province: true,
+            city: true,
+            address1: true,
+            postalCode: true,
+
+            items: {
+              select: {
+                id: true,
+                productId: true,
+                qty: true,
+                title: true,
+                unitPrice: true,
+                coverImage: true,
+                slug: true,
+                colorId: true,
+                sizeId: true,
+              },
+            },
+
+            // اگر برای نمایش در UI لازم داری:
+            shopCartId: true,
+          },
+        },
       },
     });
 
@@ -72,51 +124,67 @@ export const GET = async (request) => {
       );
     }
 
-    // ----------------------------------------
-    //  اگر پرداخت موفق بوده → bind کردن تخفیف
-    // ----------------------------------------
+    // ✅ امنیت ساده: فقط صاحب پرداخت بتواند جزئیات را ببیند
+    // (در نسخه قبلی نداشتی؛ ولی چون با credentials include صدا می‌زنی بهتره)
+    if (
+      authUserId &&
+      paymentRecord.userId &&
+      paymentRecord.userId !== authUserId
+    ) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // ----------------------------------------------------
+    // ✅ Bind discount code (دوره‌ها) - idempotent
+    // فقط وقتی پرداخت SUCCESSFUL است و cart.discountCodeId دارد
+    // ----------------------------------------------------
     if (
       paymentRecord.status === 'SUCCESSFUL' &&
       paymentRecord.cart?.discountCodeId
     ) {
       const discountCodeId = paymentRecord.cart.discountCodeId;
 
-      const discountCode = await prismadb.discountCode.findUnique({
-        where: { id: discountCodeId },
-      });
-
-      if (!discountCode) {
-        return NextResponse.json(
-          { error: 'Discount code not found.' },
-          { status: 404 }
-        );
-      }
-
-      // گرفتن اطلاعات کاربر از JWT
-      const authUser = getAuthUser();
-
-      if (!authUser?.id) {
+      // باید لاگین باشد تا userDiscount ثبت شود
+      if (!authUserId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 
-      const userId = authUser.id;
-
-      // ثبت استفاده کاربر از تخفیف (اگر قبلاً استفاده نکرده)
-      await prismadb.userDiscount.create({
-        data: {
-          userId,
-          discountCodeId,
-        },
-      });
-
-      // افزایش usageCount
-      await prismadb.discountCode.update({
+      // وجود کد تخفیف را چک می‌کنیم
+      const discountCode = await prismadb.discountCode.findUnique({
         where: { id: discountCodeId },
-        data: { usageCount: { increment: 1 } },
+        select: { id: true },
       });
+
+      if (discountCode) {
+        // ✅ جلوگیری از تکراری (به جای create خام)
+        // اگر قبلاً ثبت شده باشد، دیگر usageCount هم افزایش نده
+        const alreadyUsed = await prismadb.userDiscount.findFirst({
+          where: { userId: authUserId, discountCodeId },
+          select: { id: true },
+        });
+
+        if (!alreadyUsed) {
+          await prismadb.$transaction([
+            prismadb.userDiscount.create({
+              data: { userId: authUserId, discountCodeId },
+            }),
+            prismadb.discountCode.update({
+              where: { id: discountCodeId },
+              data: { usageCount: { increment: 1 } },
+            }),
+          ]);
+        }
+      }
     }
 
-    // اجباراً تبدیل BigInt به string
+    // ----------------------------------------------------
+    // (اختیاری) Bind discount code (فروشگاه)
+    // اگر تصمیم گرفتی برای shopCart هم userDiscount ثبت شود
+    // فعلاً چون shopOrder.discountCodeId در مدل نداری و shopCart هم include نکردیم،
+    // این بخش را عمداً نیاوردم تا با ساختارت تداخل ایجاد نکند.
+    // ----------------------------------------------------
+
+    // ✅ BigInt → string
     const sanitizedRecord = JSON.parse(
       JSON.stringify(paymentRecord, (_, value) =>
         typeof value === 'bigint' ? value.toString() : value

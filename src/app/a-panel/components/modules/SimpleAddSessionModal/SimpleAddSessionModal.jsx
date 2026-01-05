@@ -1,36 +1,36 @@
 /* eslint-disable no-undef */
-'use client'
-import React, { useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
-import { IoClose } from 'react-icons/io5'
-import { createToastHandler } from '@/utils/toastHandler'
-import { useTheme } from '@/contexts/ThemeContext'
-import { getStringTime } from '@/utils/dateTimeHelper'
-import Button from '@/components/Ui/Button/Button'
-import Input from '@/components/Ui/Input/Input'
-import DropDown from '@/components/Ui/DropDown/DropDwon'
+'use client';
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import { IoClose } from 'react-icons/io5';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getStringTime } from '@/utils/dateTimeHelper';
+import Button from '@/components/Ui/Button/Button';
+import Input from '@/components/Ui/Input/Input';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
 
 const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
-  const { isDark } = useTheme()
-  const toast = createToastHandler(isDark)
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   // فرم ساخت جلسه
-  const [name, setName] = useState('')
-  const [duration, setDuration] = useState('')
-  const [sessionType, setSessionType] = useState(null)
+  const [name, setName] = useState('');
+  const [duration, setDuration] = useState('');
+  const [sessionType, setSessionType] = useState(null);
 
   // انتخاب چندین ترم
-  const [termOptions, setTermOptions] = useState([])
-  const [selectedTerms, setSelectedTerms] = useState([])
+  const [termOptions, setTermOptions] = useState([]);
+  const [selectedTerms, setSelectedTerms] = useState([]);
 
   const sessionTypeOptions = [
     { value: 'VIDEO', label: 'ویدیو' },
     { value: 'AUDIO', label: 'صدا' },
-  ]
+  ];
 
-  const [errors, setErrors] = useState({})
+  const [errors, setErrors] = useState({});
 
   // ---------------------------------
   // لود کل ترم‌ها
@@ -40,71 +40,71 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
       try {
         const resp = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`
-        )
-        const data = await resp.json()
+        );
+        const data = await resp.json();
 
         setTermOptions(
           data.map((term) => ({
             value: term.id,
             label: `${term.name} - ${term.sessionCount} جلسه`,
           }))
-        )
+        );
       } catch (e) {
-        toast.showErrorToast('خطا در دریافت لیست ترم‌ها')
+        toast.showErrorToast('خطا در دریافت لیست ترم‌ها');
       }
-    }
+    };
 
-    fetchTerms()
-  }, [])
+    fetchTerms();
+  }, []);
 
   // ---------------------------------
   // انتخاب یک ترم از دراپ‌دان
   // ---------------------------------
   const handleSelectTerm = (termId) => {
-    const term = termOptions.find((t) => t.value === termId)
+    const term = termOptions.find((t) => t.value === termId);
 
-    if (!term) return
+    if (!term) return;
 
     // جلوگیری از انتخاب دوباره
-    if (selectedTerms.some((t) => t.value === termId)) return
+    if (selectedTerms.some((t) => t.value === termId)) return;
 
-    setSelectedTerms((prev) => [...prev, term])
-  }
+    setSelectedTerms((prev) => [...prev, term]);
+  };
 
   // ---------------------------------
   // حذف ترم انتخاب شده
   // ---------------------------------
   const handleRemoveTerm = (termId) => {
-    setSelectedTerms((prev) => prev.filter((t) => t.value !== termId))
-  }
+    setSelectedTerms((prev) => prev.filter((t) => t.value !== termId));
+  };
 
   // ---------------------------------
   // اعتبارسنجی
   // ---------------------------------
   const validateInputs = () => {
-    const e = {}
+    const e = {};
 
-    if (!name.trim()) e.name = 'عنوان جلسه الزامی است.'
+    if (!name.trim()) e.name = 'عنوان جلسه الزامی است.';
     if (!duration || isNaN(duration) || Number(duration) <= 0)
-      e.duration = 'مدت زمان معتبر نیست.'
-    if (!sessionType) e.sessionType = 'نوع محتوا را انتخاب کنید.'
-    if (selectedTerms.length === 0) e.terms = 'حداقل یک ترم انتخاب کنید.'
+      e.duration = 'مدت زمان معتبر نیست.';
+    if (!sessionType) e.sessionType = 'نوع محتوا را انتخاب کنید.';
+    if (selectedTerms.length === 0) e.terms = 'حداقل یک ترم انتخاب کنید.';
 
-    setErrors(e)
+    setErrors(e);
 
-    return Object.keys(e).length === 0
-  }
+    return Object.keys(e).length === 0;
+  };
 
   // ---------------------------------
   // ساخت جلسه
   // ---------------------------------
   const handleCreateSession = async () => {
     if (!validateInputs()) {
-      toast.showErrorToast('لطفاً فرم را کامل کنید')
-      return
+      toast.showErrorToast('لطفاً فرم را کامل کنید');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const resp = await fetch(
@@ -118,11 +118,11 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
             type: sessionType,
           }),
         }
-      )
+      );
 
-      if (!resp.ok) throw new Error('خطا در ساخت جلسه')
+      if (!resp.ok) throw new Error('خطا در ساخت جلسه');
 
-      const createdSession = await resp.json()
+      const createdSession = await resp.json();
 
       // 2) اتصال جلسه به ترم‌ها
       for (const term of selectedTerms) {
@@ -133,28 +133,28 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ sessionId: createdSession.id }),
           }
-        )
+        );
       }
 
       // ⛔ newSession ناقص است، باید نسخه کامل را fetch کنیم
       const fullResp = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions/${createdSession.id}`
-      )
+      );
 
-      const fullSession = await fullResp.json()
+      const fullSession = await fullResp.json();
 
-      toast.showSuccessToast('جلسه با موفقیت ساخته و متصل شد')
+      toast.showSuccessToast('جلسه با موفقیت ساخته و متصل شد');
 
       // حالا fullSession شامل sessionTerms و term است
-      onSuccess(fullSession)
-      onClose()
+      onSuccess(fullSession);
+      onClose();
     } catch (err) {
-      toast.showErrorToast('خطا در ساخت جلسه')
-      console.log(err)
+      toast.showErrorToast('خطا در ساخت جلسه');
+      console.log(err);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // ---------------------------------
   // UI
@@ -219,7 +219,7 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
               errorMessage={errors.duration}
             />
             {duration && (
-              <span className='font-faNa text-green'>
+              <span className='text-green-light dark:text-green-dark font-faNa'>
                 {getStringTime(duration)}
               </span>
             )}
@@ -242,12 +242,12 @@ const SimpleAddSessionModal = ({ onClose, onSuccess }) => {
         </Button>
       </div>
     </div>
-  )
-}
+  );
+};
 
 SimpleAddSessionModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
-}
+};
 
-export default SimpleAddSessionModal
+export default SimpleAddSessionModal;

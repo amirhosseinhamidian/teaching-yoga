@@ -102,7 +102,7 @@ const CreateTicket = () => {
       setSubject('');
       setTicketText('');
       setCourseSelected(null);
-      router.replace('/profile?active=3');
+      router.replace('/profile?active=4');
     } catch (error) {
       console.error('Error submitting ticket:', error);
       toast.showErrorToast('خطایی در ثبت تیکت رخ داد. لطفاً بعدا امتحان کنید.');

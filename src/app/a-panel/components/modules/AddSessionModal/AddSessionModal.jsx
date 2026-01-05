@@ -1,39 +1,39 @@
 /* eslint-disable no-undef */
-'use client'
-import React, { useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
-import { IoClose } from 'react-icons/io5'
-import { createToastHandler } from '@/utils/toastHandler'
-import { useTheme } from '@/contexts/ThemeContext'
-import { getStringTime } from '@/utils/dateTimeHelper'
-import Button from '@/components/Ui/Button/Button'
-import Input from '@/components/Ui/Input/Input'
-import DropDown from '@/components/Ui/DropDown/DropDwon'
+'use client';
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import { IoClose } from 'react-icons/io5';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
+import { getStringTime } from '@/utils/dateTimeHelper';
+import Button from '@/components/Ui/Button/Button';
+import Input from '@/components/Ui/Input/Input';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
 
 const AddSessionModal = ({ onClose, termId, onSuccess }) => {
-  const { isDark } = useTheme()
-  const toast = createToastHandler(isDark)
-  const [isLoading, setIsLoading] = useState(false)
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
+  const [isLoading, setIsLoading] = useState(false);
 
   // ساخت جلسه جدید
-  const [name, setName] = useState('')
-  const [duration, setDuration] = useState('')
-  const [sessionType, setSessionType] = useState(null)
+  const [name, setName] = useState('');
+  const [duration, setDuration] = useState('');
+  const [sessionType, setSessionType] = useState(null);
   const sessionTypeOptions = [
     { value: 'VIDEO', label: 'ویدیو' },
     { value: 'AUDIO', label: 'صدا' },
-  ]
+  ];
 
   // دراپ‌دان جلسات موجود
-  const [existingSessions, setExistingSessions] = useState([])
-  const [selectedExistingSession, setSelectedExistingSession] = useState(null)
+  const [existingSessions, setExistingSessions] = useState([]);
+  const [selectedExistingSession, setSelectedExistingSession] = useState(null);
 
   // خطاها
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     duration: '',
     sessionType: '',
-  })
+  });
 
   // دریافت جلسات موجود
   useEffect(() => {
@@ -41,57 +41,57 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions/get-all-name`
-        )
-        const data = await response.json()
+        );
+        const data = await response.json();
 
         const formatted = data.map((s) => ({
           value: s.id,
           label: `${s.name} (${s.type === 'VIDEO' ? 'ویدیو' : 'صوتی'})`,
-        }))
+        }));
 
-        setExistingSessions(formatted)
+        setExistingSessions(formatted);
       } catch (err) {
-        console.error(err)
+        console.error(err);
       }
-    }
+    };
 
-    fetchSessions()
-  }, [])
+    fetchSessions();
+  }, []);
 
   // ساخت جلسه جدید
   const validateInputs = () => {
-    let errors = {}
+    let errors = {};
 
     if (!sessionType) {
-      errors.sessionType = 'انتخاب نوع محتوا اجباری است.'
+      errors.sessionType = 'انتخاب نوع محتوا اجباری است.';
     }
 
     if (!name.trim()) {
-      errors.name = 'عنوان نمی‌تواند خالی باشد.'
+      errors.name = 'عنوان نمی‌تواند خالی باشد.';
     }
 
     if (!duration || isNaN(duration) || Number(duration) <= 0) {
-      errors.duration = 'مدت زمان باید معتبر باشد.'
+      errors.duration = 'مدت زمان باید معتبر باشد.';
     }
 
-    setErrorMessages(errors)
-    return Object.keys(errors).length === 0
-  }
+    setErrorMessages(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleCreateNewSession = async () => {
     if (!validateInputs()) {
-      toast.showErrorToast('مقادیر فرم صحیح نیست.')
-      return
+      toast.showErrorToast('مقادیر فرم صحیح نیست.');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       const payload = {
         name,
         duration: Number(duration),
         type: sessionType,
-      }
+      };
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/sessions`,
@@ -100,24 +100,24 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
-      )
+      );
 
-      const newSession = await response.json()
+      const newSession = await response.json();
 
       if (!response.ok) {
-        toast.showErrorToast(newSession.error || 'خطا در ساخت جلسه')
-        return
+        toast.showErrorToast(newSession.error || 'خطا در ساخت جلسه');
+        return;
       }
 
       // اتصال به ترم
-      await attachSessionToTerm(newSession.id)
+      await attachSessionToTerm(newSession.id);
     } catch (err) {
-      console.error(err)
-      toast.showErrorToast('خطای غیرمنتظره')
+      console.error(err);
+      toast.showErrorToast('خطای غیرمنتظره');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // اتصال جلسه موجود یا جدید به ترم
   const attachSessionToTerm = async (sessionId) => {
@@ -129,33 +129,33 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId }),
         }
-      )
+      );
 
-      const data = await res.json()
+      const data = await res.json();
 
       if (!res.ok) {
-        toast.showErrorToast(data.error || 'خطا در افزودن جلسه')
-        return
+        toast.showErrorToast(data.error || 'خطا در افزودن جلسه');
+        return;
       }
 
-      toast.showSuccessToast('جلسه با موفقیت اضافه شد')
-      onSuccess(data)
-      onClose()
+      toast.showSuccessToast('جلسه با موفقیت اضافه شد');
+      onSuccess(data);
+      onClose();
     } catch (error) {
-      console.error(error)
-      toast.showErrorToast('خطای افزودن جلسه')
+      console.error(error);
+      toast.showErrorToast('خطای افزودن جلسه');
     }
-  }
+  };
 
   // افزودن یک جلسه موجود
   const handleAttachExistingSession = async () => {
     if (!selectedExistingSession) {
-      toast.showErrorToast('لطفاً یک جلسه انتخاب کنید.')
-      return
+      toast.showErrorToast('لطفاً یک جلسه انتخاب کنید.');
+      return;
     }
 
-    await attachSessionToTerm(selectedExistingSession)
-  }
+    await attachSessionToTerm(selectedExistingSession);
+  };
 
   return (
     <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
@@ -226,7 +226,7 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
               />
 
               {duration && (
-                <span className='font-faNa text-green'>
+                <span className='text-green-light dark:text-green-dark font-faNa'>
                   {getStringTime(duration)}
                 </span>
               )}
@@ -243,13 +243,13 @@ const AddSessionModal = ({ onClose, termId, onSuccess }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 AddSessionModal.propTypes = {
   termId: PropTypes.number.isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
-}
+};
 
-export default AddSessionModal
+export default AddSessionModal;

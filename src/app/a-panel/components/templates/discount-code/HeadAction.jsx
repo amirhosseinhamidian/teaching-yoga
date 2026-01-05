@@ -7,6 +7,7 @@ import AddEditDiscountCodeModal from '../../modules/AddEditDiscountCodeModal/Add
 const HeadAction = ({
   addDiscountCodeSuccessfully,
   courseOptions,
+  categoryOptions,
   className,
 }) => {
   const [showAddDiscountCodeModal, setShowAddDiscountCodeModal] =
@@ -35,6 +36,7 @@ const HeadAction = ({
         <AddEditDiscountCodeModal
           onClose={() => setShowAddDiscountCodeModal(false)}
           courseOptions={courseOptions}
+          categoryOptions={categoryOptions}
           onSuccess={(newDiscountCode) =>
             handleAddDiscountCodeSuccessfully(newDiscountCode)
           }
@@ -48,6 +50,7 @@ HeadAction.propTypes = {
   className: PropTypes.string,
   addDiscountCodeSuccessfully: PropTypes.func.isRequired,
   courseOptions: PropTypes.array.isRequired,
+  categoryOptions: PropTypes.array.isRequired,
 };
 
 export default HeadAction;

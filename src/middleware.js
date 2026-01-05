@@ -27,34 +27,8 @@ async function getUserFromJWT(request) {
   }
 }
 
-function getBaseUrl(request) {
-  // 1) اگر خودت تو env ست کردی (پیشنهادی)
-  const envUrl =
-    process.env.SITE_URL ||
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.LIARA_URL
-      ? `https://${process.env.LIARA_URL.replace(/^https?:\/\//, '')}`
-      : null);
-
-  if (envUrl) return envUrl;
-
-  // 2) fallback: از هدرهای پروکسی بخون
-  const proto = (request.headers.get('x-forwarded-proto') || 'https')
-    .split(',')[0]
-    .trim();
-  let host = (
-    request.headers.get('x-forwarded-host') ||
-    request.headers.get('host') ||
-    ''
-  )
-    .split(',')[0]
-    .trim();
-
-  // اگر اشتباهاً پورت داخلی چسبیده بود، برای https حذفش کن
-  if (proto === 'https') host = host.replace(/:3000$/, '');
-
-  return `${proto}://${host}`;
-}
+const isAdminOrManager = (user) =>
+  !!user?.userId && (user.role === 'ADMIN' || user.role === 'MANAGER');
 
 // -------------------------------
 // 1) مسیرهای ادمین
@@ -63,7 +37,7 @@ async function handleAdminRoutes(request, user) {
   const path = request.nextUrl.pathname;
   const isAdminRoute = path.startsWith('/a-panel');
 
-  if (isAdminRoute && (!user || user.role !== 'ADMIN')) {
+  if (isAdminRoute && !isAdminOrManager(user)) {
     return NextResponse.redirect(new URL('/access-denied', request.url));
   }
 
@@ -115,8 +89,8 @@ async function handleLessonMediaAccess(request, user) {
   const sessionId = pathname.split('/')[4];
 
   try {
-    // ✅ بهتره بجای NEXT_PUBLIC_API_BASE_URL از origin همین درخواست استفاده کنیم
-    const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || `${request.nextUrl.origin}`;
 
     // ۱) سطح دسترسی رسانه را می‌گیریم
     const mediaResponse = await fetch(
@@ -154,20 +128,16 @@ async function handleLessonMediaAccess(request, user) {
 
       const data = await purchaseResponse.json().catch(() => null);
 
-      // ✅ خروجی جدید: hasAccess
       if (purchaseResponse.status === 200 && data?.hasAccess) {
-        return null; // اجازه ورود به صفحه lesson
+        return null;
       }
 
-      // اگر دسترسی ندارد → برگرد به صفحه دوره
       if (purchaseResponse.status === 403) {
-        // چون گفتی inSubscription رو حذف کنیم، دیگه ریدایرکت به /subscriptions نداریم
         return NextResponse.redirect(
           new URL(`/courses/${shortAddress}`, request.url)
         );
       }
 
-      // خطاهای سرور
       if (purchaseResponse.status >= 500) {
         return NextResponse.redirect(new URL('/error', request.url));
       }
@@ -185,12 +155,78 @@ async function handleLessonMediaAccess(request, user) {
 }
 
 // -------------------------------
+// 5) چک وضعیت نمایش فروشگاه (shopVisibility)
+// OFF | ADMIN_ONLY | ALL
+//
+// ✅ اینبار می‌تونیم از API داخلی فچ کنیم چون matcher شامل /api نیست.
+// -------------------------------
+async function handleShopRoutes(request, user) {
+  const path = request.nextUrl.pathname;
+
+  const isShopUI = path === '/shop' || path.startsWith('/shop/');
+  if (!isShopUI) return null;
+
+  // فایل‌های سیستمی
+  if (
+    path.startsWith('/_next') ||
+    path.startsWith('/static') ||
+    path.startsWith('/favicon')
+  ) {
+    return null;
+  }
+
+  try {
+    const baseUrl =
+      process.env.NEXT_PUBLIC_API_BASE_URL || `${request.nextUrl.origin}`;
+
+    // پیشنهاد: یک API خیلی سبک داشته باش:
+    // GET /api/shop/status -> { shopVisibility: "ALL" | "ADMIN_ONLY" | "OFF" }
+    const res = await fetch(`${baseUrl}/api/shop/status`, {
+      cache: 'no-store',
+      headers: {
+        // این هدر کمک می‌کنه اگر خواستی داخل API تشخیص بدی درخواست از middleware اومده
+        'x-from-middleware': '1',
+      },
+    });
+
+    const json = await res.json().catch(() => ({}));
+    const shopVisibility = String(json?.shopVisibility || 'ALL').toUpperCase();
+
+    // OFF → هیچکس
+    if (shopVisibility === 'OFF') {
+      // می‌تونی به جای access-denied، به صفحه اصلی ببری
+      return NextResponse.redirect(new URL('/access-denied', request.url));
+    }
+
+    // ADMIN_ONLY → فقط ADMIN/MANAGER
+    if (shopVisibility === 'ADMIN_ONLY' && !isAdminOrManager(user)) {
+      return NextResponse.redirect(new URL('/access-denied', request.url));
+    }
+
+    // ALL → همه مجاز
+    return null;
+  } catch (e) {
+    console.error('shop visibility check failed in middleware:', e);
+    // اگر به هر دلیلی API خطا داد، امن‌ترین حالت اینه که فروشگاه رو نبینن
+    return NextResponse.redirect(new URL('/access-denied', request.url));
+  }
+}
+
+// -------------------------------
 // Middleware اصلی
 // -------------------------------
 export async function middleware(request) {
+  const path = request.nextUrl.pathname;
+
+  // ✅ اگر بعداً matcher رو گسترش دادی، این گارد جلوی لوپ رو می‌گیره
+  if (path.startsWith('/api/')) {
+    return NextResponse.next();
+  }
+
   const user = await getUserFromJWT(request);
 
   const handlers = [
+    handleShopRoutes,
     handleAdminRoutes,
     handleProtectedRoutes,
     handleAccessDeniedRoutes,
@@ -206,5 +242,12 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/profile', '/a-panel/:path*', '/payment', '/courses/:path*'],
+  matcher: [
+    '/profile',
+    '/a-panel/:path*',
+    '/payment',
+    '/courses/:path*',
+    '/shop/:path*',
+    '/shop',
+  ],
 };

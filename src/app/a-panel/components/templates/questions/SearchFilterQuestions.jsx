@@ -14,7 +14,7 @@ const SearchFilterQuestions = ({
     <div className={`flex flex-wrap gap-4 ${className}`}>
       <SearchBox
         value={searchText}
-        onChange={(e) => setSearchText(e.target.value)}
+        onChange={setSearchText}
         placeholder=' جست و جو براساس سوال یا دوره'
       />
       <SimpleDropdown

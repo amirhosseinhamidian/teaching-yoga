@@ -1,24 +1,27 @@
-/* eslint-disable react/prop-types */
 'use client';
 import { AnimatePresence, motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
 import FloatingMessageButton from './Ui/FloatingMessageButton/FloatingMessageButton';
 import React from 'react';
+import { useUiOverlay } from '@/contexts/UiOverlayContext';
+
+// eslint-disable-next-line react/prop-types
 const ClientWrapper = ({ children }) => {
-  const pathname = usePathname(); // دریافت مسیر فعلی
+  const pathname = usePathname();
   const isAdmin = pathname.startsWith('/a-panel');
+  const { overlayOpen } = useUiOverlay();
 
   return (
     <AnimatePresence mode='wait'>
       <motion.div
-        key={pathname} // تغییر صفحه باعث اجرای انیمیشن می‌شود
-        initial={{ opacity: 0, x: 50 }} // ورود از راست
-        animate={{ opacity: 1, x: 0 }} // نمایش کامل
-        exit={{ opacity: 0, x: -50 }} // خروج به چپ
-        transition={{ duration: 0.5, ease: 'easeInOut' }} // تنظیم سرعت انیمیشن
+        key={pathname}
+        initial={{ opacity: 0, x: 50 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -50 }}
+        transition={{ duration: 0.5, ease: 'easeInOut' }}
       >
         {children}
-        {!isAdmin && <FloatingMessageButton />}
+        {!isAdmin && !overlayOpen && <FloatingMessageButton />}
       </motion.div>
     </AnimatePresence>
   );

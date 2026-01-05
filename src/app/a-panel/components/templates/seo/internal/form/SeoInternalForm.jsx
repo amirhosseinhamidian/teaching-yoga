@@ -79,7 +79,7 @@ const SeoInternalForm = ({ page }) => {
   const fetchEditData = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/single?page=${page}`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/single?page=${page}`
       );
       if (!response.ok) {
         throw new Error('Error to fetch edit data!');
@@ -96,7 +96,7 @@ const SeoInternalForm = ({ page }) => {
             ? data.data.keywords
                 .split(' ، ') // جدا کردن کلمات
                 .map((keyword) => keyword.replace(/^"|"$/g, '')) // حذف دبل کوتیشن‌ها از اول و آخر هر کلمه
-            : [], // در غیر این صورت آرایه خالی
+            : [] // در غیر این صورت آرایه خالی
       );
       setOpenGraphTitle(data.data.ogTitle || '');
       setOpenGraphSiteName(data.data.ogSiteName || '');
@@ -181,7 +181,7 @@ const SeoInternalForm = ({ page }) => {
       toast.showSuccessToast(
         seoData
           ? 'بروزرسانی با موفقیت انجام شد.'
-          : 'ثبت اطلاعات با موفقیت انجام شد.',
+          : 'ثبت اطلاعات با موفقیت انجام شد.'
       );
       router.back();
     } catch (error) {
@@ -238,7 +238,7 @@ const SeoInternalForm = ({ page }) => {
       formData.append('folderPath', 'images/open-graph');
       formData.append(
         'fileName',
-        slugUrl.replace(/^\//, '').replace(/\//g, '-'),
+        slugUrl.replace(/^\//, '').replace(/\//g, '-')
       );
 
       try {
@@ -249,7 +249,7 @@ const SeoInternalForm = ({ page }) => {
           {
             method: 'POST',
             body: formData,
-          },
+          }
         );
 
         if (response.ok) {

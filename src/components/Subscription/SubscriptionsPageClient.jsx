@@ -118,13 +118,13 @@ const SubscriptionsPageClient = ({ plans, subscriptionStatus }) => {
                 )}
 
                 <div className='flex flex-wrap items-baseline gap-1'>
-                  <span className='text-xl font-extrabold text-green dark:text-accent'>
+                  <span className='text-green-light dark:text-green-dark text-xl font-extrabold'>
                     {finalPrice.toLocaleString('fa-IR')}
                   </span>
-                  <span className='text-xs text-green dark:text-accent'>
+                  <span className='text-green-light dark:text-green-dark text-xs'>
                     تومان
                   </span>
-                  <span className='text-[11px] text-green dark:text-accent'>
+                  <span className='text-green-light dark:text-green-dark text-[11px]'>
                     / {plan.intervalLabel || 'مدت اشتراک'}
                   </span>
                 </div>

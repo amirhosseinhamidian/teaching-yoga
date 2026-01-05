@@ -63,7 +63,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
     try {
       if (id) {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast/episode/${id}`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast/episode/${id}`
         );
         if (response.ok) {
           const data = await response.json();
@@ -87,7 +87,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
                 ? data.keywords
                     .split(' ، ') // جدا کردن کلمات
                     .map((keyword) => keyword.replace(/^"|"$/g, '')) // حذف دبل کوتیشن‌ها از اول و آخر هر کلمه
-                : [],
+                : []
           );
         } else {
           toast.showErrorToast(data.error || 'خطایی رخ داده است');
@@ -167,7 +167,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
         throw new Error('Filed to send data!');
       }
       toast.showSuccessToast(
-        id ? 'بروزرسانی با موفقیت انجام شد.' : 'ایپزود جدید با موفقیت ثبت شد.',
+        id ? 'بروزرسانی با موفقیت انجام شد.' : 'ایپزود جدید با موفقیت ثبت شد.'
       );
       router.replace('/a-panel/podcast');
     } catch (error) {
@@ -244,7 +244,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
           {
             method: 'POST',
             body: formData,
-          },
+          }
         );
 
         if (response.ok) {
@@ -396,7 +396,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
               type='number'
               className='bg-surface-light text-xs sm:text-sm dark:bg-surface-dark'
             />
-            <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
+            <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
               {duration && getStringTime(duration)}
             </p>
           </div>

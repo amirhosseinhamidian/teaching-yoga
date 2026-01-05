@@ -44,14 +44,14 @@ const QuestionTable = ({
           headers: {
             id: questionTempId,
           },
-        },
+        }
       );
 
       const data = await response.json();
       if (response.ok) {
         toast.showSuccessToast(data.message);
         setQuestions(
-          questions.filter((question) => question.id !== questionTempId),
+          questions.filter((question) => question.id !== questionTempId)
         );
         setQuestionTempId(null);
         setShowQuestionDeleteModal(false);
@@ -121,7 +121,7 @@ const QuestionTable = ({
       label: 'وضعیت',
       render: (_, row) => (
         <p
-          className={`${row.isAnswered ? 'text-green dark:text-accent' : 'text-red'} `}
+          className={`${row.isAnswered ? 'text-green-light dark:text-green-dark' : 'text-red'} `}
         >
           {row.isAnswered ? 'پاسخ داده شده' : 'پاسخ داده نشده'}
         </p>

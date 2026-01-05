@@ -13,6 +13,21 @@ import Modal from '@/components/modules/Modal/Modal';
 import Switch from '@/components/Ui/Switch/Switch';
 import AddEditDiscountCodeModal from '../../modules/AddEditDiscountCodeModal/AddEditDiscountCodeModal';
 
+const scopeLabel = (s) => {
+  switch (s) {
+    case 'ALL':
+      return 'همه (دوره + محصول)';
+    case 'COURSE':
+      return 'فقط دوره';
+    case 'PRODUCT':
+      return 'فقط محصولات';
+    case 'PRODUCT_CATEGORY':
+      return 'دسته محصولات';
+    default:
+      return '-';
+  }
+};
+
 const DiscountCodeTable = ({
   className,
   discountCodes,
@@ -21,6 +36,7 @@ const DiscountCodeTable = ({
   totalPages,
   isLoading,
   courseOptions,
+  categoryOptions,
   onPageChange,
 }) => {
   const { isDark } = useTheme();
@@ -46,14 +62,14 @@ const DiscountCodeTable = ({
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/discount-code?id=${discountCodeTempId}`,
         {
           method: 'DELETE',
-        },
+        }
       );
 
       const data = await response.json();
       if (response.ok) {
         toast.showSuccessToast(data.message);
         setDiscountCodes((prev) =>
-          prev.filter((discountCode) => discountCode.id !== discountCodeTempId),
+          prev.filter((discountCode) => discountCode.id !== discountCodeTempId)
         );
       } else {
         toast.showErrorToast(data.error);
@@ -69,7 +85,7 @@ const DiscountCodeTable = ({
   const toggleActiveStatus = async (row, currentStatus) => {
     if (row.expiryDate && new Date(row.expiryDate) < new Date()) {
       toast.showErrorToast(
-        'تاریخ انقضا کد تخفیف گذشته و امکان فعال سازی آن وجود ندارد!',
+        'تاریخ انقضا کد تخفیف گذشته و امکان فعال سازی آن وجود ندارد!'
       );
       return;
     }
@@ -82,8 +98,8 @@ const DiscountCodeTable = ({
         prev.map((discountCode) =>
           discountCode.id === row.id
             ? { ...discountCode, isActive: updatedStatus }
-            : discountCode,
-        ),
+            : discountCode
+        )
       );
 
       // ارسال درخواست به سرور
@@ -93,7 +109,7 @@ const DiscountCodeTable = ({
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isActive: updatedStatus }), // ارسال مقدار جدید
-        },
+        }
       );
 
       if (!response.ok) {
@@ -107,8 +123,8 @@ const DiscountCodeTable = ({
         prev.map((discountCode) =>
           discountCode.id === row.id
             ? { ...discountCode, isActive: !updatedStatus }
-            : discountCode,
-        ),
+            : discountCode
+        )
       );
     }
   };
@@ -121,8 +137,8 @@ const DiscountCodeTable = ({
               ...discountCode,
               ...updatedDiscountCode,
             }
-          : discountCode,
-      ),
+          : discountCode
+      )
     );
     setShowEditDiscountCodeModal(false);
     setDiscountCodeTemp(null);
@@ -138,7 +154,28 @@ const DiscountCodeTable = ({
     {
       key: 'code',
       label: 'کد',
-      minWidth: '80px',
+      minWidth: '60px',
+    },
+    {
+      key: 'appliesTo',
+      label: 'نوع',
+      minWidth: '60px',
+      render: (_, row) => (
+        <p className='text-xs'>{scopeLabel(row.appliesTo)}</p>
+      ),
+    },
+
+    // ✅ NEW: هدف (دوره/دسته)
+    {
+      key: 'target',
+      label: 'هدف',
+      minWidth: '60px',
+      render: (_, row) => {
+        if (row.appliesTo === 'COURSE') return row.course?.title || '-';
+        if (row.appliesTo === 'PRODUCT_CATEGORY')
+          return row.productCategory?.title || '-';
+        return '-';
+      },
     },
     {
       key: 'discountPercent',
@@ -228,6 +265,9 @@ const DiscountCodeTable = ({
     isActive: discountCode.isActive,
     createdAt: discountCode.createdAt,
     updatedAt: discountCode.updatedAt,
+    appliesTo: discountCode.appliesTo,
+    productCategoryId: discountCode.productCategoryId,
+    productCategory: discountCode.productCategory,
   }));
 
   return (
@@ -270,6 +310,7 @@ const DiscountCodeTable = ({
           onSuccess={handleUpdateDiscountCode}
           discountCode={discountCodeTemp}
           courseOptions={courseOptions}
+          categoryOptions={categoryOptions}
         />
       )}
     </div>
@@ -284,6 +325,7 @@ DiscountCodeTable.propTypes = {
   totalPages: PropTypes.number.isRequired,
   isLoading: PropTypes.bool.isRequired,
   courseOptions: PropTypes.array.isRequired,
+  categoryOptions: PropTypes.array.isRequired,
   onPageChange: PropTypes.func.isRequired,
 };
 

@@ -15,6 +15,8 @@ const Input = React.forwardRef(
       errorClassName = 'mr-3',
       label = '',
       focus = false,
+      min,
+      max,
       maxLength,
       thousandSeparator = false,
       fontDefault = true,
@@ -98,6 +100,8 @@ const Input = React.forwardRef(
           value={displayValue}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
+          min={min && min}
+          max={max && max}
           className={`rounded-xl border border-solid ${errorMessage ? 'border-red focus:ring-red' : 'border-accent focus:ring-accent'} bg-background-light px-4 py-2 ${fontDefault ? 'font-faNa' : 'font-main'} font-medium transition duration-200 ease-in placeholder:text-subtext-light focus:outline-none focus:ring-1 dark:bg-background-dark placeholder:dark:text-subtext-dark ${className}`}
         />
         {errorMessage && (
@@ -127,6 +131,8 @@ Input.propTypes = {
   isUppercase: PropTypes.bool,
   isShowCounter: PropTypes.bool,
   onEnterPress: PropTypes.func,
+  min: PropTypes.number,
+  max: PropTypes.number,
 };
 
 Input.displayName = 'Input'; // لازم برای React.forwardRef

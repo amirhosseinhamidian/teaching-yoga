@@ -1,23 +1,14 @@
 /* eslint-disable no-undef */
-import Footer from '@/components/Footer/Footer';
 import React from 'react';
-import { GoCreditCard } from 'react-icons/go';
-import PageCheckoutTitle from '@/components/Ui/PageCheckoutTitle/PageCheckoutTitle';
-import UserInformationCard from '@/components/templates/payment/UserInformationCard';
-import UserOrderCard from '@/components/templates/payment/UserOrderCard';
 import { headers } from 'next/headers';
+import PaymentMain from '@/components/templates/payment/PaymentMain';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import Footer from '@/components/Footer/Footer';
 
-/* -----------------------------
- * Metadata SSR
- * ----------------------------- */
 export async function generateMetadata() {
   const res = await fetch(
     `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/payment`,
-    {
-      method: 'GET',
-      headers: headers(),
-    }
+    { method: 'GET', headers: headers() }
   );
 
   const result = await res.json();
@@ -35,12 +26,8 @@ export async function generateMetadata() {
   };
 }
 
-/* -----------------------------
- * SSR Fetch cart + validate discount
- * ----------------------------- */
-async function fetchCartData() {
+async function fetchCheckoutData() {
   try {
-    // 1) Validate discount on server
     await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/apply-discount-code`,
       {
@@ -50,54 +37,39 @@ async function fetchCartData() {
       }
     );
 
-    // 2) Fetch updated cart
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cart`,
-      {
+    const [cartRes, shopRes] = await Promise.all([
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/cart`, {
         method: 'GET',
         headers: headers(),
         cache: 'no-store',
-      }
-    );
+      }),
+      fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/api/shop/cart`, {
+        method: 'GET',
+        headers: headers(),
+        cache: 'no-store',
+      }),
+    ]);
 
-    if (!res.ok) {
-      console.error('Failed to fetch cart data');
-      return { cart: null };
-    }
+    const cartJson = cartRes.ok ? await cartRes.json() : { cart: null };
+    const shopJson = shopRes.ok ? await shopRes.json() : { cart: null };
 
-    return res.json();
+    return {
+      cart: cartJson?.cart || null,
+      shopCart: shopJson?.cart || null,
+    };
   } catch (err) {
-    console.error('Error fetching cart:', err);
-    return { cart: null };
+    console.error('Error fetching checkout data:', err);
+    return { cart: null, shopCart: null };
   }
 }
 
-/* -----------------------------
- * PAGE
- * ----------------------------- */
 export default async function PaymentPage() {
-  const cartResponse = await fetchCartData();
-  const cart = cartResponse?.cart || null;
+  const { cart, shopCart } = await fetchCheckoutData();
 
   return (
     <>
       <HeaderWrapper />
-
-      <div className='container'>
-        <PageCheckoutTitle isSuccess={true} icon={GoCreditCard}>
-          پرداخت
-        </PageCheckoutTitle>
-
-        <div className='mb-10 mt-4 grid grid-cols-1 gap-10 md:mb-16 md:mt-8 md:grid-cols-2 lg:gap-28'>
-          <UserInformationCard className='order-last self-start md:order-first' />
-
-          <UserOrderCard
-            data={cart} // 👈 داده محاسبه‌شده SSR
-            className='order-first self-start md:order-last'
-          />
-        </div>
-      </div>
-
+      <PaymentMain cart={cart} shopCart={shopCart} />
       <Footer />
     </>
   );

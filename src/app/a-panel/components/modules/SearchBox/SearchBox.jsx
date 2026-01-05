@@ -8,6 +8,8 @@ const SearchBox = ({
   value,
   onChange,
   onSearch,
+  className,
+  inputClassName,
 }) => {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && onSearch) {
@@ -15,7 +17,9 @@ const SearchBox = ({
     }
   };
   return (
-    <div className='flex w-fit items-center rounded-xl border border-accent bg-surface-light p-1 dark:bg-surface-dark'>
+    <div
+      className={`flex items-center justify-between rounded-xl border border-accent bg-surface-light p-1 dark:bg-surface-dark ${className ? className : 'w-fit'}`}
+    >
       <input
         type='text'
         placeholder={placeholder}
@@ -23,13 +27,13 @@ const SearchBox = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        className='mr-2 shrink border-none bg-transparent font-faNa text-sm outline-none xs:w-52 sm:w-60 sm:text-base'
+        className={`mr-2 w-full shrink border-none bg-transparent font-faNa outline-none ${inputClassName ? inputClassName : 'text-sm sm:text-base'}`}
       />
       <button
         onClick={() => onSearch && onSearch(value)}
         className='rounded-xl bg-accent p-2 shadow-search active:opacity-75'
       >
-        <IoIosSearch className='h-4 w-4 text-white sm:h-6 sm:w-6' size={24} />
+        <IoIosSearch className='text-white' size={20} />
       </button>
     </div>
   );
@@ -41,6 +45,8 @@ SearchBox.propTypes = {
   value: PropTypes.string.isRequired,
   onChange: PropTypes.func.isRequired,
   onSearch: PropTypes.func,
+  className: PropTypes.string,
+  inputClassName: PropTypes.string,
 };
 
 export default SearchBox;

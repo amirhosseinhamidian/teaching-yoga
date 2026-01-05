@@ -55,7 +55,7 @@
     "readable-stream": "^4.6.0",
     "recharts": "^2.15.0",
     "shamsi-date-converter": "^1.0.5",
-    "swiper": "^11.1.15",
+    "swiper": "^11.2.10",
     "video.js": "^8.19.1",
     "web-push": "^3.6.7",
     "xlsx": "^0.18.5",

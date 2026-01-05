@@ -36,7 +36,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
     const fetchTerms = async () => {
       try {
         const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`
         );
         if (!response.ok) throw new Error('Failed to fetch terms');
         const data = await response.json();
@@ -135,7 +135,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
       if (response.ok) {
         const data = await response.json();
         toast.showSuccessToast(
-          term ? 'ترم با موفقیت بروزرسانی شد' : 'ترم با موفقیت ساخته شد',
+          term ? 'ترم با موفقیت بروزرسانی شد' : 'ترم با موفقیت ساخته شد'
         );
         if (!term) {
           await fetch(
@@ -147,7 +147,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
                 termId: data?.term?.id || data.termId,
               }),
               headers: { 'Content-Type': 'application/json' },
-            },
+            }
           );
         }
         onSuccess(data);
@@ -214,7 +214,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
               thousandSeparator={true}
               className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
             />
-            <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
+            <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
               {duration && getStringTime(duration)}
             </p>
           </div>
@@ -238,7 +238,7 @@ const AddEditTermModal = ({ onClose, courseId, onSuccess, term }) => {
               maxLength={2}
               className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
             />
-            <p className='mr-2 mt-1 font-faNa text-green sm:text-sm'>
+            <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
               {price &&
                 discount &&
                 `قیمت نهایی: ${finalPrice.toLocaleString()} تومان`}

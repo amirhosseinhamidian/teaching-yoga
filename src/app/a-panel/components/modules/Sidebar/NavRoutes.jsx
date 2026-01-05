@@ -22,6 +22,7 @@ import {
   MdMailOutline,
   MdVideoSettings,
 } from 'react-icons/md';
+import { FiShoppingBag } from 'react-icons/fi';
 
 import Link from 'next/link';
 import { useNotifications } from '@/contexts/NotificationContext';
@@ -64,6 +65,18 @@ function NavRoutes({ onLinkClick }) {
         label: 'مدیریت کاربران',
         icon: PiUsersBold,
         statusNumber: 0,
+      },
+      {
+        href: '/a-panel/shop',
+        label: 'مدیریت فروشگاه',
+        icon: FiShoppingBag,
+        statusNumber: 0,
+        subRoutes: [
+          { href: '/a-panel/shop', label: 'داشبورد فروشگاه' },
+          { href: '/a-panel/shop/products', label: 'محصولات' },
+          { href: '/a-panel/shop/categories', label: 'دسته‌بندی‌ها' },
+          { href: '/a-panel/shop/orders', label: 'سفارش‌ها' },
+        ],
       },
       {
         href: '/a-panel/subscriptions',

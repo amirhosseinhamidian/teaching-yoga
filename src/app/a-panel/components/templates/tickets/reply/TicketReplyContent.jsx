@@ -76,7 +76,7 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Filed to create reply');
@@ -135,7 +135,7 @@ const TicketReplyContent = ({ ticketId, ticket, setTicket }) => {
             <p className='text-xs xs:text-sm sm:text-base'>{ticket.title}</p>
           </div>
           <SimpleDropdown
-            className={`text-xs md:text-sm ${ticket.status === 'OPEN' && 'text-blue'} ${ticket.status === 'ANSWERED' && 'text-green dark:text-accent'} ${ticket.status === 'IN_PROGRESS' && 'text-secondary'} ${ticket.status === 'PENDING' && 'text-red'}`}
+            className={`text-xs md:text-sm ${ticket.status === 'OPEN' && 'text-blue'} ${ticket.status === 'ANSWERED' && 'text-green-light dark:text-green-dark'} ${ticket.status === 'IN_PROGRESS' && 'text-secondary'} ${ticket.status === 'PENDING' && 'text-red'}`}
             options={[
               { label: 'در انتظار بررسی', value: 'PENDING' },
               { label: 'در حال بررسی', value: 'IN_PROGRESS' },

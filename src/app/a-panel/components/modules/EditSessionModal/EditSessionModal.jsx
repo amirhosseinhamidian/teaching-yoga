@@ -1,31 +1,31 @@
 /* eslint-disable no-undef */
-'use client'
-import React, { useEffect, useState } from 'react'
-import PropTypes from 'prop-types'
-import Button from '@/components/Ui/Button/Button'
-import Input from '@/components/Ui/Input/Input'
-import { IoClose } from 'react-icons/io5'
-import { getStringTime } from '@/utils/dateTimeHelper'
-import { createToastHandler } from '@/utils/toastHandler'
-import { useTheme } from '@/contexts/ThemeContext'
-import DropDown from '@/components/Ui/DropDown/DropDwon'
-import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel'
+'use client';
+import React, { useEffect, useState } from 'react';
+import PropTypes from 'prop-types';
+import Button from '@/components/Ui/Button/Button';
+import Input from '@/components/Ui/Input/Input';
+import { IoClose } from 'react-icons/io5';
+import { getStringTime } from '@/utils/dateTimeHelper';
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
+import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 
 const EditSessionModal = ({ onClose, session, onSuccess }) => {
-  const { isDark } = useTheme()
-  const toast = createToastHandler(isDark)
+  const { isDark } = useTheme();
+  const toast = createToastHandler(isDark);
 
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(false);
 
   // ===============================
   // مقداردهی اولیه با ساختار جدید جلسه
   // ===============================
 
-  const [name, setName] = useState(session?.sessionName || session?.name || '')
+  const [name, setName] = useState(session?.sessionName || session?.name || '');
 
   const [duration, setDuration] = useState(
     session?.sessionDuration || session?.duration || ''
-  )
+  );
 
   const [accessLevel, setAccessLevel] = useState(
     session.videoAccessLevel ||
@@ -33,27 +33,27 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
       session?.video?.accessLevel ||
       session?.audio?.accessLevel ||
       ''
-  )
+  );
 
   // ===============================
   // لیست ترم‌های قبلی → اکنون terms[]
   // ===============================
-  const initialSelectedTerms = session?.terms?.map((t) => t.termId) || []
+  const initialSelectedTerms = session?.terms?.map((t) => t.termId) || [];
 
-  const [selectedTerms, setSelectedTerms] = useState(initialSelectedTerms)
-  const [termOptions, setTermOptions] = useState([])
+  const [selectedTerms, setSelectedTerms] = useState(initialSelectedTerms);
+  const [termOptions, setTermOptions] = useState([]);
 
   const [errorMessages, setErrorMessages] = useState({
     name: '',
     accessLevel: '',
     duration: '',
-  })
+  });
 
   const accessVideoOptions = [
     { label: 'عمومی', value: PUBLIC },
     { label: 'ثبت نام', value: REGISTERED },
     { label: 'خریداری', value: PURCHASED },
-  ]
+  ];
 
   // ===============================
   // دریافت ترم‌ها
@@ -63,69 +63,69 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
       try {
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms`
-        )
-        if (!response.ok) throw new Error('Failed to fetch terms')
+        );
+        if (!response.ok) throw new Error('Failed to fetch terms');
 
-        const data = await response.json()
+        const data = await response.json();
 
         const formatted = data.map((term) => ({
           value: term.id,
           label: `${term.name} - ${term.sessionCount} جلسه - ${term.price.toLocaleString(
             'fa-IR'
           )} تومان`,
-        }))
+        }));
 
-        setTermOptions(formatted)
+        setTermOptions(formatted);
       } catch (err) {
-        console.error(err)
-        toast.showErrorToast(err.message)
+        console.error(err);
+        toast.showErrorToast(err.message);
       }
-    }
+    };
 
-    fetchTerms()
-  }, [])
+    fetchTerms();
+  }, []);
 
   // ===============================
   // افزودن ترم از Dropdown
   // ===============================
   const handleSelectTerm = (termId) => {
     if (!selectedTerms.includes(termId)) {
-      setSelectedTerms((prev) => [...prev, termId])
+      setSelectedTerms((prev) => [...prev, termId]);
     }
-  }
+  };
 
   // ===============================
   // حذف ترم
   // ===============================
   const removeTerm = (termId) => {
-    setSelectedTerms((prev) => prev.filter((id) => id !== termId))
-  }
+    setSelectedTerms((prev) => prev.filter((id) => id !== termId));
+  };
 
   // ===============================
   // اعتبارسنجی
   // ===============================
   const validateInputs = () => {
-    let errors = {}
+    let errors = {};
 
-    if (!name.trim()) errors.name = 'عنوان نمی‌تواند خالی باشد.'
-    if (!accessLevel) errors.accessLevel = 'سطح دسترسی را مشخص کنید.'
+    if (!name.trim()) errors.name = 'عنوان نمی‌تواند خالی باشد.';
+    if (!accessLevel) errors.accessLevel = 'سطح دسترسی را مشخص کنید.';
     if (!duration || isNaN(duration) || duration <= 0)
-      errors.duration = 'مدت زمان معتبر نیست.'
+      errors.duration = 'مدت زمان معتبر نیست.';
 
-    setErrorMessages(errors)
-    return Object.keys(errors).length === 0
-  }
+    setErrorMessages(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // ===============================
   // درخواست بروزرسانی
   // ===============================
   const handleFormSubmit = async () => {
     if (!validateInputs()) {
-      toast.showErrorToast('لطفاً مقادیر را درست وارد کنید.')
-      return
+      toast.showErrorToast('لطفاً مقادیر را درست وارد کنید.');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     const payload = {
       sessionId: session.sessionId || session.id,
@@ -134,30 +134,30 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
       accessLevel,
       type: session.type,
       termIds: selectedTerms, // 🔥 آرایه ترم‌ها
-    }
+    };
 
     try {
       const response = await fetch(`/api/admin/sessions`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      })
+      });
 
       if (response.ok) {
-        const data = await response.json()
-        toast.showSuccessToast('جلسه با موفقیت بروزرسانی شد!')
-        onSuccess(data.updatedSession)
+        const data = await response.json();
+        toast.showSuccessToast('جلسه با موفقیت بروزرسانی شد!');
+        onSuccess(data.updatedSession);
       } else {
-        const err = await response.json()
-        toast.showErrorToast(err.error || 'خطا در بروزرسانی')
+        const err = await response.json();
+        toast.showErrorToast(err.error || 'خطا در بروزرسانی');
       }
     } catch (error) {
-      console.error(error)
-      toast.showErrorToast('خطای غیرمنتظره')
+      console.error(error);
+      toast.showErrorToast('خطای غیرمنتظره');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   // ===============================
   // UI
@@ -190,7 +190,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
             )}
 
             {selectedTerms.map((tid) => {
-              const term = termOptions.find((t) => t.value === tid)
+              const term = termOptions.find((t) => t.value === tid);
 
               return (
                 <div
@@ -205,7 +205,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
                     <IoClose size={18} />
                   </button>
                 </div>
-              )
+              );
             })}
           </div>
         </div>
@@ -242,7 +242,7 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
               errorMessage={errorMessages.duration}
               thousandSeparator
             />
-            <p className='mr-2 mt-1 font-faNa text-green'>
+            <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa'>
               {duration && getStringTime(duration)}
             </p>
           </div>
@@ -257,13 +257,13 @@ const EditSessionModal = ({ onClose, session, onSuccess }) => {
         </Button>
       </div>
     </div>
-  )
-}
+  );
+};
 
 EditSessionModal.propTypes = {
   session: PropTypes.object.isRequired,
   onClose: PropTypes.func.isRequired,
   onSuccess: PropTypes.func.isRequired,
-}
+};
 
-export default EditSessionModal
+export default EditSessionModal;
