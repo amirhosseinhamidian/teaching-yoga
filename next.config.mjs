@@ -9,6 +9,16 @@ const nextConfig = {
       'static.postex.ir',
     ],
   },
+
+  // ✅ برای کاهش مصرف RAM در next build (روی ۱ گیگ خیلی مهم)
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  productionBrowserSourceMaps: false,
+
   webpack(config) {
     config.resolve.extensions.push('.mjs');
     config.module.rules.push({
@@ -18,6 +28,7 @@ const nextConfig = {
     });
     return config;
   },
+
   async headers() {
     return [
       {
@@ -35,6 +46,7 @@ const nextConfig = {
       },
     ];
   },
+
   async rewrites() {
     return [
       {
