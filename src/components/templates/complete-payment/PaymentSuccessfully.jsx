@@ -50,6 +50,45 @@ const humanizePaymentStatus = (status) => {
   }
 };
 
+const Badge = ({ className = '', children }) => (
+  <span
+    className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${className}`}
+  >
+    {children}
+  </span>
+);
+Badge.propTypes = { className: PropTypes.string, children: PropTypes.node };
+
+const statusBadgeClass = (status) => {
+  const s = String(status || '').toUpperCase();
+  if (s === 'PENDING_PAYMENT')
+    return 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30';
+  if (s === 'PROCESSING')
+    return 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/30';
+  if (s === 'PACKED')
+    return 'bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30';
+  if (s === 'SHIPPED')
+    return 'bg-cyan-50 text-cyan-700 ring-cyan-200 dark:bg-cyan-500/10 dark:text-cyan-300 dark:ring-cyan-500/30';
+  if (s === 'DELIVERED')
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30';
+  if (s === 'CANCELLED')
+    return 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30';
+  if (s === 'RETURNED')
+    return 'bg-purple-50 text-purple-700 ring-purple-200 dark:bg-purple-500/10 dark:text-purple-300 dark:ring-purple-500/30';
+  return 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-300 dark:ring-gray-500/30';
+};
+
+const paymentBadgeClass = (paymentStatus) => {
+  const s = String(paymentStatus || '').toUpperCase();
+  if (s === 'SUCCESSFUL')
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-500/30';
+  if (s === 'FAILED')
+    return 'bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30';
+  if (s === 'PENDING')
+    return 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30';
+  return 'bg-gray-50 text-gray-700 ring-gray-200 dark:bg-gray-500/10 dark:text-gray-300 dark:ring-gray-500/30';
+};
+
 const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
   const router = useRouter();
   const { isDark } = useTheme();
@@ -90,7 +129,6 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
     const discountAmount = Number(shopOrder?.discountAmount || 0);
     const shippingCost = Number(shopOrder?.shippingCost || 0);
     const payableOnline = Number(shopOrder?.payableOnline || 0);
-
     // اگر payableOnline در DB نگهداری می‌کنی، همون را نشان بده
     // وگرنه می‌تونستیم محاسبه کنیم:
     // const computed = Math.max(subtotal - discountAmount + shippingCost, 0);
@@ -124,17 +162,6 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
       setIsClickLoading(false);
       setShortAddressClick('');
     }
-  };
-
-  const handleTrackOrder = () => {
-    // مسیر را با مسیر واقعی صفحه سفارش‌های پروفایل خودت تنظیم کن
-    // پیشنهاد: صفحه لیست سفارش‌ها یا صفحه جزئیات با orderId
-    const orderId = shopOrder?.id;
-    if (orderId) {
-      router.replace(`/profile/orders?orderId=${orderId}`);
-      return;
-    }
-    router.replace('/profile');
   };
 
   // =========================
@@ -278,9 +305,9 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
           </p>
         </div>
       ) : (
-        <p className='mt-2 text-xs text-slate-600 dark:text-slate-300'>
-          پرداخت با موفقیت انجام شد و دسترسی شما به محتوای خریداری‌شده فعال
-          گردید.
+        <p className='mt-2 text-xs text-subtext-light dark:text-subtext-dark'>
+          پرداخت با موفقیت انجام شد و می توانید از بخش سفارشات پروفایل کاربری ،
+          وضعیت سفارش را پیگیری کنید.
         </p>
       )}
 
@@ -290,13 +317,13 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
           <div className='flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between'>
             <h3 className='text-sm font-semibold'>جزئیات سفارش فروشگاه</h3>
 
-            <div className='flex flex-wrap gap-2 text-xs text-slate-600 dark:text-slate-200'>
-              <span className='rounded-lg bg-gray-100 px-2 py-1 dark:bg-gray-800'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <Badge className={statusBadgeClass(shopOrder?.status)}>
                 وضعیت سفارش: {humanizeShopStatus(shopOrder?.status)}
-              </span>
-              <span className='rounded-lg bg-gray-100 px-2 py-1 dark:bg-gray-800'>
+              </Badge>
+              <Badge className={paymentBadgeClass(shopOrder?.paymentStatus)}>
                 وضعیت پرداخت: {humanizePaymentStatus(shopOrder?.paymentStatus)}
-              </span>
+              </Badge>
             </div>
           </div>
 
@@ -322,17 +349,17 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
 
                   <div className='flex flex-col'>
                     <span className='text-sm'>{it.title}</span>
-                    <span className='text-xs text-slate-500 dark:text-slate-300'>
+                    <span className='text-xs text-slate-500 dark:text-subtext-dark'>
                       تعداد: {Number(it.qty || 1).toLocaleString('fa-IR')}
                     </span>
                   </div>
                 </div>
 
                 <div className='flex flex-col items-end'>
-                  <span className='text-xs text-slate-600 dark:text-slate-200'>
+                  <span className='text-xs text-subtext-light dark:text-subtext-dark'>
                     {formatToman(it.unitPrice)}
                   </span>
-                  <span className='text-[11px] text-slate-500 dark:text-slate-300'>
+                  <span className='text-[11px] text-slate-500 dark:text-subtext-dark'>
                     جمع:{' '}
                     {formatToman(
                       Number(it.unitPrice || 0) * Number(it.qty || 1)
@@ -345,9 +372,9 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
 
           {/* totals */}
           {shopTotals && (
-            <div className='mt-4 rounded-xl bg-gray-50 p-3 text-xs dark:bg-gray-900'>
+            <div className='mt-4 rounded-xl bg-gray-50 p-3 text-xs dark:bg-foreground-dark/30'>
               <div className='flex items-center justify-between'>
-                <span className='text-slate-600 dark:text-slate-200'>
+                <span className='text-subtext-light dark:text-subtext-dark'>
                   جمع سبد
                 </span>
                 <span className='font-faNa'>
@@ -356,21 +383,38 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
               </div>
 
               <div className='mt-2 flex items-center justify-between'>
-                <span className='text-slate-600 dark:text-slate-200'>
+                <span className='text-subtext-light dark:text-subtext-dark'>
                   تخفیف
                 </span>
-                <span className='font-faNa'>
-                  {formatToman(shopTotals.discountAmount)}
+                <span
+                  className={`font-faNa ${shopTotals.discountAmount !== 0 && 'text-red'}`}
+                >
+                  {shopTotals.discountAmount === 0
+                    ? '-'
+                    : formatToman(shopTotals.discountAmount)}
                 </span>
               </div>
 
               <div className='mt-2 flex items-center justify-between'>
-                <span className='text-slate-600 dark:text-slate-200'>
+                <span className='text-subtext-light dark:text-subtext-dark'>
                   هزینه ارسال
                 </span>
-                <span className='font-faNa'>
-                  {formatToman(shopTotals.shippingCost)}
-                </span>
+                {shopOrder?.shippingMethod === 'POST' ? (
+                  <span className='font-faNa'>
+                    {shopOrder?.postOptionKey === 'FALLBACK_POST_FAST' &&
+                    shopTotals?.shippingCost === 0 ? (
+                      <span className='text-red'>
+                        هزینه ارسال بعدا محاسبه می شود.
+                      </span>
+                    ) : shopTotals?.shippingCost === 0 ? (
+                      'رایگان'
+                    ) : (
+                      formatToman(shopTotals?.shippingCost)
+                    )}
+                  </span>
+                ) : (
+                  <span>در محل</span>
+                )}
               </div>
 
               <div className='mt-3 flex items-center justify-between border-t border-gray-200 pt-3 dark:border-gray-700'>
@@ -381,13 +425,13 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
               </div>
 
               {shopOrder?.shippingTitle ? (
-                <p className='mt-2 text-[11px] text-slate-500 dark:text-slate-300'>
+                <p className='mt-2 text-[11px] text-slate-500 dark:text-subtext-dark'>
                   روش ارسال: {shopOrder.shippingTitle}
                 </p>
               ) : null}
 
               {shopOrder?.trackingCode ? (
-                <p className='mt-1 text-[11px] text-slate-500 dark:text-slate-300'>
+                <p className='mt-1 text-[11px] text-slate-500 dark:text-subtext-dark'>
                   کد رهگیری مرسوله: {shopOrder.trackingCode}
                 </p>
               ) : null}
@@ -398,7 +442,7 @@ const PaymentSuccessfully = ({ paymentDetails, transactionId }) => {
             <Button
               shadow
               className='text-xs sm:text-sm'
-              onClick={handleTrackOrder}
+              onClick={() => router.push('/profile?active=1')}
             >
               پیگیری سفارش
             </Button>
