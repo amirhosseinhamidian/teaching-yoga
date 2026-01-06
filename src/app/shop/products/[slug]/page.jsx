@@ -6,15 +6,23 @@ import Footer from '@/components/Footer/Footer';
 import ProductDetailsPage from '@/components/templates/shop/product/ProductDetailsPage';
 import React from 'react';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import { cookies } from 'next/headers';
 
 export const dynamic = 'force-dynamic';
 
 async function getProduct(slug) {
   const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
+  // ✅ کوکی‌های ریکوئست جاری را بگیر و به API فوروارد کن
+  const cookieHeader = cookies().toString();
+
   const res = await fetch(
     `${base}/api/shop/products/${encodeURIComponent(slug)}`,
     {
       cache: 'no-store',
+      headers: {
+        cookie: cookieHeader,
+      },
     }
   );
 
@@ -22,7 +30,6 @@ async function getProduct(slug) {
 
   if (!res.ok) {
     if (res.status === 404) return null;
-    // خطاهای دیگر را هم می‌توانی هندل کنی
     return null;
   }
   return data;

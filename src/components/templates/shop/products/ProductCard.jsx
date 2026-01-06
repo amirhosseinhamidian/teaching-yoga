@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 export default function ProductCard({ product }) {
-  console.log('product in home =============> ', product.colors[0].hex);
   const cover =
     product.coverImage ||
     (Array.isArray(product.images) ? product.images[0] : null);
