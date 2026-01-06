@@ -179,7 +179,7 @@ export async function POST(req) {
   try {
     const body = await req.json().catch(() => ({}));
 
-    const user = await getAuthUser();
+    const user = getAuthUser();
     if (!user?.id) {
       return NextResponse.json(
         { error: 'لطفا وارد حساب کاربری خود شوید.' },
