@@ -3,11 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import {
-  HiOutlineArrowPath,
-  HiOutlineCheck,
-  HiOutlineClipboardDocument,
-} from 'react-icons/hi2';
+import { HiOutlineArrowPath, HiOutlineCheck } from 'react-icons/hi2';
 import Button from '@/components/Ui/Button/Button';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -71,7 +67,7 @@ const statusBadgeClass = (status) => {
   if (s === 'PENDING_PAYMENT')
     return 'bg-amber-50 text-amber-700 ring-amber-200 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-500/30';
   if (s === 'PROCESSING')
-    return 'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-500/10 dark:text-blue-300 dark:ring-blue-500/30';
+    return 'bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-500/30';
   if (s === 'PACKED')
     return 'bg-indigo-50 text-indigo-700 ring-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-500/30';
   if (s === 'SHIPPED')
