@@ -10,6 +10,14 @@ function toInt(v, fallback = 0) {
   return Number.isFinite(n) ? Math.trunc(n) : fallback;
 }
 
+function jsonSafe(data) {
+  return JSON.parse(
+    JSON.stringify(data, (_key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    )
+  );
+}
+
 function normalizeFa(s) {
   return String(s || '')
     .trim()
@@ -188,14 +196,16 @@ export async function GET(req) {
 
     const hasMore = skip + orders.length < total;
 
-    return NextResponse.json({
+    const payload = {
       success: true,
       page,
       pageSize,
       total,
       hasMore,
       orders,
-    });
+    };
+
+    return NextResponse.json(jsonSafe(payload));
   } catch (e) {
     console.error('[ADMIN_SHOP_ORDERS_GET]', e);
     return NextResponse.json(
