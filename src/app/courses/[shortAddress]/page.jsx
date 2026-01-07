@@ -267,13 +267,12 @@ async function page({ params }) {
 
                     {/* ✅ وقتی دوره داخل پلن‌های اشتراک هست و مدلش اجازه اشتراک میده */}
                     {(course.pricingMode === 'SUBSCRIPTION_ONLY' ||
-                      course.pricingMode === 'BOTH') &&
-                      inSubscription && (
-                        <CourseSubscriptionCard
-                          courseId={course.id}
-                          className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                        />
-                      )}
+                      course.pricingMode === 'BOTH') && (
+                      <CourseSubscriptionCard
+                        courseId={course.id}
+                        className='w-full basis-full sm:basis-1/2 lg:basis-full'
+                      />
+                    )}
                   </>
                 )}
 
