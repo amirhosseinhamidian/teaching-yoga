@@ -36,6 +36,8 @@ const ProductsTable = ({ search }) => {
       const response = await fetch(url.toString(), { cache: 'no-store' });
       const data = await response.json();
 
+      console.log('productss =====> ', data);
+
       if (!response.ok) {
         toast.showErrorToast(data?.error || 'خطا در دریافت لیست محصولات');
         setProducts([]);
@@ -144,8 +146,23 @@ const ProductsTable = ({ search }) => {
       label: 'رنگ‌ها',
       minWidth: '50px',
       render: (_, row) => {
-        const colors = row.colors || [];
-        if (!Array.isArray(colors) || colors.length === 0) {
+        const rawColors = row.colors ?? [];
+
+        // normalize => array of { id?, name?, hex }
+        const colors = Array.isArray(rawColors)
+          ? rawColors
+              .map((c) => {
+                if (typeof c === 'string') return { hex: c };
+                return {
+                  id: c?.id,
+                  name: c?.name,
+                  hex: c?.hex ?? c?.color?.hex,
+                };
+              })
+              .filter((c) => Boolean(c.hex))
+          : [];
+
+        if (colors.length === 0) {
           return (
             <span className='text-xs text-subtext-light dark:text-subtext-dark'>
               -
@@ -157,10 +174,10 @@ const ProductsTable = ({ search }) => {
           <div className='flex flex-wrap items-center justify-center gap-1'>
             {colors.slice(0, 8).map((c, idx) => (
               <span
-                key={`${c}-${idx}`}
+                key={c.id ?? `${c.hex}-${idx}`}
                 className='h-3 w-3 rounded-full border border-subtext-light dark:border-subtext-dark'
-                style={{ backgroundColor: c }}
-                title={c}
+                style={{ backgroundColor: c.hex }}
+                title={c.name ? `${c.name} (${c.hex})` : c.hex}
               />
             ))}
 
@@ -218,12 +235,14 @@ const ProductsTable = ({ search }) => {
     id: p.id,
     title: p.title,
     image: p.coverImage,
-    category: p.category.title,
+    category: p?.category?.title,
     price: p.price,
     stock: p.stock,
     isActive: p.isActive,
     colors: Array.isArray(p.colors)
-      ? p.colors.map((x) => x?.color?.hex).filter(Boolean)
+      ? p.colors
+          .map((x) => ({ id: x?.id, name: x?.name, hex: x?.hex }))
+          .filter((c) => c.hex)
       : [],
   }));
 

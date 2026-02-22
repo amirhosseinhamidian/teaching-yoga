@@ -12,7 +12,6 @@ import UserOrderCard from '@/components/templates/payment/UserOrderCard';
 
 export default function PaymentMain({ cart, shopCart }) {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
-
   return (
     <>
       <div className='container'>
