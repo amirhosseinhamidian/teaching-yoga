@@ -38,7 +38,6 @@ const ConfirmCodeContent = () => {
   // جلوگیری از ورود مستقیم بدون otpToken
   useEffect(() => {
     // hydration check
-    console.log('token in confirm code page ========> ', otpToken);
     if (otpToken === undefined) return;
 
     if (user) {

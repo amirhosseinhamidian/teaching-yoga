@@ -26,8 +26,6 @@ export default function ShopCartItemsCard({ className }) {
     useSelector((state) => state)
   );
   console.log('SHOP CART SLICE:', shopCart);
-  console.log('shop card item =======> ', items);
-
   if (!items?.length) return null;
 
   return (

@@ -18,8 +18,6 @@ async function fetchOrder(id) {
   );
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || 'Fetch order error');
-  console.log('order ======> ', json.order);
-
   return json?.order;
 }
 
