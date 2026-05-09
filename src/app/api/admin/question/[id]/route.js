@@ -1,14 +1,14 @@
-import { NextResponse } from 'next/server'
-import prismadb from '@/libs/prismadb'
+import { NextResponse } from 'next/server';
+import prismadb from '@/libs/prismadb';
 
 export async function GET(request, { params }) {
-  const { id } = params
+  const { id } = params;
 
   if (!id) {
     return NextResponse.json(
       { message: 'Question ID is required' },
       { status: 400 }
-    )
+    );
   }
 
   try {
@@ -41,20 +41,20 @@ export async function GET(request, { params }) {
           },
         },
       },
-    })
+    });
 
     if (!question) {
       return NextResponse.json(
         { message: 'Question not found' },
         { status: 404 }
-      )
+      );
     }
 
     // آماده‌سازی ترم‌ها
     const terms = question.session.sessionTerms.map((st) => ({
       termId: st.term.id,
       termName: st.term.name,
-    }))
+    }));
 
     const formatted = {
       id: question.id,
@@ -72,14 +72,14 @@ export async function GET(request, { params }) {
         name: question.session.name,
         terms,
       },
-    }
+    };
 
-    return NextResponse.json(formatted, { status: 200 })
+    return NextResponse.json(formatted, { status: 200 });
   } catch (error) {
-    console.error(error)
+    console.error(error);
     return NextResponse.json(
       { message: 'An error occurred while fetching the question' },
       { status: 500 }
-    )
+    );
   }
 }

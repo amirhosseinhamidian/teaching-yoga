@@ -40,7 +40,7 @@ export async function GET() {
     console.error('[SALES_API_ERROR]', error);
     return NextResponse.json(
       { message: 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

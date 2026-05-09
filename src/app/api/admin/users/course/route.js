@@ -11,7 +11,7 @@ export async function POST(request) {
     if (!userId || !courseId || !paymentMethod) {
       return NextResponse.json(
         { error: ' دوره و روش پرداخت الزامی است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -39,7 +39,7 @@ export async function POST(request) {
     if (existingRecord) {
       return NextResponse.json(
         { error: 'کاربر قبلاً در این دوره ثبت‌نام کرده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -83,13 +83,13 @@ export async function POST(request) {
         message: 'دوره با موفقیت ثبت شد و پرداخت ایجاد شد',
         userCourse,
       },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     console.error('خطا در ثبت دوره و پرداخت:', error);
     return NextResponse.json(
       { error: 'مشکلی در ثبت دوره و پرداخت پیش آمد' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -104,7 +104,7 @@ export async function DELETE(request) {
         {
           error: 'شناسه کاربر و شناسه دوره الزامی است',
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -138,7 +138,7 @@ export async function DELETE(request) {
       {
         message: 'اطلاعات دوره برای کاربر با موفقیت حذف شد',
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('خطا در حذف اطلاعات دوره:', error);
@@ -146,7 +146,7 @@ export async function DELETE(request) {
       {
         error: 'حذف اطلاعات دوره با شکست مواجه شد',
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -10,7 +10,7 @@ export async function POST(request) {
     if (!name || typeof name !== 'string') {
       return NextResponse.json(
         { error: 'Name is required and must be a string.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -27,13 +27,13 @@ export async function POST(request) {
 
     return NextResponse.json(
       { message: 'Term created successfully.', term: newTerm },
-      { status: 201 },
+      { status: 201 }
     );
   } catch (error) {
     console.error('Error creating term:', error);
     return NextResponse.json(
       { error: 'An error occurred while creating the term.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -106,7 +106,7 @@ export async function GET(request) {
     console.error('Error fetching terms:', error);
     return NextResponse.json(
       { error: 'مشکلی در پردازش درخواست وجود دارد.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -171,7 +171,7 @@ export async function PUT(request) {
     console.error('Error updating term and cart:', error);
     return NextResponse.json(
       { error: 'Failed to update term and cart' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -13,7 +13,7 @@ export async function PATCH(req, { params }) {
     if (!session) {
       return NextResponse.json(
         { message: 'Session not found' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -28,13 +28,13 @@ export async function PATCH(req, { params }) {
         message: 'Session updated successfully',
         session: updatedSession,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error toggling session active status:', error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

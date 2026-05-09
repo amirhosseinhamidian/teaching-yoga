@@ -8,7 +8,7 @@ export async function getUserActiveSubscriptions(userId) {
   return prismadb.userSubscription.findMany({
     where: {
       userId,
-      status: "ACTIVE",
+      status: 'ACTIVE',
       endDate: {
         gte: now,
       },
@@ -30,7 +30,7 @@ export async function userHasSubscriptionForCourse(userId, courseId) {
   const sub = await prismadb.userSubscription.findFirst({
     where: {
       userId,
-      status: "ACTIVE",
+      status: 'ACTIVE',
       endDate: { gte: now },
       plan: {
         planCourses: {
@@ -52,7 +52,7 @@ export async function userHasPurchasedCourseOrTerms(userId, courseId) {
     where: {
       userId,
       courseId,
-      status: "ACTIVE",
+      status: 'ACTIVE',
     },
   });
 

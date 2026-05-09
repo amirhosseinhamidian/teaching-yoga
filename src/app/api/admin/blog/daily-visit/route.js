@@ -15,7 +15,7 @@ export async function GET() {
         dayEnd: new Date(
           date.getFullYear(),
           date.getMonth(),
-          date.getDate() + 1,
+          date.getDate() + 1
         ),
       };
     }).reverse(); // مرتب‌سازی به‌ترتیب از قدیمی‌ترین تا جدیدترین روز
@@ -26,7 +26,7 @@ export async function GET() {
     });
 
     const articleUrls = articles.map(
-      (article) => `/articles/${article.shortAddress}`,
+      (article) => `/articles/${article.shortAddress}`
     );
 
     // دریافت تمامی بازدیدهای مربوط به مقالات در ۳۰ روز اخیر
@@ -46,7 +46,7 @@ export async function GET() {
     // محاسبه تعداد بازدیدهای هر روز
     const visitsByDate = days.map(({ date, dayStart, dayEnd }) => {
       const dayVisits = visits.filter(
-        (visit) => visit.visitedAt >= dayStart && visit.visitedAt < dayEnd,
+        (visit) => visit.visitedAt >= dayStart && visit.visitedAt < dayEnd
       ).length;
 
       return {
@@ -60,7 +60,7 @@ export async function GET() {
     console.error('[VISIT_LOG_ERROR]', error);
     return NextResponse.json(
       { message: 'خطایی در دریافت داده‌ها رخ داده است' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

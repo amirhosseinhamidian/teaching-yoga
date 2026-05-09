@@ -9,7 +9,7 @@ export async function POST(request) {
     if (!question || !answer || !category) {
       return NextResponse.json(
         { error: 'Question, answer, and category are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -18,7 +18,7 @@ export async function POST(request) {
         {
           error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -51,7 +51,7 @@ export async function GET(request) {
         {
           error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
     const faqs = await prismadb.fAQ.findMany({
@@ -74,7 +74,7 @@ export async function PUT(request) {
     if (!id || !question || !answer || !category) {
       return NextResponse.json(
         { error: 'ID, question, answer, and category are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -83,7 +83,7 @@ export async function PUT(request) {
         {
           error: `Invalid category. Valid categories are: ${VALID_CATEGORIES.join(', ')}`,
         },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -111,7 +111,7 @@ export async function DELETE(request) {
     if (!id) {
       return NextResponse.json(
         { error: 'FAQ ID is required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 

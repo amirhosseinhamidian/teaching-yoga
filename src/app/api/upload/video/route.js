@@ -8,10 +8,14 @@ const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   endpoint: process.env.AWS_S3_ENDPOINT,
-  s3ForcePathStyle: true,
+  signatureVersion: 'v4',
+  s3ForcePathStyle: false,
   httpOptions: {
     timeout: 3000000,
     connectTimeout: 1200000,
+  },
+  params: {
+    Bucket: 'samane-yoga',
   },
 });
 
@@ -73,7 +77,7 @@ export async function POST(req) {
   if (!files || !termId || !sessionId) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

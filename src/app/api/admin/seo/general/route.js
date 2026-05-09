@@ -67,7 +67,7 @@ export async function POST(request) {
     console.error('Error saving SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to save SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -91,7 +91,7 @@ export async function GET() {
     console.error('Error fetching SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to fetch SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -162,7 +162,7 @@ export async function PUT(request) {
     console.error('Error updating SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to update SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

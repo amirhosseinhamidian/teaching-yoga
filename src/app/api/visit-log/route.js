@@ -18,7 +18,7 @@ export async function POST(req) {
 
     return NextResponse.json(
       { message: 'Visit logged successfully' },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error logging visit:', error);

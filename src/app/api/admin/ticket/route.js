@@ -69,7 +69,7 @@ export async function GET(request) {
     console.error('Error fetching tickets:', error);
     return NextResponse.json(
       { error: 'An error occurred while fetching tickets.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -83,7 +83,7 @@ export async function DELETE(request) {
     if (!ticketId) {
       return NextResponse.json(
         { error: 'Ticket ID is required in the header.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -92,7 +92,7 @@ export async function DELETE(request) {
     if (isNaN(id)) {
       return NextResponse.json(
         { error: 'Invalid Ticket ID. It must be a number.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -112,7 +112,7 @@ export async function DELETE(request) {
     // بازگشت پاسخ موفق
     return NextResponse.json(
       { message: 'تیکت و پاسخ‌های مرتبط با موفقیت حذف شدند.' },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting ticket and its replies:', error);
@@ -121,14 +121,14 @@ export async function DELETE(request) {
     if (error.code === 'P2025') {
       return NextResponse.json(
         { error: 'Ticket not found or already deleted.' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     // بازگشت خطای عمومی
     return NextResponse.json(
       { error: 'An error occurred while deleting the ticket and its replies.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

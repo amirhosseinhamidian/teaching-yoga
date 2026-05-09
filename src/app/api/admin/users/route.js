@@ -8,7 +8,7 @@ export async function POST(request) {
     if (!username || !phoneNumber || !role) {
       return NextResponse.json(
         { error: 'خطا در تکمیل فیلدها' },
-        { status: 400 },
+        { status: 400 }
       );
     }
     const newUser = await prismadb.user.create({
@@ -52,7 +52,7 @@ export async function GET(request) {
     if (page < 1) {
       return NextResponse.json(
         { error: 'شماره صفحه باید یک عدد مثبت باشد' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -97,7 +97,7 @@ export async function GET(request) {
     console.error(error);
     return NextResponse.json(
       { error: 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -27,7 +27,7 @@ export async function POST(request) {
     console.error('Error saving session video:', error);
     return NextResponse.json(
       { error: 'Error saving session video' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -41,7 +41,7 @@ export async function PUT(request) {
     if (!videoId || !sessionId) {
       return NextResponse.json(
         { error: 'Video ID and Session ID are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -69,7 +69,7 @@ export async function PUT(request) {
     console.error('Error updating session video:', error);
     return NextResponse.json(
       { error: 'Error updating session video' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

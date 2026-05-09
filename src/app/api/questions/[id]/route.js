@@ -7,7 +7,7 @@ export async function PUT(request, { params }) {
     if (!id) {
       return NextResponse.json(
         { message: 'شناسه سوال ارسال نشده است.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -26,13 +26,13 @@ export async function PUT(request, { params }) {
         message: 'سوال به‌عنوان مشاهده‌شده علامت‌گذاری شد.',
         question: updatedQuestion,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error updating question:', error);
     return NextResponse.json(
       { message: 'خطایی در به‌روزرسانی سوال رخ داد.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

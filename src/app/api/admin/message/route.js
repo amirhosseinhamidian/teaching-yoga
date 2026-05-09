@@ -12,9 +12,11 @@ export async function GET(req) {
     const skip = (page - 1) * perPage;
 
     const isSeenFilter =
-      isSeenParam === 'true' ? true :
-      isSeenParam === 'false' ? false :
-      undefined;
+      isSeenParam === 'true'
+        ? true
+        : isSeenParam === 'false'
+          ? false
+          : undefined;
 
     // اگر search داریم، اول سشن‌های مطابق search را پیدا کن تا در groupBy محدودشان کنیم
     let searchedSessionIds = null;
@@ -124,7 +126,10 @@ export async function GET(req) {
 
         const hasPushSubscription =
           hasPushParam === 'all'
-            ? await getHasPush({ userId: s.user?.id || null, anonymousId: s.anonymousId || null })
+            ? await getHasPush({
+                userId: s.user?.id || null,
+                anonymousId: s.anonymousId || null,
+              })
             : null;
 
         return {
@@ -147,7 +152,9 @@ export async function GET(req) {
       hasPushParam === 'all'
         ? enriched
         : enriched.filter((s) =>
-            hasPushParam === 'true' ? !!s.hasPushSubscription : !s.hasPushSubscription
+            hasPushParam === 'true'
+              ? !!s.hasPushSubscription
+              : !s.hasPushSubscription
           );
 
     // اگر فیلتر hasPush اعمال شد، total را با آن تطبیق بده (در غیر این صورت همان totalCount)
@@ -180,7 +187,7 @@ export async function DELETE(request) {
     if (!sessionId) {
       return NextResponse.json(
         { success: false, message: 'شناسه سشن الزامی است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -207,7 +214,7 @@ export async function DELETE(request) {
     console.error('Error deleting support session:', error);
     return NextResponse.json(
       { success: false, message: 'خطا در حذف گفتگو' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

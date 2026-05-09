@@ -3,10 +3,11 @@
 const nextConfig = {
   images: {
     domains: [
-      'samane-yoga.storage.c2.liara.space',
+      'samane-yoga.storage.c2.liara.site',
       'trustseal.enamad.ir',
       'lh3.googleusercontent.com',
       'static.postex.ir',
+      'localhost',
     ],
   },
 

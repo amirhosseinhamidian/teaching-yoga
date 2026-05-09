@@ -3,6 +3,7 @@ import React from 'react';
 import Footer from '@/components/Footer/Footer';
 import prismadb from '@/libs/prismadb';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata() {
   const seoSettings = await prismadb.seoSetting.findMany({

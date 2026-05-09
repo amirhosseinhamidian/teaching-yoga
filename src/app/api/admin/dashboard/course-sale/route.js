@@ -53,7 +53,7 @@ export async function GET() {
     console.error('Error fetching course data:', error);
     return NextResponse.json(
       { error: 'Failed to fetch course data' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

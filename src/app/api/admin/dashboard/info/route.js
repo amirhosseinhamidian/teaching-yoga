@@ -54,7 +54,7 @@ export async function GET() {
     console.error('Error fetching data:', error);
     return NextResponse.json(
       { error: 'An error occurred while fetching data.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

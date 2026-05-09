@@ -40,7 +40,7 @@ export async function GET() {
     console.error('Error fetching terms and courses:', error);
     return NextResponse.json(
       { error: 'خطا در دریافت اطلاعات.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

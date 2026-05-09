@@ -10,7 +10,11 @@ const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   endpoint: process.env.AWS_S3_ENDPOINT,
+  signatureVersion: 'v4',
   s3ForcePathStyle: true,
+  params: {
+    Bucket: 'samane-yoga',
+  },
 });
 
 const bucketName = process.env.AWS_S3_BUCKET_NAME;
@@ -37,7 +41,7 @@ export async function POST(req) {
   if (!file || typeof file.arrayBuffer !== 'function' || !folderPath) {
     return NextResponse.json(
       { error: 'لطفاً فایل صوتی و مسیر پوشه را ارسال کنید.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -57,7 +61,7 @@ export async function POST(req) {
   if (!fileExtension) {
     return NextResponse.json(
       { error: 'فقط فایل‌های صوتی (mp3, m4a, wav, ogg, webm) مجاز هستند.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

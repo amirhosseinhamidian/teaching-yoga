@@ -7,7 +7,7 @@ export async function PUT(request, { params }) {
   if (!newStatus) {
     return NextResponse.json(
       { message: 'New status is required in the header' },
-      { status: 400 },
+      { status: 400 }
     );
   }
   const validStatuses = [
@@ -34,7 +34,7 @@ export async function PUT(request, { params }) {
     console.error('Error updating ticket status:', error);
     return NextResponse.json(
       { message: 'An error occurred while updating the ticket status' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

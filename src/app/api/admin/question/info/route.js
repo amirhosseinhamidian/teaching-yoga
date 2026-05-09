@@ -28,7 +28,7 @@ export async function GET() {
     // بازگشت خطا در صورت بروز مشکل
     return NextResponse.json(
       { success: false, message: 'Failed to fetch question statistics' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

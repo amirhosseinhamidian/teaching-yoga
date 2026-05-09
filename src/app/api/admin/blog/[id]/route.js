@@ -13,7 +13,7 @@ export async function DELETE(request, { params }) {
     if (!existingArticle) {
       return NextResponse.json(
         { message: 'مقاله موردنظر یافت نشد' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -24,12 +24,12 @@ export async function DELETE(request, { params }) {
 
     return NextResponse.json(
       { message: 'مقاله با موفقیت حذف شد' },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
       { message: 'خطایی در حذف مقاله رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -47,7 +47,7 @@ export async function PUT(request, { params }) {
     if (!existingArticle) {
       return NextResponse.json(
         { message: 'مقاله موردنظر یافت نشد' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -66,12 +66,12 @@ export async function PUT(request, { params }) {
 
     return NextResponse.json(
       { message: 'مقاله با موفقیت بروزرسانی شد', data: updatedArticle },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
       { message: 'خطایی در بروزرسانی مقاله رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -88,7 +88,7 @@ export async function GET(request, { params }) {
     if (!article) {
       return NextResponse.json(
         { message: 'مقاله موردنظر یافت نشد' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -96,7 +96,7 @@ export async function GET(request, { params }) {
   } catch (error) {
     return NextResponse.json(
       { message: 'خطایی در بروزرسانی مقاله رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

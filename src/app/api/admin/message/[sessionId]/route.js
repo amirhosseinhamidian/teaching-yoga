@@ -3,11 +3,8 @@ import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { notifyReply } from '@/libs/notifyReply';
 
-
 export async function GET(req, { params }) {
   try {
-
-
     const { searchParams } = req.nextUrl;
     const sessionId = params.sessionId;
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -16,7 +13,10 @@ export async function GET(req, { params }) {
     const markSeen = (searchParams.get('markSeen') || 'false') === 'true';
 
     if (!sessionId) {
-      return NextResponse.json({ success: false, message: 'شناسه سشن الزامی است' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'شناسه سشن الزامی است' },
+        { status: 400 }
+      );
     }
 
     // 1) خود سشن + کاربر
@@ -25,11 +25,16 @@ export async function GET(req, { params }) {
       select: {
         id: true,
         anonymousId: true,
-        user: { select: { id: true, username: true, avatar: true, phone: true } },
+        user: {
+          select: { id: true, username: true, avatar: true, phone: true },
+        },
       },
     });
     if (!sessionRow) {
-      return NextResponse.json({ success: false, message: 'سشن یافت نشد' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: 'سشن یافت نشد' },
+        { status: 404 }
+      );
     }
 
     // 2) تعداد کل پیام‌ها
@@ -59,7 +64,9 @@ export async function GET(req, { params }) {
         where: {
           OR: [
             sessionRow.user?.id ? { userId: sessionRow.user.id } : undefined,
-            sessionRow.anonymousId ? { anonymousId: sessionRow.anonymousId } : undefined,
+            sessionRow.anonymousId
+              ? { anonymousId: sessionRow.anonymousId }
+              : undefined,
           ].filter(Boolean),
         },
         select: { id: true },
@@ -89,12 +96,11 @@ export async function GET(req, { params }) {
       replyToContent: m.replyTo ? m.replyTo.content : null,
     }));
 
-    const userData =
-      sessionRow.user || {
-        username: 'مهمان',
-        avatar: '/images/default-profile.png',
-        phone: 'ناشناخته',
-      };
+    const userData = sessionRow.user || {
+      username: 'مهمان',
+      avatar: '/images/default-profile.png',
+      phone: 'ناشناخته',
+    };
 
     return NextResponse.json({
       success: true,
@@ -115,21 +121,29 @@ export async function GET(req, { params }) {
     });
   } catch (error) {
     console.error('[GET_SESSION_MESSAGES_ERROR]', error);
-    return NextResponse.json({ success: false, message: 'خطا در دریافت پیام‌ها' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'خطا در دریافت پیام‌ها' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(req, { params }) {
   try {
- 
     const sessionId = params.sessionId;
     const { content } = await req.json();
 
     if (!content || content.trim() === '') {
-      return NextResponse.json({ success: false, message: 'متن پیام الزامی است' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'متن پیام الزامی است' },
+        { status: 400 }
+      );
     }
     if (!sessionId) {
-      return NextResponse.json({ success: false, message: 'شناسه سشن الزامی است' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: 'شناسه سشن الزامی است' },
+        { status: 400 }
+      );
     }
 
     // صاحب سشن
@@ -138,7 +152,10 @@ export async function POST(req, { params }) {
       select: { id: true, userId: true, anonymousId: true },
     });
     if (!sessionRow) {
-      return NextResponse.json({ success: false, message: 'سشن یافت نشد' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: 'سشن یافت نشد' },
+        { status: 404 }
+      );
     }
 
     // ایجاد پیام پشتیبان
@@ -148,7 +165,7 @@ export async function POST(req, { params }) {
 
     // URL گفتگو (از سایت، نه API)
     // eslint-disable-next-line no-undef
-    const origin = process.env.NEXT_PUBLIC_API_BASE_URL
+    const origin = process.env.NEXT_PUBLIC_API_BASE_URL;
 
     // ارسال Web Push (non-blocking)
     try {
@@ -168,6 +185,9 @@ export async function POST(req, { params }) {
     });
   } catch (error) {
     console.error('[POST_SESSION_MESSAGE_ERROR]', error);
-    return NextResponse.json({ success: false, message: 'خطا در ارسال پیام پشتیبان' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: 'خطا در ارسال پیام پشتیبان' },
+      { status: 500 }
+    );
   }
 }

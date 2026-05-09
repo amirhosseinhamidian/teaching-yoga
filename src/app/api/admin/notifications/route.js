@@ -91,13 +91,13 @@ export async function GET() {
         total: totalNotifications,
         details: notifications,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error fetching notifications:', error);
     return NextResponse.json(
       { error: 'خطا در دریافت اطلاعات نوتیفیکیشن‌ها' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

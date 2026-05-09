@@ -51,10 +51,7 @@ export async function DELETE(request, { params }) {
     );
   } catch (error) {
     console.error('Error deleting term:', error);
-    return NextResponse.json(
-      { error: 'خطا در حذف ترم' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'خطا در حذف ترم' }, { status: 500 });
   }
 }
 

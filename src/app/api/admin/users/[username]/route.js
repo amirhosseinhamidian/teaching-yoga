@@ -10,7 +10,7 @@ export async function DELETE(request, { params }) {
     if (!username) {
       return NextResponse.json(
         { error: 'یوزرنیم مشخص نشده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -27,7 +27,7 @@ export async function DELETE(request, { params }) {
     // در صورت موفقیت
     return NextResponse.json(
       { message: `کاربر ${username} با موفقیت حذف شد` },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error deleting user:', error);
@@ -44,7 +44,7 @@ export async function PUT(request, { params }) {
     if (!username) {
       return NextResponse.json(
         { error: 'یوزرنیم مشخص نشده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -56,7 +56,7 @@ export async function PUT(request, { params }) {
     if (!phoneNumber || !newUsername || !role) {
       return NextResponse.json(
         { error: 'تمام فیلدها باید تکمیل شوند' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -119,7 +119,7 @@ export async function GET(request, { params }) {
     if (!username) {
       return NextResponse.json(
         { error: 'یوزرنیم مشخص نشده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 

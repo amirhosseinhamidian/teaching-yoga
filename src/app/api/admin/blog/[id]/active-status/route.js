@@ -14,7 +14,7 @@ export async function PUT(request, { params }) {
     if (typeof isActive !== 'boolean') {
       return NextResponse.json(
         { error: 'Invalid isActive value' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -33,7 +33,7 @@ export async function PUT(request, { params }) {
     console.error('Error updating course:', error);
     return NextResponse.json(
       { error: 'An error occurred while updating the course' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

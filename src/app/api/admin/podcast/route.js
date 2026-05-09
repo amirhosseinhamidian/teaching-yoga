@@ -14,7 +14,7 @@ export async function GET() {
     console.error(error);
     return NextResponse.json(
       { error: 'Failed to fetch podcast' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -81,7 +81,7 @@ export async function PUT(request) {
     console.error(error);
     return NextResponse.json(
       { error: 'Failed to update podcast' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -1,4 +1,5 @@
 import prismadb from '@/libs/prismadb';
+export const dynamic = 'force-dynamic';
 
 export async function buildCartResponse(userId) {
   const cart = await prismadb.cart.findFirst({

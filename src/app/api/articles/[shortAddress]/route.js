@@ -16,7 +16,7 @@ export async function GET(req, { params }) {
     if (!article) {
       return NextResponse.json(
         { message: 'Article not found' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -25,7 +25,7 @@ export async function GET(req, { params }) {
     console.error(error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

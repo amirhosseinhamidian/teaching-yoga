@@ -8,7 +8,11 @@ const s3 = new S3({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   endpoint: process.env.AWS_S3_ENDPOINT,
+  signatureVersion: 'v4',
   s3ForcePathStyle: true,
+  params: {
+    Bucket: 'samane-yoga',
+  },
 });
 
 const BUCKET_NAME = process.env.AWS_S3_BUCKET_NAME;
@@ -64,7 +68,7 @@ export async function POST(req) {
   if (!files || !courseName) {
     return NextResponse.json(
       { error: 'Please provide all required fields.' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 

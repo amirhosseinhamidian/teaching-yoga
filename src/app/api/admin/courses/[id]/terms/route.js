@@ -9,7 +9,7 @@ export async function POST(request, { params }) {
     if (!id || isNaN(parseInt(id))) {
       return NextResponse.json(
         { error: 'Invalid course ID.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -22,7 +22,7 @@ export async function POST(request, { params }) {
       if (!selectedTermId || isNaN(parseInt(selectedTermId))) {
         return NextResponse.json(
           { error: 'Selected term ID is invalid.' },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
@@ -39,7 +39,7 @@ export async function POST(request, { params }) {
       if (existingConnection) {
         return NextResponse.json(
           { error: 'این ترم قبلاً به این دوره اضافه شده است.' },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
@@ -59,14 +59,14 @@ export async function POST(request, { params }) {
       if (!name || typeof name !== 'string') {
         return NextResponse.json(
           { error: 'Name is required and must be a string.' },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
       if (duration !== undefined && (isNaN(duration) || duration < 0)) {
         return NextResponse.json(
           { error: 'Duration must be a non-negative integer.' },
-          { status: 400 },
+          { status: 400 }
         );
       }
 
@@ -92,14 +92,14 @@ export async function POST(request, { params }) {
 
       return NextResponse.json(
         { term: newTerm, courseTerm: newCourseTerm },
-        { status: 201 },
+        { status: 201 }
       );
     }
   } catch (error) {
     console.error('Error handling term:', error);
     return NextResponse.json(
       { error: 'یک مشکل ناشناخته در هنگام مدیریت ترم بوجود آمده است.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -110,7 +110,7 @@ export async function GET(request, { params }) {
   if (!id) {
     return NextResponse.json(
       { error: 'Course ID is required' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -159,7 +159,7 @@ export async function GET(request, { params }) {
     console.error(error);
     return NextResponse.json(
       { error: 'Something went wrong' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

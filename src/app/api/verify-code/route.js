@@ -1,4 +1,5 @@
 import prismadb from '../../../../libs/prismadb';
+
 export async function POST(request) {
   const { phone, code } = await request.json();
 
@@ -13,7 +14,7 @@ export async function POST(request) {
       {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      },
+      }
     );
   }
 
@@ -26,7 +27,7 @@ export async function POST(request) {
       {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      },
+      }
     );
   }
 
@@ -36,7 +37,7 @@ export async function POST(request) {
       {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
-      },
+      }
     );
   }
 
@@ -45,6 +46,6 @@ export async function POST(request) {
     {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
-    },
+    }
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { generatePodcastRss } from '@/libs/rss/generatePodcastRss';
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
