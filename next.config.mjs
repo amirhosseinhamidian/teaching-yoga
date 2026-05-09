@@ -7,6 +7,7 @@ const nextConfig = {
       'trustseal.enamad.ir',
       'lh3.googleusercontent.com',
       'static.postex.ir',
+      'localhost',
     ],
   },
 

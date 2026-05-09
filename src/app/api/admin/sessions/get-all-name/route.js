@@ -20,7 +20,7 @@ export async function GET() {
     console.error('Error fetching sessions:', error);
     return NextResponse.json(
       { error: 'خطا در دریافت لیست جلسات.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

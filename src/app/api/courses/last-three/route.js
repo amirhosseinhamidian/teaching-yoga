@@ -74,7 +74,7 @@ export async function GET() {
         success: true,
         data: coursesWithPrices,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error fetching courses:', error);
@@ -83,7 +83,7 @@ export async function GET() {
         success: false,
         error: 'Failed to fetch courses. Please try again later.',
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

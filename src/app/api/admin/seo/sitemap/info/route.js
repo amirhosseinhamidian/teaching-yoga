@@ -24,7 +24,7 @@ export async function GET() {
     console.error('Error fetching sitemap info:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to fetch sitemap info.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

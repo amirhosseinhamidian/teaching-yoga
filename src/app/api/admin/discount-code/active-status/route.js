@@ -14,7 +14,7 @@ export async function PATCH(request) {
     if (!discountCode) {
       return NextResponse.json(
         { message: 'discount Code not found' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -29,13 +29,13 @@ export async function PATCH(request) {
         message: 'Discount Code updated successfully',
         session: updatedDiscountCode,
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error toggling session active status:', error);
     return NextResponse.json(
       { message: 'Internal Server Error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

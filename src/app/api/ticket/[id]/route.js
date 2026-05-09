@@ -8,7 +8,7 @@ export async function GET(request, { params }) {
     if (!id) {
       return NextResponse.json(
         { error: 'Ticket ID is required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
     // واکشی اطلاعات تیکت به همراه پاسخ‌ها
@@ -50,7 +50,7 @@ export async function GET(request, { params }) {
     if (!ticket) {
       return NextResponse.json(
         { message: 'Ticket not found' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -59,7 +59,7 @@ export async function GET(request, { params }) {
     console.error('Error fetching ticket:', error);
     return NextResponse.json(
       { message: 'An error occurred while fetching the ticket' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

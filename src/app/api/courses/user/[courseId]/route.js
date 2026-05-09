@@ -8,7 +8,7 @@ export async function GET(req, { params }) {
   if (isNaN(numericCourseId)) {
     return NextResponse.json(
       { success: false, message: 'Course ID must be a number' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -28,7 +28,7 @@ export async function GET(req, { params }) {
     if (!course) {
       return NextResponse.json(
         { success: false, message: 'Course not found' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -37,7 +37,7 @@ export async function GET(req, { params }) {
     console.error('[GET COURSE]', error);
     return NextResponse.json(
       { success: false, message: 'Server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

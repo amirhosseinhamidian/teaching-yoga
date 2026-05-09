@@ -11,7 +11,7 @@ export async function PUT(request) {
     if (!id || !status) {
       return new NextResponse(
         JSON.stringify({ message: 'فیلدهای id و status ضروری هستند' }),
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -35,19 +35,19 @@ export async function PUT(request) {
     if (!updatedComment) {
       return new NextResponse(
         JSON.stringify({ message: 'کامنتی با این id یافت نشد' }),
-        { status: 404 },
+        { status: 404 }
       );
     }
 
     return new NextResponse(
       JSON.stringify({ message: 'وضعیت کامنت با موفقیت به روز شد' }),
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error(error);
     return new NextResponse(
       JSON.stringify({ message: 'خطا در انجام عملیات' }),
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

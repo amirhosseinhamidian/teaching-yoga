@@ -27,7 +27,7 @@ export async function GET() {
     console.error('[GET_MESSAGE_STATS_ERROR]', error);
     return NextResponse.json(
       { error: 'خطا در دریافت آمار پیام‌ها' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

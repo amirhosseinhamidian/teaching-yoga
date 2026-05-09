@@ -10,7 +10,7 @@ export async function PUT(request, { params }) {
     if (!id) {
       return NextResponse.json(
         { error: 'شناسه کاربر مشخص نشده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -21,7 +21,7 @@ export async function PUT(request, { params }) {
     if (!avatar) {
       return NextResponse.json(
         { error: 'تصویر آواتار باید مشخص شود' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -49,7 +49,7 @@ export async function PUT(request, { params }) {
     console.error('Error updating avatar:', error);
     return NextResponse.json(
       { error: 'خطای داخلی سرور', field: null },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

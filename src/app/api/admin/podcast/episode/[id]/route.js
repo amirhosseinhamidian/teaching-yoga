@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
     console.error('Error fetching episode:', error);
     return NextResponse.json(
       { error: 'خطای ناشناخته در ارسال اطلاعات اپیزود' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -30,7 +30,7 @@ export async function DELETE(request, { params }) {
     if (!id) {
       return NextResponse.json(
         { error: 'شناسه اپیزود مورد نظر مشخص نشده است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -45,7 +45,7 @@ export async function DELETE(request, { params }) {
     console.error('Error deleting episode:', error);
     return NextResponse.json(
       { error: 'Failed to delete episode' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

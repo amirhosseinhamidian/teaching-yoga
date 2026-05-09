@@ -16,7 +16,7 @@ export async function GET() {
     });
 
     const articleUrls = articles.map(
-      (article) => `/articles/${article.shortAddress}`,
+      (article) => `/articles/${article.shortAddress}`
     );
 
     // دریافت تعداد کل بازدیدهای مربوط به مقالات
@@ -52,12 +52,12 @@ export async function GET() {
         visitsLast30Days: formatNumber(visitsLast30Days),
         totalArticles: formatNumber(totalArticles),
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
       { message: 'خطایی در دریافت اطلاعات رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

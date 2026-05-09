@@ -12,7 +12,7 @@ export async function GET() {
         dayEnd: new Date(
           date.getFullYear(),
           date.getMonth(),
-          date.getDate() + 1,
+          date.getDate() + 1
         ),
       };
     }).reverse(); // ترتیب به صورت تاریخی
@@ -28,7 +28,7 @@ export async function GET() {
 
     const visitsByDate = days.map(({ dayStart, dayEnd }) => {
       const dayVisits = visitLogs.filter(
-        (visit) => visit.visitedAt >= dayStart && visit.visitedAt < dayEnd,
+        (visit) => visit.visitedAt >= dayStart && visit.visitedAt < dayEnd
       ).length;
 
       return {
@@ -42,7 +42,7 @@ export async function GET() {
     console.error('[VISIT_LOG_ERROR]', error);
     return NextResponse.json(
       { message: 'Internal server error' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

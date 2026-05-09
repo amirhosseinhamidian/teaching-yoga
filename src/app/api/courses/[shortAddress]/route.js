@@ -100,8 +100,10 @@ export async function GET(req, { params }) {
     };
 
     // اگر ویدیو معرفی دارد لینک موقت بساز
+
     if (course.introVideoUrl) {
       const signedUrl = await generateTemporaryLink(course.introVideoUrl);
+      console.log('short address ======>>>> ', signedUrl);
       responseData.introLink = signedUrl;
     }
 

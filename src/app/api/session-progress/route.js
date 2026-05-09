@@ -83,10 +83,7 @@ export async function GET(request) {
         ? Math.ceil((completedSessions / totalSessions) * 100)
         : 0;
 
-    return NextResponse.json(
-      { progress: progressPercentage },
-      { status: 200 }
-    );
+    return NextResponse.json({ progress: progressPercentage }, { status: 200 });
   } catch (error) {
     console.error('Error calculating progress:', error);
     return NextResponse.json(

@@ -20,7 +20,7 @@ export async function GET(request) {
     console.error('Error fetching SEO settings:', error);
     return NextResponse.json(
       { success: false, message: 'Failed to fetch SEO settings.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

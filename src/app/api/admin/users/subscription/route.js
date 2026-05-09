@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
+export const dynamic = 'force-dynamic';
 
 function calcFinalPrice(price, discountAmount) {
   const p = Number(price || 0);

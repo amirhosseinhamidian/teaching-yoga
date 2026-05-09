@@ -45,7 +45,7 @@ export async function GET(request) {
           ...article,
           visitCount, // اضافه کردن تعداد بازدید
         };
-      }),
+      })
     );
 
     return NextResponse.json(
@@ -58,12 +58,12 @@ export async function GET(request) {
           totalPages: Math.ceil(totalArticles / perPage),
         },
       },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
       { message: 'خطایی رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -92,7 +92,7 @@ export async function POST(req) {
     ) {
       return NextResponse.json(
         { message: 'عنوان و محتوا الزامی هستند' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -113,7 +113,7 @@ export async function POST(req) {
     console.error(error);
     return NextResponse.json(
       { message: 'خطایی رخ داده است', error },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

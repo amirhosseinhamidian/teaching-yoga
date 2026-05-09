@@ -23,7 +23,7 @@ export async function POST(request) {
     console.error('Error saving session audio:', error);
     return NextResponse.json(
       { error: 'Error saving session audio' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -35,7 +35,7 @@ export async function PUT(request) {
     if (!audioId || !sessionId) {
       return NextResponse.json(
         { error: 'Audio ID and Session ID are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -58,7 +58,7 @@ export async function PUT(request) {
     console.error('Error updating session audio:', error);
     return NextResponse.json(
       { error: 'Error updating session audio' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

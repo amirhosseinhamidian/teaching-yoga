@@ -8,7 +8,7 @@ export async function POST(request) {
     if (!courseId || isNaN(parseInt(courseId))) {
       return NextResponse.json(
         { error: 'Invalid course ID.' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -48,7 +48,7 @@ export async function POST(request) {
     const addedCarts = [];
     const promises = cartCourses.map(async ({ cart }) => {
       const termExists = cart.cartTerms.some(
-        (cartTerm) => cartTerm.termId === parseInt(termId),
+        (cartTerm) => cartTerm.termId === parseInt(termId)
       );
 
       if (!termExists) {
@@ -75,7 +75,7 @@ export async function POST(request) {
 
       const newTotalPrice = updatedCartTerms.reduce(
         (sum, term) => sum + term.price,
-        0,
+        0
       );
 
       const newTotalDiscount = updatedCartTerms.reduce((sum, term) => {
@@ -96,13 +96,13 @@ export async function POST(request) {
 
     return NextResponse.json(
       { message: 'Term added and cart totals updated where necessary.' },
-      { status: 200 },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Error adding term and updating cart totals:', error);
     return NextResponse.json(
       { error: 'An unknown error occurred.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

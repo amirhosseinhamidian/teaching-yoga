@@ -1,5 +1,6 @@
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '../getAuthUser';
+export const dynamic = 'force-dynamic';
 
 export async function getShopEnabled() {
   const site = await prismadb.siteInfo.findFirst({

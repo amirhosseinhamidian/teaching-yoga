@@ -5,6 +5,9 @@
     "publicDir": ".next"
   },
   "build": {
-    "location": "germany"
+    "location": "iran"
+  },
+  "next": {
+    "mirror": false
   }
 }

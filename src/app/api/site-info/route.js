@@ -40,7 +40,7 @@ export async function POST(req) {
     console.error(error);
     return NextResponse.json(
       { message: 'Error creating site information' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -86,7 +86,7 @@ export async function PUT(req) {
     console.error(error);
     return NextResponse.json(
       { message: 'Error updating site information' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -104,7 +104,7 @@ export async function GET(req) {
     if (!siteInfo) {
       return NextResponse.json(
         { message: 'No site information found' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -112,7 +112,7 @@ export async function GET(req) {
     if (onlyRules !== null) {
       return NextResponse.json(
         { rules: siteInfo.rules || '' },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -122,7 +122,7 @@ export async function GET(req) {
     console.error(error);
     return NextResponse.json(
       { message: 'Error retrieving site information' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -10,7 +10,7 @@ export async function PATCH(req) {
     if (!sessionId) {
       return NextResponse.json(
         { success: false, message: 'شناسه سشن الزامی است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -29,7 +29,7 @@ export async function PATCH(req) {
     if (updatedMessages.count === 0) {
       return NextResponse.json(
         { success: false, message: 'پیامی برای آپدیت پیدا نشد' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -41,7 +41,7 @@ export async function PATCH(req) {
     console.error('[UPDATE_MESSAGES_IS_SEEN_ERROR]', error);
     return NextResponse.json(
       { success: false, message: 'خطا در به‌روزرسانی پیام‌ها' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

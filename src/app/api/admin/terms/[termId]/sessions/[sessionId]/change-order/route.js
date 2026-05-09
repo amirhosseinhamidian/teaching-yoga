@@ -11,7 +11,7 @@ export async function PUT(req, { params }) {
     const sessionTerm = await prismadb.sessionTerm.findFirst({
       where: {
         termId: parseInt(termId),
-        sessionId: sessionId
+        sessionId: sessionId,
       },
     });
 

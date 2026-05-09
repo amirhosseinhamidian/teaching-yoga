@@ -6,12 +6,15 @@ export async function GET() {
     const users = await prismadb.user.findMany({
       orderBy: {
         createAt: 'desc',
-      }
+      },
     });
 
     return NextResponse.json({ users });
   } catch (error) {
     console.error('Error fetching all users:', error);
-    return NextResponse.json({ error: 'خطا در دریافت کاربران' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'خطا در دریافت کاربران' },
+      { status: 500 }
+    );
   }
 }

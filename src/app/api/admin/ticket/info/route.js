@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+
 export async function GET() {
   try {
     // شمارش تیکت‌های بسته
@@ -31,7 +32,7 @@ export async function GET() {
     console.error('Error fetching ticket data:', error);
     return NextResponse.json(
       { error: 'An error occurred while fetching ticket data.' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

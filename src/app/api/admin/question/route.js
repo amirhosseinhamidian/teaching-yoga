@@ -82,7 +82,7 @@ export async function GET(request) {
 
     return NextResponse.json(
       { success: false, message: 'Failed to fetch questions' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -96,7 +96,7 @@ export async function DELETE(request) {
     if (!questionId) {
       return NextResponse.json(
         { success: false, message: 'Question ID is required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -115,7 +115,7 @@ export async function DELETE(request) {
 
     return NextResponse.json(
       { success: false, message: 'خطا در حذف سوال!' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -129,7 +129,7 @@ export async function PUT(request) {
     if (!id || answerText === undefined) {
       return NextResponse.json(
         { error: 'Missing required fields (id, answerText, isAnswered)' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -153,7 +153,7 @@ export async function PUT(request) {
     console.error('Error updating question:', error);
     return NextResponse.json(
       { error: 'Failed to update question' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

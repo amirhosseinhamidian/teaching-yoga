@@ -10,7 +10,7 @@ export async function GET(request) {
   if (!shortAddress) {
     return NextResponse.json(
       { error: 'Course short address is required' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -41,7 +41,7 @@ export async function GET(request) {
     console.error('Error fetching course details:', error);
     return NextResponse.json(
       { error: 'Failed to fetch course details' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

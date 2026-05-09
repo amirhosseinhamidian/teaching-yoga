@@ -30,7 +30,7 @@ export async function GET() {
     console.error('Error fetching terms:', error);
     return NextResponse.json(
       { error: 'Failed to fetch terms' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

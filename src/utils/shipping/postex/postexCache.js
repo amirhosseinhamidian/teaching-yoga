@@ -2,6 +2,7 @@
 /* eslint-disable no-undef */
 import prismadb from '@/libs/prismadb';
 import { fetchPostexBoxes } from './postexClient';
+export const dynamic = 'force-dynamic';
 
 const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 

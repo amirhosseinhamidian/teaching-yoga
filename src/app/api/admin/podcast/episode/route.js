@@ -20,7 +20,7 @@ export async function GET(request) {
     if (episodes.length === 0) {
       return NextResponse.json(
         { message: 'No episodes found' },
-        { status: 200 },
+        { status: 200 }
       );
     }
 
@@ -37,7 +37,7 @@ export async function GET(request) {
     console.error(error);
     return NextResponse.json(
       { error: 'Failed to fetch episodes' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -88,7 +88,7 @@ export async function POST(request) {
     console.error(error);
     return NextResponse.json(
       { error: 'Failed to update podcast' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -143,7 +143,7 @@ export async function PUT(request) {
     console.error(error);
     return NextResponse.json(
       { error: 'Failed to update podcast' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

@@ -9,7 +9,7 @@ export async function GET(request) {
     if (!userId) {
       return NextResponse.json(
         { error: 'شناسه کاربر الزامی است' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -35,23 +35,23 @@ export async function GET(request) {
                               where: { userId },
                               select: { isCompleted: true },
                             },
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     });
 
     if (!userCourses || userCourses.length === 0) {
       return NextResponse.json(
         { error: 'هیچ دوره‌ای برای کاربر یافت نشد' },
-        { status: 404 },
+        { status: 404 }
       );
     }
 
@@ -91,7 +91,7 @@ export async function GET(request) {
     console.error('خطا در بازیابی پیشرفت دوره:', error);
     return NextResponse.json(
       { error: 'بازیابی پیشرفت دوره با شکست مواجه شد' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

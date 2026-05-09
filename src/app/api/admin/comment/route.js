@@ -14,7 +14,7 @@ export async function GET(request) {
     if (!type || (type !== 'course' && type !== 'article')) {
       return NextResponse.json(
         { error: 'Invalid type parameter' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -115,7 +115,7 @@ export async function GET(request) {
     console.error('Error fetching comments:', error);
     return NextResponse.json(
       { error: 'An error occurred while fetching comments' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -127,7 +127,7 @@ export async function DELETE(request) {
     if (!commentId) {
       return NextResponse.json(
         { error: 'Comment ID is required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -155,7 +155,7 @@ export async function DELETE(request) {
     console.error('Error deleting comment:', error);
     return NextResponse.json(
       { error: 'خطای ناشناخته در حذف کامنت' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
@@ -170,7 +170,7 @@ export async function POST(request) {
     if (!content || !userId || !parentId) {
       return NextResponse.json(
         { error: 'Content, userId, and parentId are required' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -178,7 +178,7 @@ export async function POST(request) {
     if (!courseId && !articleId) {
       return NextResponse.json(
         { error: 'Either courseId or articleId must be provided' },
-        { status: 400 },
+        { status: 400 }
       );
     }
 
@@ -199,7 +199,7 @@ export async function POST(request) {
     console.error('Error creating reply:', error);
     return NextResponse.json(
       { error: 'An error occurred while creating the reply' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

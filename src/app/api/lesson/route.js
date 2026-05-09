@@ -10,7 +10,7 @@ export async function GET(request) {
   if (!sessionId) {
     return NextResponse.json(
       { error: 'A valid session ID is required' },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -68,7 +68,7 @@ export async function GET(request) {
     } else if (session.type === 'AUDIO' && session.audio?.audioKey) {
       // قبلاً از session.term.id استفاده می‌شد → حالا از term?.id
       mediaLink = await generateTemporaryLink(
-        `audio/${term?.id}/${session.id}/audio.mp3`,
+        `audio/${term?.id}/${session.id}/audio.mp3`
       );
     }
 
@@ -81,7 +81,7 @@ export async function GET(request) {
     console.error('Error fetching session details:', error);
     return NextResponse.json(
       { error: 'Failed to fetch session details' },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }
