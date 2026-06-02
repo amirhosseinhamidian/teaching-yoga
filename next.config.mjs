@@ -4,6 +4,7 @@ const nextConfig = {
   images: {
     domains: [
       'samane-yoga.storage.c2.liara.site',
+      'beta.samaneyoga.ir',
       'trustseal.enamad.ir',
       'lh3.googleusercontent.com',
       'static.postex.ir',
