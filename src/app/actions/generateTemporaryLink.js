@@ -24,8 +24,7 @@ export async function generateTemporaryLink(videoKey) {
       'https://samane-yoga.beta.samaneyoga.ir',
       'https://beta.samaneyoga.ir'
     );
-    console.log('signedUrl ======>>>> ', signedUrl);
-    console.log('fixed url ======>>>> ', fixedUrl);
+
     return fixedUrl;
   } catch (error) {
     console.error('Error generating temporary link:', error);
