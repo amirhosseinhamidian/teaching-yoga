@@ -5,7 +5,38 @@ import { getShamsiDate } from '@/utils/dateTimeHelper';
 import { PENDING, REJECTED } from '@/constants/commentStatus';
 import Image from 'next/image';
 
-const CommentCard = ({ className, comment }) => {
+const DEFAULT_AVATAR = '/images/default-profile.png';
+
+const getSafeImageSrc = (src) => {
+  if (typeof src !== 'string') return DEFAULT_AVATAR;
+
+  const value = src.trim();
+
+  if (!value || value.startsWith('blob:')) {
+    return DEFAULT_AVATAR;
+  }
+
+  if (value.startsWith('/')) {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return value;
+    }
+
+    return DEFAULT_AVATAR;
+  } catch {
+    return DEFAULT_AVATAR;
+  }
+};
+
+const CommentCard = ({ className = '', comment }) => {
+  const user = comment?.user ?? {};
+  const avatarSrc = getSafeImageSrc(user.avatar);
+
   return (
     <div
       className={`rounded-xl bg-background-light p-2 sm:p-4 dark:bg-background-dark ${className}`}
@@ -13,25 +44,29 @@ const CommentCard = ({ className, comment }) => {
       <div className='border-b border-gray-300 pb-2 sm:pb-4 dark:border-gray-600'>
         <div className='mr-3 flex items-center gap-1'>
           <Image
-            src={comment.user.avatar}
+            src={avatarSrc}
             width={240}
             height={240}
-            alt='user profile picture'
+            alt={`${user.username ?? 'کاربر'} profile picture`}
             className='h-8 w-8 rounded-full object-cover sm:h-12 sm:w-12'
           />
+
           <div className='flex flex-col gap-0 sm:gap-1'>
             <h5 className='text-sm font-medium sm:text-base'>
-              {comment.user.username}
+              {user.username ?? 'کاربر'}
             </h5>
+
             <span className='font-faNa text-xs font-thin text-subtext-light sm:text-sm dark:text-subtext-dark'>
               {getShamsiDate(comment.createAt)}
             </span>
-            {comment.status == PENDING && (
+
+            {comment.status === PENDING && (
               <span className='rounded-2xl border border-blue border-opacity-40 bg-blue bg-opacity-20 px-2 text-center text-2xs text-blue sm:text-xs'>
                 در انتظار تایید
               </span>
             )}
-            {comment.status == REJECTED && (
+
+            {comment.status === REJECTED && (
               <span className='rounded-2xl border border-red border-opacity-40 bg-red bg-opacity-20 px-2 text-center text-2xs text-red sm:text-xs'>
                 رد شده
               </span>
@@ -39,13 +74,14 @@ const CommentCard = ({ className, comment }) => {
           </div>
         </div>
       </div>
+
       <p className='m-2 text-xs font-light sm:m-4 sm:text-base'>
         {comment.content}
       </p>
-      {comment.replies &&
-        comment.replies.map((reply) => (
-          <CommentReplyCard key={reply.id} className='mt-4' reply={reply} />
-        ))}
+
+      {comment.replies?.map((reply) => (
+        <CommentReplyCard key={reply.id} className='mt-4' reply={reply} />
+      ))}
     </div>
   );
 };
