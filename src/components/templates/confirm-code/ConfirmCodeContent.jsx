@@ -105,6 +105,8 @@ const ConfirmCodeContent = () => {
       // -----------------------
       const verify = await verifyOtp({ phone, code: confirmCode });
 
+      console.log(verify.meta.requestStatus);
+
       if (verify.meta.requestStatus !== 'fulfilled') {
         toast.showErrorToast('کد تایید نادرست است.');
         setIsSubmitting(false);
