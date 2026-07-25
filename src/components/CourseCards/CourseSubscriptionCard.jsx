@@ -6,6 +6,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import DropDown from '../Ui/DropDown/DropDwon';
 import Button from '../Ui/Button/Button';
+import { LuLogIn } from 'react-icons/lu';
+import { useAuthUser } from '@/hooks/auth/useAuthUser';
+import { usePathname, useRouter } from 'next/navigation';
+import Modal from '../modules/Modal/Modal';
 
 const CourseSubscriptionCard = ({ courseId, className = '' }) => {
   const [plans, setPlans] = useState([]);
@@ -13,6 +17,10 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const { isAuthenticated } = useAuthUser();
+  const pathname = usePathname();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -53,6 +61,10 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
   }, [courseId]);
 
   const handleCheckout = async () => {
+    if (!isAuthenticated) {
+      setShowLoginModal(true);
+      return;
+    }
     if (!selectedPlanId) return;
 
     try {
@@ -111,6 +123,11 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
 
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
+  const loginHandler = () => {
+    sessionStorage.setItem('previousPage', pathname);
+    router.push('/login');
+  };
+
   return (
     <div
       className={`flex flex-col justify-between gap-4 rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark ${className}`}
@@ -152,6 +169,19 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
       >
         {checkoutLoading ? 'انتقال به پرداخت...' : 'خرید اشتراک'}
       </Button>
+
+      {showLoginModal && (
+        <Modal
+          title='ثبت نام یا ورود به حساب کاربری'
+          desc='برای تهیه اشتراک لطفا ابتدا وارد حساب کاربری خود شوید یا در سایت ثبت نام کنید.'
+          icon={LuLogIn}
+          iconSize={36}
+          primaryButtonClick={loginHandler}
+          secondaryButtonClick={() => setShowLoginModal(false)}
+          primaryButtonText='ورود | ثبت نام'
+          secondaryButtonText='لغو'
+        />
+      )}
     </div>
   );
 };
