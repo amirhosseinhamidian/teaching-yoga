@@ -6,6 +6,10 @@ import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import Footer from '@/components/Footer/Footer';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import SubscriptionsPageClient from '@/components/Subscription/SubscriptionsPageClient';
+import {
+  toAbsoluteAppUrl,
+  toOpenGraphImages,
+} from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,15 +50,18 @@ export async function generateMetadata() {
     robots: seoData?.robotsTag || defaultSeoData.robots,
     canonical: seoData?.canonicalTag || defaultSeoData.canonical,
     openGraph: {
-      title: seoData?.ogTitle || '',
-      description: seoData?.ogDescription || '',
-      url: seoData.ogUrl || `https://samaneyoga.ir/subscriptions`,
-      images: [
-        {
-          url: seoData?.ogImage || '',
-          alt: seoData?.ogImageAlt || '',
-        },
-      ],
+      siteName: seoData?.ogSiteName || 'سمانه یوگا',
+
+      title: seoData?.ogTitle || seoData?.siteTitle || 'اشتراک‌ها',
+
+      description: seoData?.ogDescription || seoData?.metaDescription || '',
+
+      url: toAbsoluteAppUrl(seoData?.ogUrl || '/subscriptions'),
+
+      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+
+      type: 'website',
+      locale: 'fa_IR',
     },
   };
 }

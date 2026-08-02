@@ -95,14 +95,14 @@ const CreateCommentCard = ({
           {/* User Info */}
           <div className='flex items-center gap-2'>
             <Image
-              src={user.avatar || '/images/default-profile.png'}
+              src={user?.avatar || '/images/default-profile.png'}
               alt='user profile'
               width={50}
               height={50}
               className='h-9 w-9 rounded-full border xs:h-11 xs:w-11 sm:h-14 sm:w-14'
             />
             <p className='text-subtext-light dark:text-subtext-dark'>
-              {user.username}
+              {user?.username}
             </p>
           </div>
 

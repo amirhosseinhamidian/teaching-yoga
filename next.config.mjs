@@ -59,6 +59,22 @@ const nextConfig = {
         source: '/robots.txt',
         destination: '/api/admin/seo/sitemap/robots',
       },
+      {
+        source: '/images/:path*',
+        destination: '/local-videos/images/:path*',
+      },
+      {
+        source: '/audio/:path*',
+        destination: '/local-videos/audio/:path*',
+      },
+      {
+        source: '/videos/:path*',
+        destination: '/local-videos/videos/:path*',
+      },
+      {
+        source: '/podcast/:path*',
+        destination: '/local-videos/podcast/:path*',
+      },
     ];
   },
 };

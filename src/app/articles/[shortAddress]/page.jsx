@@ -7,6 +7,10 @@ import Image from 'next/image';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
 import SuggestionCourses from '@/components/templates/articles/SuggestionCourses';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import {
+  toAbsoluteAppUrl,
+  toOpenGraphImages,
+} from '@/server/media/absolute-url';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -46,15 +50,26 @@ export async function generateMetadata({ params }) {
     robots: seoData?.robotsTag || defaultSeoData.robots,
     canonical: seoData?.canonicalTag || defaultSeoData.canonical,
     openGraph: {
-      title: seoData?.ogTitle || '',
-      description: seoData?.ogDescription || '',
-      url: seoData.ogUrl || `https://samaneyoga.ir/articles/${shortAddress}`,
-      images: [
-        {
-          url: seoData?.ogImage || '',
-          alt: seoData?.ogImageAlt || '',
-        },
-      ],
+      siteName: seoData?.ogSiteName || 'سمانه یوگا',
+
+      title: seoData?.ogTitle || article?.title || 'مقاله',
+
+      description:
+        seoData?.ogDescription ||
+        seoData?.metaDescription ||
+        article?.subtitle ||
+        '',
+
+      url: toAbsoluteAppUrl(seoData?.ogUrl || `/articles/${shortAddress}`),
+
+      images: toOpenGraphImages(
+        seoData?.ogImage || article?.cover,
+
+        seoData?.ogImageAlt || article?.title || ''
+      ),
+
+      type: 'article',
+      locale: 'fa_IR',
     },
   };
 }

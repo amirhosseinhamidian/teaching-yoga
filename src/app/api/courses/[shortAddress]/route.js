@@ -1,5 +1,5 @@
 /* eslint-disable no-undef */
-import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
+import { resolveStoredMediaUrl } from '@/server/media/resolve-stored-media-url';
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
@@ -102,9 +102,14 @@ export async function GET(req, { params }) {
     // اگر ویدیو معرفی دارد لینک موقت بساز
 
     if (course.introVideoUrl) {
-      const signedUrl = await generateTemporaryLink(course.introVideoUrl);
-      console.log('short address ======>>>> ', signedUrl);
-      responseData.introLink = signedUrl;
+      responseData.introLink = await resolveStoredMediaUrl(
+        course.introVideoUrl,
+        {
+          allowedRoots: ['videos'],
+        }
+      );
+    } else {
+      responseData.introLink = null;
     }
 
     return NextResponse.json(responseData, { status: 200 });

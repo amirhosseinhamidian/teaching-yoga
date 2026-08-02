@@ -25,7 +25,7 @@ const ProfileModal = ({ onClose, setShowSignOutModal, user }) => {
       <div className='absolute left-14 top-14 w-72 rounded-xl bg-surface-light dark:bg-background-dark'>
         <div className='m-4 flex items-center gap-3'>
           <Image
-            src={user.avatar || '/images/default-profile.png'}
+            src={user?.avatar || '/images/default-profile.png'}
             alt='profile'
             width={50}
             height={50}

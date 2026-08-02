@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
-import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
+import { resolveStoredMediaUrl } from '@/server/media/resolve-stored-media-url';
 
 export async function GET(request) {
   const { searchParams } = request.nextUrl;
@@ -63,13 +63,14 @@ export async function GET(request) {
 
     let mediaLink = null;
 
-    if (session.type === 'VIDEO' && session.video?.videoKey) {
-      mediaLink = await generateTemporaryLink(session.video.videoKey);
-    } else if (session.type === 'AUDIO' && session.audio?.audioKey) {
-      // قبلاً از session.term.id استفاده می‌شد → حالا از term?.id
-      mediaLink = await generateTemporaryLink(
-        `audio/${term?.id}/${session.id}/audio.mp3`
-      );
+    if (session.video?.videoKey) {
+      mediaLink = await resolveStoredMediaUrl(session.video.videoKey, {
+        allowedRoots: ['videos'],
+      });
+    } else if (session.audio?.audioKey) {
+      mediaLink = await resolveStoredMediaUrl(session.audio.audioKey, {
+        allowedRoots: ['audio'],
+      });
     }
 
     return NextResponse.json({

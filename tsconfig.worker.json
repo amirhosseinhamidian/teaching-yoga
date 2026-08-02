@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/libs/*": ["./libs/*"],
+      "@/*": ["./src/*"]
+    },
+    "allowJs": true,
+    "checkJs": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ES2022"
+  },
+  "include": ["scripts/**/*", "src/server/**/*", "libs/**/*"]
+}

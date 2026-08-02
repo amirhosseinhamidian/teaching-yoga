@@ -7,6 +7,10 @@ import ProductDetailsPage from '@/components/templates/shop/product/ProductDetai
 import React from 'react';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import { cookies } from 'next/headers';
+import {
+  toAbsoluteAppUrl,
+  toOpenGraphImages,
+} from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -94,15 +98,26 @@ export async function generateMetadata({ params }) {
     robots: seoData?.robotsTag || defaultSeoData.robots,
     canonical: seoData?.canonicalTag || defaultSeoData.canonical,
     openGraph: {
-      title: seoData?.ogTitle || '',
-      description: seoData?.ogDescription || '',
-      url: seoData.ogUrl || `https://samaneyoga.ir/shop/products/${slug}`,
-      images: [
-        {
-          url: seoData?.ogImage || '',
-          alt: seoData?.ogImageAlt || '',
-        },
-      ],
+      siteName: seoData?.ogSiteName || 'سمانه یوگا',
+
+      title: seoData?.ogTitle || product?.title || 'محصول',
+
+      description:
+        seoData?.ogDescription ||
+        seoData?.metaDescription ||
+        product?.description ||
+        '',
+
+      url: toAbsoluteAppUrl(seoData?.ogUrl || `/shop/products/${slug}`),
+
+      images: toOpenGraphImages(
+        seoData?.ogImage || product?.coverImage,
+
+        seoData?.ogImageAlt || product?.title || ''
+      ),
+
+      type: 'website',
+      locale: 'fa_IR',
     },
   };
 }
