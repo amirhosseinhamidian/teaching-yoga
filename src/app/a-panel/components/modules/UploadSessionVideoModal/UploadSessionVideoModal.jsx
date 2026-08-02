@@ -1,179 +1,225 @@
 /* eslint-disable no-undef */
 'use client';
+
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import Button from '@/components/Ui/Button/Button';
 import { IoClose } from 'react-icons/io5';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
+
+import Button from '@/components/Ui/Button/Button';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
+import { useTheme } from '@/contexts/ThemeContext';
+import { createToastHandler } from '@/utils/toastHandler';
+
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
-import { processVideo } from '@/services/videoProcessor';
+
+const VIDEO_STAGE_LABELS = {
+  idle: 'آماده آپلود',
+  creating: 'در حال آماده‌سازی عملیات',
+  uploading: 'در حال آپلود ویدئو',
+  queued: 'در صف پردازش',
+  processing: 'در حال تبدیل ویدئو',
+  publishing: 'در حال انتشار ویدئو',
+  ready: 'پردازش تکمیل شد',
+  failed: 'پردازش ناموفق بود',
+  cancelled: 'عملیات لغو شد',
+};
+
+const clampProgress = (value) => {
+  const numericValue = Number(value);
+
+  if (!Number.isFinite(numericValue)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(100, Math.round(numericValue)));
+};
 
 const UploadSessionMediaModal = ({
   onClose,
   onUpload,
   mediaAccessLevel,
-  mediaType, // 'VIDEO' یا 'AUDIO'
+  mediaType,
   isUpdate = false,
+  showAccessLevel = true,
 }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const controller = new AbortController();
+
+  const fileInputRef = useRef(null);
+  const uploadControllerRef = useRef(null);
 
   const [file, setFile] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [progress, setProgress] = useState(0); // state برای پیشرفت
-  const fileInputRef = useRef(null);
-  const pollingRef = useRef(null);
-  const [isComplete, setIsComplete] = useState(false);
   const [accessLevel, setAccessLevel] = useState(mediaAccessLevel || '');
-  const [currentStage, setCurrentStage] = useState('processing');
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  const [progress, setProgress] = useState(0);
+
+  const [currentStage, setCurrentStage] = useState('idle');
+
   const [errorMessages, setErrorMessages] = useState({
     accessLevel: '',
   });
 
   const accessMediaOptions = [
-    { label: 'عمومی', value: PUBLIC },
-    { label: 'ثبت نام', value: REGISTERED },
-    { label: 'خریداری', value: PURCHASED },
-  ];
-
-  // برای ویدیو
-  const videoDirectionOptions = [
-    { label: 'افقی', value: 'HORIZONTAL' },
-    { label: 'عمودی', value: 'VERTICAL' },
+    {
+      label: 'عمومی',
+      value: PUBLIC,
+    },
+    {
+      label: 'ثبت نام',
+      value: REGISTERED,
+    },
+    {
+      label: 'خریداری',
+      value: PURCHASED,
+    },
   ];
 
   const validateInputs = () => {
-    let errors = {};
+    const errors = {};
 
-    if (!accessLevel) {
+    if (showAccessLevel && !accessLevel) {
       errors.accessLevel = 'سطح دسترسی را مشخص کنید.';
     }
 
     setErrorMessages(errors);
 
-    // Return true if no errors exist
     return Object.keys(errors).length === 0;
   };
 
-  const handleFileChange = (e) => {
-    const uploadedFile = e.target.files[0];
-    if (uploadedFile) {
-      setFile(uploadedFile);
+  const selectFile = (selectedFile) => {
+    if (!selectedFile) {
+      return;
     }
+
+    setFile(selectedFile);
+    setProgress(0);
+    setCurrentStage('idle');
   };
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const droppedFile = e.dataTransfer.files[0];
-    if (droppedFile) {
-      setFile(droppedFile);
-    }
+  const handleFileChange = (event) => {
+    selectFile(event.target.files?.[0]);
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDrop = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (isLoading) {
+      return;
+    }
+
+    selectFile(event.dataTransfer.files?.[0]);
+  };
+
+  const handleDragOver = (event) => {
+    event.preventDefault();
+    event.stopPropagation();
   };
 
   const openFilePicker = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+    if (isLoading) {
+      return;
     }
+
+    fileInputRef.current?.click();
   };
 
-  // تابعی برای دریافت درصد پیشرفت از API
-  const fetchProgress = async () => {
-    if (isComplete) return; // جلوگیری از درخواست اضافی بعد از تکمیل
-
-    try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/progress`,
-      );
-      const data = await response.json();
-
-      setProgress(data.progress); // به‌روزرسانی درصد پیشرفت
-    } catch (error) {
-      console.error('Error fetching progress:', error);
+  const getCurrentStageLabel = () => {
+    if (mediaType === 'VIDEO') {
+      return VIDEO_STAGE_LABELS[currentStage] || 'در حال پردازش ویدئو';
     }
+
+    if (currentStage === 'ready') {
+      return 'آپلود صدا تکمیل شد';
+    }
+
+    return 'در حال آپلود صدا';
   };
 
   const handleUpload = async () => {
     if (!validateInputs()) {
-      toast.showErrorToast('مقادیر را به درستی وارد کنید');
+      toast.showErrorToast('مقادیر را به درستی وارد کنید.');
+
       return;
     }
 
     if (!file) {
       toast.showErrorToast('لطفاً یک فایل انتخاب کنید.');
+
       return;
     }
-    setCurrentStage('processing');
+
+    const abortController = new AbortController();
+
+    uploadControllerRef.current = abortController;
+
     setIsLoading(true);
+    setProgress(0);
+    setCurrentStage(mediaType === 'VIDEO' ? 'creating' : 'uploading');
+
     try {
-      let outFiles;
-      // اگر رسانه ویدیو باشد
       if (mediaType === 'VIDEO') {
-        outFiles = await processVideo(
-          file,
-          videoDirection === 'HORIZONTAL',
-          (progress) => {
-            setProgress(progress);
+        const result = await onUpload(file, accessLevel, {
+          signal: abortController.signal,
+
+          onProgress: (value) => {
+            setProgress(clampProgress(value));
           },
-        );
-      } else if (mediaType === 'AUDIO') {
-        // برای فایل صوتی هیچ پردازش خاصی نیاز نیست
-        outFiles = [file];
-      }
-      if (!outFiles || outFiles.length === 0) {
-        throw new Error('No output files generated.');
+
+          onStageChange: (stage) => {
+            if (typeof stage === 'string' && stage.length > 0) {
+              setCurrentStage(stage);
+            }
+          },
+        });
+
+        setCurrentStage('ready');
+        setProgress(100);
+
+        toast.showSuccessToast(result?.message || 'ویدئو با موفقیت ثبت شد.');
+
+        uploadControllerRef.current = null;
+        onClose();
+
+        return;
       }
 
-      setCurrentStage('uploading');
-      setProgress(0);
-      startPolling();
+      await onUpload([file], false, accessLevel);
 
-      await onUpload(outFiles, mediaType === 'VIDEO', accessLevel);
-    } catch (error) {
-      if (error.name === 'AbortError') {
-        console.error('Upload canceled.');
-      } else {
-        console.error('Upload error:', error);
-        toast.showErrorToast('خطایی در آپلود فایل رخ داده است.');
-      }
-    } finally {
-      setIsLoading(false);
+      setCurrentStage('ready');
       setProgress(100);
-      setIsComplete(true);
-    }
-  };
 
-  const startPolling = () => {
-    if (pollingRef.current) return;
-    pollingRef.current = setInterval(() => {
-      if (!isComplete) {
-        fetchProgress();
-      } else {
-        clearInterval(pollingRef.current);
-        pollingRef.current = null; // ریست پولینگ
+      uploadControllerRef.current = null;
+      onClose();
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        setCurrentStage('cancelled');
+
+        toast.showErrorToast(
+          mediaType === 'VIDEO' ? 'آپلود ویدئو لغو شد.' : 'آپلود صدا لغو شد.'
+        );
+
+        return;
       }
-    }, 5000);
-  };
 
-  const stopPolling = () => {
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+      setCurrentStage('failed');
+
+      console.error('Media upload error:', error);
+
+      toast.showErrorToast(
+        error?.message || 'خطایی در آپلود فایل رخ داده است.'
+      );
+    } finally {
+      uploadControllerRef.current = null;
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     return () => {
-      stopPolling();
-      controller.abort();
+      uploadControllerRef.current?.abort();
     };
   }, []);
 
@@ -184,7 +230,14 @@ const UploadSessionMediaModal = ({
           <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
             {mediaType === 'VIDEO' ? 'آپلود ویدیو جلسه' : 'آپلود صدا جلسه'}
           </h3>
-          <button onClick={onClose} disabled={isLoading}>
+
+          <button
+            type='button'
+            onClick={onClose}
+            disabled={isLoading}
+            aria-label='بستن'
+            className={isLoading ? 'cursor-not-allowed opacity-50' : ''}
+          >
             <IoClose
               size={24}
               className='text-subtext-light md:cursor-pointer dark:text-subtext-dark'
@@ -192,43 +245,53 @@ const UploadSessionMediaModal = ({
           </button>
         </div>
 
-        <div className='mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2'>
-          <DropDown
-            options={accessMediaOptions}
-            placeholder='سطح دسترسی را مشخص کنید'
-            value={accessLevel}
-            onChange={setAccessLevel}
-            errorMessage={errorMessages.accessLevel}
-            label='سطح دسترسی'
-            fullWidth
-            className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-          />
-          {mediaType === 'VIDEO' && (
+        {showAccessLevel && (
+          <div className='mt-6 grid grid-cols-1 gap-6'>
             <DropDown
-              options={videoDirectionOptions}
-              placeholder='جهت ویدیو را مشخص کنید'
-              value={videoDirection}
-              onChange={setVideoDirection}
-              label='جهت ویدیو'
+              options={accessMediaOptions}
+              placeholder='سطح دسترسی را مشخص کنید'
+              value={accessLevel}
+              onChange={(value) => {
+                setAccessLevel(value);
+
+                setErrorMessages((previous) => ({
+                  ...previous,
+                  accessLevel: '',
+                }));
+              }}
+              errorMessage={errorMessages.accessLevel}
+              label='سطح دسترسی'
               fullWidth
               className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
             />
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Description */}
         <p className='px-2 pb-1 pt-6 text-xs text-subtext-light xs:text-sm dark:text-subtext-dark'>
           {isUpdate
-            ? `برای آپدیت ${mediaType === 'VIDEO' ? 'ویدیو' : 'صدا'} جلسه ، فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید. فایل قبلی به صورت خودکار پاک خواهد شد.`
-            : `برای آپلود ${mediaType === 'VIDEO' ? 'ویدیو' : 'صدا'} جلسه فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید.`}
+            ? `برای آپدیت ${
+                mediaType === 'VIDEO' ? 'ویدیو' : 'صدا'
+              } جلسه، فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید. فایل قبلی به‌صورت خودکار جایگزین خواهد شد.`
+            : `برای آپلود ${
+                mediaType === 'VIDEO' ? 'ویدیو' : 'صدا'
+              } جلسه، فایل خود را در اینجا بکشید و رها کنید یا با کلیک انتخاب کنید.`}
         </p>
 
-        {/* Upload Area */}
         <div
-          className='mt-4 flex h-40 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark'
+          role='button'
+          tabIndex={0}
+          className={`mt-4 flex h-40 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark ${
+            isLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={openFilePicker}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              openFilePicker();
+            }
+          }}
         >
           <input
             type='file'
@@ -240,50 +303,61 @@ const UploadSessionMediaModal = ({
             className='hidden'
             ref={fileInputRef}
             onChange={handleFileChange}
+            disabled={isLoading}
           />
-          <label className='cursor-pointer'>
+
+          <div className='cursor-pointer'>
             {file ? (
-              <p className='text-sm text-text-light dark:text-text-dark'>
-                {file.name}
-              </p>
+              <>
+                <p className='break-all px-4 text-sm text-text-light dark:text-text-dark'>
+                  {file.name}
+                </p>
+
+                <p className='mt-2 text-xs text-subtext-light dark:text-subtext-dark'>
+                  {(file.size / 1024 / 1024).toFixed(2)} مگابایت
+                </p>
+              </>
             ) : (
               <p className='text-sm text-subtext-light dark:text-subtext-dark'>
                 {mediaType === 'VIDEO'
-                  ? 'Click to upload video'
-                  : 'Click to upload audio'}
+                  ? 'برای انتخاب ویدئو کلیک کنید'
+                  : 'برای انتخاب فایل صوتی کلیک کنید'}
               </p>
             )}
-          </label>
+          </div>
         </div>
+
         {isLoading && (
-          <>
-            {mediaType === 'VIDEO' && (
-              <div>
-                <div className='mt-4 h-3 w-full rounded-full bg-foreground-light dark:bg-foreground-dark'>
-                  <div
-                    className='h-3 rounded-full bg-primary'
-                    style={{ width: `${progress}%` }}
-                  ></div>
-                </div>
-                <div className='mt-2 text-center font-faNa text-sm'>
-                  {currentStage === 'processing'
-                    ? `${mediaType === 'VIDEO' ? 'پردازش ویدیو' : 'پردازش صدا'}: ${progress}%`
-                    : `${mediaType === 'VIDEO' ? 'آپلود ویدیو' : 'آپلود صدا'}: ${progress}%`}
-                </div>
-              </div>
-            )}
-          </>
+          <div>
+            <div className='mt-4 h-3 w-full overflow-hidden rounded-full bg-foreground-light dark:bg-foreground-dark'>
+              <div
+                className='h-3 rounded-full bg-primary transition-[width] duration-300'
+                style={{
+                  width: `${progress}%`,
+                }}
+              />
+            </div>
+
+            <div className='mt-2 text-center font-faNa text-sm text-text-light dark:text-text-dark'>
+              {`${getCurrentStageLabel()}: ${progress}%`}
+            </div>
+          </div>
         )}
+
         <p
-          className={`mt-2 text-xs text-secondary sm:text-sm ${isLoading ? 'block' : 'hidden'}`}
+          className={`mt-2 text-xs text-secondary sm:text-sm ${
+            isLoading ? 'block' : 'hidden'
+          }`}
         >
-          لطفا تا پایان فرایند آپلود از این باکس خارج نشوید!
+          تا پایان آپلود اولیه این پنجره را نبندید. پس از ورود ویدئو به صف،
+          پردازش روی سرور انجام می‌شود.
         </p>
 
         <Button
           onClick={handleUpload}
           className='mt-8 text-xs sm:text-base'
           isLoading={isLoading}
+          disabled={isLoading}
         >
           {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
         </Button>
@@ -296,8 +370,9 @@ UploadSessionMediaModal.propTypes = {
   onClose: PropTypes.func.isRequired,
   onUpload: PropTypes.func.isRequired,
   mediaAccessLevel: PropTypes.string,
-  mediaType: PropTypes.oneOf(['VIDEO', 'AUDIO']).isRequired, // نوع رسانه را مشخص می‌کند
+  mediaType: PropTypes.oneOf(['VIDEO', 'AUDIO']).isRequired,
   isUpdate: PropTypes.bool,
+  showAccessLevel: PropTypes.bool,
 };
 
 export default UploadSessionMediaModal;

@@ -23,6 +23,12 @@ import { createFFmpeg } from '@ffmpeg/ffmpeg';
 import SimpleDropdown from '@/components/Ui/SimpleDropDown/SimpleDropDown';
 import UploadSessionMediaModal from '@/app/a-panel/components/modules/UploadSessionVideoModal/UploadSessionVideoModal';
 import AudioModal from '@/app/a-panel/components/modules/AudioModal/AudioModal';
+import {
+  cancelAdminVideoJob,
+  createAdminVideoJob,
+  uploadAdminVideoSource,
+  waitForAdminVideoJob,
+} from '@/server/videoJobClient';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -86,7 +92,7 @@ const AddTermSessionPage = () => {
   const fetchTerms = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms`
       );
       if (!response.ok) {
         throw new Error('Failed to fetch terms');
@@ -115,7 +121,7 @@ const AddTermSessionPage = () => {
     setLoadingSessions((prev) => ({ ...prev, [termId]: true }));
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termId}/sessions`
       );
       const data = await response.json();
       setSessions((prev) => ({ ...prev, [termId]: data }));
@@ -150,7 +156,7 @@ const AddTermSessionPage = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/terms/${termTempId}/sessions/${sessionTempId}`,
         {
           method: 'DELETE',
-        },
+        }
       );
 
       const data = await response.json();
@@ -184,7 +190,7 @@ const AddTermSessionPage = () => {
         `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/courses/${courseId}/terms/${termTempId}`,
         {
           method: 'DELETE',
-        },
+        }
       );
 
       const data = await response.json();
@@ -216,144 +222,199 @@ const AddTermSessionPage = () => {
     setShowUploadAudioSessionModal(true);
   };
 
-  const handleSessionVideoUpload = async (
-    outFiles,
-    isVertical,
-    accessLevel,
-  ) => {
-    if (!outFiles) {
-      toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
-      return;
+  const handleSessionVideoUpload = async (file, accessLevel, controls = {}) => {
+    const { signal, onProgress, onStageChange } = controls;
+
+    if (!(file instanceof File)) {
+      throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
     }
 
-    const formData = new FormData();
-    outFiles.forEach((file, index) => {
-      formData.append(`file_${index}`, new Blob([file.data]), file.name);
-    });
-    formData.append('termId', termTempId);
-    formData.append('sessionId', sessionTempId);
+    const termId = Number(termTempId);
+    const sessionId = sessionTempId;
+
+    if (!Number.isInteger(termId) || termId <= 0 || !sessionId) {
+      throw new Error('اطلاعات ترم یا جلسه معتبر نیست.');
+    }
+
+    let jobId = null;
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video`,
-        {
-          method: 'POST',
-          body: formData,
+      onStageChange?.('creating');
+      onProgress?.(0);
+
+      const createdJob = await createAdminVideoJob({
+        sessionId,
+        termId,
+        accessLevel,
+        signal,
+      });
+
+      jobId = createdJob.id;
+
+      onStageChange?.('uploading');
+      onProgress?.(0);
+
+      await uploadAdminVideoSource({
+        jobId,
+        file,
+        signal,
+        onProgress,
+      });
+
+      onStageChange?.('queued');
+      onProgress?.(0);
+
+      const readyJob = await waitForAdminVideoJob({
+        jobId,
+        signal,
+
+        onUpdate: (job) => {
+          onStageChange?.(job.stage || job.status.toLowerCase());
+
+          onProgress?.(
+            Number.isFinite(job.displayProgress)
+              ? job.displayProgress
+              : job.progress || 0
+          );
         },
-      );
+      });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.showErrorToast('خطایی رخ داده است.');
-        console.error('خطا در آپلود:', errorData.error || 'خطایی رخ داده است.');
-        return;
-      }
-      const { videoKey, message } = await response.json();
+      await fetchSessions(termId, true);
 
-      const resSave = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-video`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            videoKey,
-            accessLevel,
-            sessionId: sessionTempId,
-          }),
-        },
-      );
-
-      if (resSave.ok) {
-        toast.showSuccessToast(message);
-        // فراخوانی دوباره برای دریافت جلسات جدید
-        await fetchSessions(termTempId, true);
-      } else {
-        toast.showErrorToast('خطا در ذخیره سازی.');
-      }
-
-      setShowUploadVideoSessionModal(false);
-    } catch (error) {
-      toast.showErrorToast('خطای غیرمنتظره در آپلود');
-      console.error('خطای غیرمنتظره در آپلود:', error.message);
-    } finally {
       setTermTempId(null);
       setSessionTempId('');
+
+      return {
+        job: readyJob,
+        message: 'ویدئوی جلسه با موفقیت آپلود و پردازش شد.',
+      };
+    } catch (error) {
+      /*
+       * اگر کاربر حین Upload یا QUEUED عملیات را متوقف کند،
+       * تلاش می‌کنیم Job و فایل موقت پاک شوند.
+       *
+       * اگر FFmpeg پردازش را شروع کرده باشد، API ممکن است
+       * پاسخ 409 بدهد؛ Worker در آن حالت ادامه می‌دهد.
+       */
+      if (error?.name === 'AbortError' && jobId) {
+        await cancelAdminVideoJob({
+          jobId,
+        }).catch(() => {});
+      }
+
+      throw error;
     }
   };
 
   const handleSessionAudioUpload = async (
     outFiles,
-    isVertical,
-    accessLevel,
+    _isVertical,
+    accessLevel
   ) => {
-    if (!outFiles) {
-      toast.showErrorToast('لطفاً یک فایل صوتی انتخاب کنید.');
-      return;
+    const audioFile = Array.isArray(outFiles) ? outFiles[0] : outFiles;
+
+    const currentTermId = termTempId;
+    const currentSessionId = sessionTempId;
+
+    if (!audioFile || !(audioFile instanceof File)) {
+      throw new Error('لطفاً یک فایل صوتی معتبر انتخاب کنید.');
     }
+
+    if (!currentTermId || !currentSessionId) {
+      throw new Error('اطلاعات ترم یا جلسه معتبر نیست.');
+    }
+
+    if (!accessLevel) {
+      throw new Error('لطفاً سطح دسترسی فایل صوتی را مشخص کنید.');
+    }
+
     const formData = new FormData();
-    formData.append('file', outFiles[0]);
-    formData.append('folderPath', `audio/${termTempId}/${sessionTempId}`); // مسیر دلخواه
-    formData.append('fileName', 'audio'); // بدون پسوند
 
-    try {
-      const res = await fetch('/api/upload/audio', {
-        method: 'POST',
-        body: formData,
-      });
+    formData.append('file', audioFile);
 
-      const data = await res.json();
+    formData.append('folderPath', `audio/${currentTermId}/${currentSessionId}`);
 
-      if (!res.ok) {
-        throw new Error(data.error || 'خطا در آپلود فایل صوتی');
-      }
+    formData.append('fileName', 'audio');
 
-      const resSave = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/session-audio`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            audioKey: data.fileUrl,
-            accessLevel,
-            sessionId: sessionTempId,
-            audioId: sessionTemp?.audioId,
-          }),
-        },
-      );
+    const uploadResponse = await fetch('/api/upload/audio', {
+      method: 'POST',
+      body: formData,
+    });
 
-      if (resSave.ok) {
-        const audioData = await resSave.json();
-        toast.showSuccessToast(data.message);
-        setSessions((prev) => ({
-          ...prev,
-          [termTempId]: prev[termTempId].map((session) =>
-            session.id === sessionTempId
-              ? {
-                  ...session,
-                  audio: {
-                    id: audioData.data.id,
-                    audioKey: audioData.data.audioKey,
-                    accessLevel: audioData.data.accessLevel,
-                  },
-                  isActive: true,
-                }
-              : session,
-          ),
-        }));
-      } else {
-        toast.showErrorToast('خطا در ذخیره سازی.');
-      }
-    } catch (err) {
-      toast.showErrorToast(err.message);
-    } finally {
-      setTermTempId(null);
-      setSessionTempId('');
-      setShowUploadAudioSessionModal(false);
+    const uploadData = await uploadResponse.json().catch(() => ({}));
+
+    if (!uploadResponse.ok) {
+      throw new Error(uploadData.error || 'خطا در آپلود فایل صوتی.');
     }
+
+    if (!uploadData.fileKey) {
+      throw new Error('مسیر فایل صوتی از سرور دریافت نشد.');
+    }
+
+    const saveResponse = await fetch('/api/session-audio', {
+      method: 'POST',
+
+      headers: {
+        'Content-Type': 'application/json',
+      },
+
+      body: JSON.stringify({
+        audioKey: uploadData.fileKey,
+        accessLevel,
+        sessionId: currentSessionId,
+      }),
+    });
+
+    const saveData = await saveResponse.json().catch(() => ({}));
+
+    if (!saveResponse.ok) {
+      throw new Error(saveData.error || 'خطا در ذخیره اطلاعات فایل صوتی.');
+    }
+
+    if (!saveData.data?.id) {
+      throw new Error('اطلاعات فایل صوتی از سرور دریافت نشد.');
+    }
+
+    setSessions((previousSessions) => {
+      const termSessions = previousSessions[currentTermId] || [];
+
+      return {
+        ...previousSessions,
+
+        [currentTermId]: termSessions.map((session) =>
+          session.id === currentSessionId
+            ? {
+                ...session,
+
+                type: saveData.session?.type || 'AUDIO',
+
+                isActive: saveData.session?.isActive ?? true,
+
+                audio: {
+                  id: saveData.data.id,
+
+                  audioKey: saveData.data.audioKey,
+
+                  accessLevel: saveData.data.accessLevel,
+
+                  status: saveData.data.status,
+
+                  createAt: saveData.data.createAt,
+
+                  updatedAt: saveData.data.updatedAt,
+                },
+              }
+            : session
+        ),
+      };
+    });
+
+    return {
+      audio: saveData.data,
+      session: saveData.session,
+
+      message: uploadData.message || 'فایل صوتی جلسه با موفقیت آپلود شد.',
+    };
   };
 
   const handleUpdateSessionSuccessfully = (updatedSession) => {
@@ -367,7 +428,7 @@ const AddTermSessionPage = () => {
       const updatedSessions = existingSessions.map((session) =>
         session.id === updatedSession.id
           ? { ...session, ...updatedSession }
-          : session,
+          : session
       );
 
       return {
@@ -384,22 +445,29 @@ const AddTermSessionPage = () => {
     try {
       setVideoLoadingId(videoId);
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate-video-link`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/media-url`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ videoKey }),
-        },
+          body: JSON.stringify({
+            mediaKey: videoKey,
+          }),
+        }
       );
 
       if (!response.ok) {
         throw new Error('Failed to fetch temporary link');
       }
 
-      const { signedUrl } = await response.json();
-      setTempVideoUrl(signedUrl);
+      const result = await response.json();
+
+      if (!response.ok || !result?.mediaUrl) {
+        throw new Error(result?.error || 'دریافت آدرس ویدئو ناموفق بود.');
+      }
+
+      setTempVideoUrl(result.mediaUrl);
       setShowVideoModal(true);
       setVideoLoadingId(null);
     } catch (error) {
@@ -424,7 +492,7 @@ const AddTermSessionPage = () => {
         [row.termId]: prev[row.termId].map((session) =>
           session.id === row.id
             ? { ...session, isActive: currentStatus } // وضعیت جدید به‌روزرسانی می‌شود
-            : session,
+            : session
         ),
       }));
       const response = await fetch(
@@ -433,7 +501,7 @@ const AddTermSessionPage = () => {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ isActive: currentStatus }), // ارسال مقدار جدید
-        },
+        }
       );
 
       if (!response.ok) {
@@ -447,7 +515,7 @@ const AddTermSessionPage = () => {
         [row.termId]: prev[row.termId].map((session) =>
           session.id === row.id
             ? { ...session, isActive: currentStatus }
-            : session,
+            : session
         ),
       }));
     }
@@ -465,7 +533,7 @@ const AddTermSessionPage = () => {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Failed to update session order');
@@ -499,12 +567,12 @@ const AddTermSessionPage = () => {
 
   const tableColumns = [
     {
-      key: "order",
-      minWidth: "100px",
-      label: "ترتیب جلسات",
+      key: 'order',
+      minWidth: '100px',
+      label: 'ترتیب جلسات',
       render: (_, row) => {
         const termSessions = sessions[row.termId] || [];
-        
+
         // تعداد جلسات ← n
         const total = termSessions.length;
 

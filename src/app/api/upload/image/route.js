@@ -1,95 +1,251 @@
 /* eslint-disable no-undef */
+
 import { NextResponse } from 'next/server';
-import { S3 } from 'aws-sdk';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
 
-// S3 Configuration
-const s3 = new S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  endpoint: process.env.AWS_S3_ENDPOINT,
-  signatureVersion: 'v4',
-  s3ForcePathStyle: true,
-  params: {
-    Bucket: 'samane-yoga',
-  },
-});
+import { getMediaStorage, normalizeStorageKey } from '@/server/storage';
 
-const bucketName = process.env.AWS_S3_BUCKET_NAME;
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+import { toPublicMediaPath } from '@/server/media/public-media-path';
 
-// Upload function
-const uploadToS3 = async (filePath, key) => {
-  const fileContent = await fs.readFile(filePath);
-  const params = {
-    Bucket: bucketName,
-    Key: key,
-    Body: fileContent,
-  };
-  await s3.upload(params).promise();
-  return `${process.env.AWS_S3_BASE_URL}/${key}`;
+const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
+
+const IMAGE_MIME_TYPES = {
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/png': 'png',
+  'image/gif': 'gif',
+  'image/webp': 'webp',
 };
 
-// Route handler
-export async function POST(req) {
-  const data = await req.formData();
-  const file = data.get('file');
-  const folderPath = data.get('folderPath');
-  let fileName = data.get('fileName');
+class ImageUploadError extends Error {
+  constructor(message, status = 400) {
+    super(message);
 
-  if (!file || typeof file.arrayBuffer !== 'function' || !folderPath) {
-    return NextResponse.json(
-      { error: 'Please provide a valid file and folderPath.' },
-      { status: 400 }
-    );
+    this.name = 'ImageUploadError';
+    this.status = status;
+  }
+}
+
+const getMaxImageBytes = () => {
+  const configuredValue = Number(process.env.MAX_IMAGE_BYTES);
+
+  if (Number.isFinite(configuredValue) && configuredValue > 0) {
+    return Math.floor(configuredValue);
   }
 
-  // Allowed image types
-  const validImageTypes = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/gif': 'gif',
-    'image/webp': 'webp',
-    'image/jpg': 'jpg',
-  };
+  return DEFAULT_MAX_IMAGE_BYTES;
+};
 
-  // Validate file type
-  const fileExtension = validImageTypes[file.type];
-  if (!fileExtension) {
-    return NextResponse.json(
-      { error: 'Only image files (jpeg, png, gif, webp, jpg) are allowed.' },
-      { status: 400 }
-    );
+const normalizeFolderPath = (value) => {
+  const folderPath =
+    typeof value === 'string' ? value.normalize('NFC').trim() : '';
+
+  if (!folderPath) {
+    throw new ImageUploadError('مسیر ذخیره‌سازی تصویر ارسال نشده است.');
   }
 
-  // Add extension to fileName if missing
-  if (!fileName.endsWith(`.${fileExtension}`)) {
-    fileName = `${fileName}.${fileExtension}`;
+  if (folderPath.length > 500) {
+    throw new ImageUploadError('مسیر ذخیره‌سازی تصویر بیش از حد طولانی است.');
   }
-
-  const tempDir = os.tmpdir();
-  const tempFilePath = path.join(tempDir, fileName);
 
   try {
-    // Save file to temp directory
-    await fs.writeFile(tempFilePath, Buffer.from(await file.arrayBuffer()));
+    return normalizeStorageKey(folderPath);
+  } catch {
+    throw new ImageUploadError('مسیر ذخیره‌سازی تصویر معتبر نیست.');
+  }
+};
 
-    // Upload to S3
-    const key = `${folderPath}/${fileName}`;
-    const fileUrl = await uploadToS3(tempFilePath, key);
+const normalizeFileName = (value) => {
+  const rawName =
+    typeof value === 'string' ? value.normalize('NFC').trim() : '';
 
-    return NextResponse.json({
-      fileUrl,
-      message: 'آپلود موفقیت‌آمیز بود',
+  const fileNameWithoutExtension = rawName.replace(/\.[^.]+$/, '').trim();
+
+  if (!fileNameWithoutExtension) {
+    throw new ImageUploadError('نام تصویر معتبر نیست.');
+  }
+
+  if (fileNameWithoutExtension.length > 120) {
+    throw new ImageUploadError('نام تصویر بیش از حد طولانی است.');
+  }
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(fileNameWithoutExtension)) {
+    throw new ImageUploadError(
+      'نام تصویر فقط می‌تواند شامل حروف انگلیسی، عدد، خط تیره و زیرخط باشد.'
+    );
+  }
+
+  return fileNameWithoutExtension;
+};
+
+const detectImageExtension = (buffer) => {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return 'jpg';
+  }
+
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return 'png';
+  }
+
+  if (buffer.length >= 6) {
+    const gifSignature = buffer.subarray(0, 6).toString('ascii');
+
+    if (gifSignature === 'GIF87a' || gifSignature === 'GIF89a') {
+      return 'gif';
+    }
+  }
+
+  if (buffer.length >= 12) {
+    const riffSignature = buffer.subarray(0, 4).toString('ascii');
+
+    const webpSignature = buffer.subarray(8, 12).toString('ascii');
+
+    if (riffSignature === 'RIFF' && webpSignature === 'WEBP') {
+      return 'webp';
+    }
+  }
+
+  return null;
+};
+
+const validateImageType = ({ file, buffer }) => {
+  const mimeType =
+    typeof file.type === 'string' ? file.type.toLowerCase().trim() : '';
+
+  const mimeExtension = IMAGE_MIME_TYPES[mimeType];
+
+  if (!mimeExtension) {
+    throw new ImageUploadError('فقط تصاویر JPG، PNG، GIF و WebP مجاز هستند.');
+  }
+
+  const detectedExtension = detectImageExtension(buffer);
+
+  if (!detectedExtension) {
+    throw new ImageUploadError('محتوای فایل انتخاب‌شده یک تصویر معتبر نیست.');
+  }
+
+  if (detectedExtension !== mimeExtension) {
+    throw new ImageUploadError(
+      'نوع واقعی تصویر با فرمت اعلام‌شده فایل مطابقت ندارد.'
+    );
+  }
+
+  return detectedExtension;
+};
+
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
+
+    const file = formData.get('file');
+
+    if (!file || typeof file.arrayBuffer !== 'function') {
+      throw new ImageUploadError('لطفاً یک تصویر معتبر انتخاب کنید.');
+    }
+
+    if (typeof file.size !== 'number' || file.size <= 0) {
+      throw new ImageUploadError('فایل تصویر خالی است.');
+    }
+
+    const maxImageBytes = getMaxImageBytes();
+
+    if (file.size > maxImageBytes) {
+      throw new ImageUploadError(
+        `حجم تصویر نباید بیشتر از ${Math.floor(
+          maxImageBytes / 1024 / 1024
+        )} مگابایت باشد.`,
+        413
+      );
+    }
+
+    const folderPath = normalizeFolderPath(formData.get('folderPath'));
+
+    const baseFileName = normalizeFileName(formData.get('fileName') || 'image');
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    const fileExtension = validateImageType({
+      file,
+      buffer: fileBuffer,
     });
+
+    const fileName = `${baseFileName}.${fileExtension}`;
+
+    const fileKey = normalizeStorageKey(`${folderPath}/${fileName}`);
+
+    const storage = getMediaStorage();
+
+    const savedFile = await storage.saveBuffer(fileBuffer, fileKey);
+
+    const publicPath = toPublicMediaPath(savedFile.key);
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        fileKey: savedFile.key,
+
+        /*
+         * مقداری که فرم‌ها و دیتابیس
+         * استفاده می‌کنند.
+         */
+        fileUrl: publicPath,
+
+        /*
+         * فقط برای تست و دیباگ.
+         * در دیتابیس ذخیره نشود.
+         */
+        absoluteUrl: savedFile.url,
+
+        contentType: file.type || null,
+
+        size: file.size,
+
+        message: 'تصویر با موفقیت آپلود شد.',
+      },
+      {
+        status: 201,
+      }
+    );
   } catch (error) {
-    console.error('Error uploading image:', error);
-    return NextResponse.json({ error: 'خطا در پردازش آپلود' }, { status: 500 });
-  } finally {
-    // Clean up temporary file
-    await fs
-      .unlink(tempFilePath)
-      .catch((err) => console.error('Error deleting temp file:', err));
+    if (error instanceof ImageUploadError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
+
+    console.error('[upload-image] Upload error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'خطا در پردازش و ذخیره تصویر.',
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

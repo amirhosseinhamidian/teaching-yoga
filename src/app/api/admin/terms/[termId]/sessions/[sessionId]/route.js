@@ -1,235 +1,588 @@
 /* eslint-disable no-undef */
-import prismadb from '@/libs/prismadb';
+
 import { NextResponse } from 'next/server';
-import AWS from 'aws-sdk';
 
-// ===============================
-//           DELETE
-// ===============================
-export async function DELETE(req, { params }) {
-  const { termId, sessionId } = params;
+import prismadb from '@/libs/prismadb';
 
-  // AWS SDK v2
-  const s3 = new AWS.S3({
-    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-    endpoint: process.env.AWS_S3_ENDPOINT,
-    signatureVersion: 'v4',
-    s3ForcePathStyle: true,
-    params: {
-      Bucket: 'samane-yoga',
+import { getMediaStorage, normalizeStorageKey } from '@/server/storage';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const VALID_ACCESS_LEVELS = new Set(['PUBLIC', 'REGISTERED', 'PURCHASED']);
+
+const VALID_SESSION_TYPES = new Set(['VIDEO', 'AUDIO']);
+
+class SessionRouteError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+
+    this.name = 'SessionRouteError';
+    this.status = status;
+  }
+}
+
+const getRouteParams = async (context) => {
+  const params = await context.params;
+
+  const termId = Number(params?.termId);
+
+  const sessionId =
+    typeof params?.sessionId === 'string' ? params.sessionId.trim() : '';
+
+  if (!Number.isInteger(termId) || termId <= 0) {
+    throw new SessionRouteError('شناسه ترم معتبر نیست.');
+  }
+
+  if (!sessionId) {
+    throw new SessionRouteError('شناسه جلسه معتبر نیست.');
+  }
+
+  return {
+    termId,
+    sessionId,
+  };
+};
+
+const getStorageKey = (value) => {
+  const mediaKey = typeof value === 'string' ? value.trim() : '';
+
+  if (!mediaKey) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(mediaKey)) {
+    throw new Error('Absolute legacy media URLs are no longer supported.');
+  }
+
+  return normalizeStorageKey(mediaKey);
+};
+
+const getVideoDirectoryKey = (videoValue) => {
+  const videoKey = getStorageKey(videoValue);
+
+  if (!videoKey) {
+    return null;
+  }
+
+  if (videoKey.endsWith('/master.m3u8')) {
+    return videoKey.slice(0, -'/master.m3u8'.length);
+  }
+
+  const segments = videoKey.split('/');
+
+  if (segments.length <= 1) {
+    return videoKey;
+  }
+
+  segments.pop();
+
+  return segments.join('/');
+};
+
+const cleanupVideoFiles = async (videoValue) => {
+  const directoryKey = getVideoDirectoryKey(videoValue);
+
+  if (!directoryKey) {
+    return {
+      deleted: false,
+      driver: null,
+      key: null,
+      reason: 'empty-key',
+    };
+  }
+
+  const storage = getMediaStorage();
+
+  if (
+    typeof storage.exists !== 'function' ||
+    typeof storage.deletePath !== 'function'
+  ) {
+    throw new Error('The configured media storage does not support deletion.');
+  }
+
+  const exists = await storage.exists(directoryKey);
+
+  if (!exists) {
+    return {
+      deleted: false,
+      driver: 'media-storage',
+      key: directoryKey,
+      reason: 'not-found',
+    };
+  }
+
+  await storage.deletePath(directoryKey);
+
+  return {
+    deleted: true,
+    driver: 'media-storage',
+    key: directoryKey,
+    reason: null,
+  };
+};
+
+const cleanupAudioFile = async (audioValue) => {
+  const audioKey = getStorageKey(audioValue);
+
+  if (!audioKey) {
+    return {
+      deleted: false,
+      driver: null,
+      key: null,
+      reason: 'empty-key',
+    };
+  }
+
+  const storage = getMediaStorage();
+
+  if (
+    typeof storage.exists !== 'function' ||
+    typeof storage.deletePath !== 'function'
+  ) {
+    throw new Error('The configured media storage does not support deletion.');
+  }
+
+  const exists = await storage.exists(audioKey);
+
+  if (!exists) {
+    return {
+      deleted: false,
+      driver: 'media-storage',
+      key: audioKey,
+      reason: 'not-found',
+    };
+  }
+
+  await storage.deletePath(audioKey);
+
+  return {
+    deleted: true,
+    driver: 'media-storage',
+    key: audioKey,
+    reason: null,
+  };
+};
+
+const reorderTermSessions = async (tx, termId) => {
+  const remainingLinks = await tx.sessionTerm.findMany({
+    where: {
+      termId,
+    },
+
+    orderBy: [
+      {
+        order: 'asc',
+      },
+      {
+        id: 'asc',
+      },
+    ],
+
+    select: {
+      id: true,
     },
   });
 
-  try {
-    // 1) دریافت جلسه
-    const session = await prismadb.session.findUnique({
-      where: { id: sessionId },
-      include: { video: true, audio: true },
-    });
+  for (let index = 0; index < remainingLinks.length; index += 1) {
+    const sessionTerm = remainingLinks[index];
 
-    if (!session) {
-      return NextResponse.json({ error: 'جلسه یافت نشد.' }, { status: 404 });
-    }
-
-    // 2) چک حضور جلسه در ترم‌های دیگر
-    const otherLinks = await prismadb.sessionTerm.findMany({
+    await tx.sessionTerm.update({
       where: {
-        sessionId,
-        NOT: { termId: parseInt(termId) },
+        id: sessionTerm.id,
+      },
+
+      data: {
+        order: index + 1,
       },
     });
-
-    // 3) حذف لینک این ترم
-    await prismadb.sessionTerm.deleteMany({
-      where: {
-        termId: parseInt(termId),
-        sessionId,
-      },
-    });
-
-    // 4) ساماندهی مجدد order
-    const remaining = await prismadb.sessionTerm.findMany({
-      where: { termId: parseInt(termId) },
-      orderBy: { order: 'asc' },
-    });
-
-    await Promise.all(
-      remaining.map((st, idx) =>
-        prismadb.sessionTerm.update({
-          where: { id: st.id },
-          data: { order: idx + 1 },
-        })
-      )
-    );
-
-    // اگر جلسه در ترم دیگر هست، فقط unlink می‌کنیم و برمی‌گردیم
-    if (otherLinks.length > 0) {
-      return NextResponse.json(
-        { message: 'جلسه فقط از این ترم حذف شد.' },
-        { status: 200 }
-      );
-    }
-
-    // ========== حذف کامل جلسه + فایل‌ها ==========
-    // --- حذف فایل ویدیو ---
-    if (session.video?.videoKey) {
-      try {
-        const videoKey = session.video.videoKey.replace('/master.m3u8', '');
-
-        const listObjects = await s3
-          .listObjectsV2({
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Prefix: videoKey,
-          })
-          .promise();
-
-        if (listObjects?.Contents?.length > 0) {
-          await s3
-            .deleteObjects({
-              Bucket: process.env.AWS_S3_BUCKET_NAME,
-              Delete: {
-                Objects: listObjects.Contents.map((o) => ({ Key: o.Key })),
-              },
-            })
-            .promise();
-        }
-      } catch (err) {
-        console.error('Error deleting video file:', err);
-      }
-    }
-
-    // --- حذف فایل صوتی ---
-    if (session.audio?.audioKey) {
-      try {
-        await s3
-          .deleteObject({
-            Bucket: process.env.AWS_S3_BUCKET_NAME,
-            Key: session.audio.audioKey,
-          })
-          .promise();
-      } catch (err) {
-        console.error('Error deleting audio file:', err);
-      }
-    }
-
-    // --- حذف رکوردهای دیتابیس ---
-    const trx = [
-      prismadb.sessionProgress.deleteMany({ where: { sessionId } }),
-      prismadb.session.delete({ where: { id: sessionId } }),
-    ];
-
-    if (session.video)
-      trx.push(
-        prismadb.sessionVideo.delete({ where: { id: session.video.id } })
-      );
-
-    if (session.audio)
-      trx.push(
-        prismadb.sessionAudio.delete({ where: { id: session.audio.id } })
-      );
-
-    await prismadb.$transaction(trx);
-
-    return NextResponse.json(
-      { message: 'جلسه کاملاً حذف شد.' },
-      { status: 200 }
-    );
-  } catch (err) {
-    console.error('Error deleting session:', err);
-    return NextResponse.json({ error: 'خطا در حذف جلسه.' }, { status: 500 });
   }
-}
-// ===============================
-//             PUT
-// ===============================
-export async function PUT(req, { params }) {
-  const { termId, sessionId } = params;
+};
 
+// ===============================
+// DELETE
+// ===============================
+
+export async function DELETE(_request, context) {
   try {
-    const { name, duration, accessLevel, type, order } = await req.json();
+    const { termId, sessionId } = await getRouteParams(context);
 
-    if (!name) {
-      return NextResponse.json(
-        { error: 'عنوان جلسه معتبر نیست.' },
-        { status: 400 }
-      );
-    }
+    const deletionResult = await prismadb.$transaction(async (tx) => {
+      const session = await tx.session.findUnique({
+        where: {
+          id: sessionId,
+        },
 
-    if (!duration || typeof duration !== 'number' || duration <= 0) {
-      return NextResponse.json(
-        { error: 'مدت زمان باید عددی معتبر باشد.' },
-        { status: 400 }
-      );
-    }
+        include: {
+          video: true,
+          audio: true,
+        },
+      });
 
-    if (
-      !accessLevel ||
-      !['PUBLIC', 'REGISTERED', 'PURCHASED'].includes(accessLevel)
-    ) {
-      return NextResponse.json(
-        { error: 'سطح دسترسی مدیا معتبر نیست.' },
-        { status: 400 }
-      );
-    }
+      if (!session) {
+        throw new SessionRouteError('جلسه یافت نشد.', 404);
+      }
 
-    if (!order || typeof order !== 'number') {
-      return NextResponse.json(
-        { error: 'ترتیب جلسه معتبر نیست.' },
-        { status: 400 }
-      );
-    }
+      const currentLink = await tx.sessionTerm.findFirst({
+        where: {
+          termId,
+          sessionId,
+        },
 
-    const session = await prismadb.session.findUnique({
-      where: { id: sessionId },
-      include: { video: true, audio: true },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!currentLink) {
+        throw new SessionRouteError('این جلسه به ترم موردنظر متصل نیست.', 404);
+      }
+
+      const otherLinkCount = await tx.sessionTerm.count({
+        where: {
+          sessionId,
+
+          NOT: {
+            termId,
+          },
+        },
+      });
+
+      await tx.sessionTerm.deleteMany({
+        where: {
+          termId,
+          sessionId,
+        },
+      });
+
+      await reorderTermSessions(tx, termId);
+
+      if (otherLinkCount > 0) {
+        return {
+          fullyDeleted: false,
+          sessionId,
+          videoKey: null,
+          audioKey: null,
+        };
+      }
+
+      const videoKey = session.video?.videoKey || null;
+
+      const audioKey = session.audio?.audioKey || null;
+
+      const videoId = session.video?.id || null;
+
+      const audioId = session.audio?.id || null;
+
+      await tx.sessionProgress.deleteMany({
+        where: {
+          sessionId,
+        },
+      });
+
+      await tx.session.delete({
+        where: {
+          id: sessionId,
+        },
+      });
+
+      if (videoId) {
+        await tx.sessionVideo.deleteMany({
+          where: {
+            id: videoId,
+          },
+        });
+      }
+
+      if (audioId) {
+        await tx.sessionAudio.deleteMany({
+          where: {
+            id: audioId,
+          },
+        });
+      }
+
+      return {
+        fullyDeleted: true,
+        sessionId,
+        videoKey,
+        audioKey,
+      };
     });
 
-    if (!session) {
+    if (!deletionResult.fullyDeleted) {
       return NextResponse.json(
-        { error: 'جلسه‌ای با این شناسه یافت نشد.' },
-        { status: 404 }
+        {
+          success: true,
+          fullyDeleted: false,
+
+          message: 'جلسه فقط از این ترم حذف شد و در ترم‌های دیگر باقی ماند.',
+
+          cleanup: {
+            video: null,
+            audio: null,
+          },
+
+          warnings: [],
+        },
+        {
+          status: 200,
+        }
       );
     }
 
-    // ===============================
-    // بروزرسانی Session
-    // ===============================
+    const cleanupWarnings = [];
 
-    const updateData = {
-      name,
-      duration,
+    const cleanupResult = {
+      video: null,
+      audio: null,
     };
 
-    if (type === 'VIDEO' && session.video) {
-      updateData.video = { update: { accessLevel } };
+    if (deletionResult.videoKey) {
+      try {
+        cleanupResult.video = await cleanupVideoFiles(deletionResult.videoKey);
+
+        if (cleanupResult.video.reason === 'not-found') {
+          cleanupWarnings.push(
+            'رکورد ویدئو حذف شد، اما پوشه فایل ویدئو در فضای ذخیره‌سازی پیدا نشد.'
+          );
+        }
+      } catch (error) {
+        console.error('[session-delete] Video cleanup failed:', error);
+
+        cleanupWarnings.push(
+          'رکورد جلسه حذف شد، اما پاک‌سازی فایل‌های ویدئو کامل نشد.'
+        );
+      }
     }
 
-    if (type === 'AUDIO' && session.audio) {
-      updateData.audio = { update: { accessLevel } };
+    if (deletionResult.audioKey) {
+      try {
+        cleanupResult.audio = await cleanupAudioFile(deletionResult.audioKey);
+
+        if (cleanupResult.audio.reason === 'not-found') {
+          cleanupWarnings.push(
+            'رکورد صوت حذف شد، اما فایل صوتی در فضای ذخیره‌سازی پیدا نشد.'
+          );
+        }
+      } catch (error) {
+        console.error('[session-delete] Audio cleanup failed:', error);
+
+        cleanupWarnings.push(
+          'رکورد جلسه حذف شد، اما پاک‌سازی فایل صوتی کامل نشد.'
+        );
+      }
     }
-
-    // بروزرسانی order در SessionTerm
-    await prismadb.sessionTerm.updateMany({
-      where: { sessionId, termId: parseInt(termId) },
-      data: { order },
-    });
-
-    const updatedSession = await prismadb.session.update({
-      where: { id: sessionId },
-      data: updateData,
-      include: { video: true, audio: true },
-    });
 
     return NextResponse.json(
-      { message: 'جلسه با موفقیت بروزرسانی شد.', updatedSession },
-      { status: 200 }
+      {
+        success: true,
+        fullyDeleted: true,
+
+        message:
+          cleanupWarnings.length > 0
+            ? 'جلسه حذف شد، اما بخشی از پاک‌سازی فایل‌های رسانه‌ای کامل نشد.'
+            : 'جلسه و فایل‌های رسانه‌ای آن با موفقیت حذف شدند.',
+
+        cleanup: cleanupResult,
+        warnings: cleanupWarnings,
+      },
+      {
+        status: 200,
+      }
     );
-  } catch (e) {
-    console.error('Error updating session:', e);
+  } catch (error) {
+    if (error instanceof SessionRouteError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
+
+    console.error('[session-delete] Delete error:', error);
+
     return NextResponse.json(
-      { error: 'خطا در بروزرسانی جلسه.' },
-      { status: 500 }
+      {
+        success: false,
+        error: 'خطا در حذف جلسه.',
+      },
+      {
+        status: 500,
+      }
+    );
+  }
+}
+
+// ===============================
+// PUT
+// ===============================
+
+export async function PUT(request, context) {
+  try {
+    const { termId, sessionId } = await getRouteParams(context);
+
+    const body = await request.json();
+
+    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+
+    const duration = Number(body?.duration);
+
+    const order = Number(body?.order);
+
+    const accessLevel =
+      typeof body?.accessLevel === 'string'
+        ? body.accessLevel.trim().toUpperCase()
+        : '';
+
+    const type =
+      typeof body?.type === 'string' ? body.type.trim().toUpperCase() : '';
+
+    if (!name) {
+      throw new SessionRouteError('عنوان جلسه معتبر نیست.');
+    }
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      throw new SessionRouteError('مدت زمان باید عددی معتبر باشد.');
+    }
+
+    if (!Number.isInteger(order) || order <= 0) {
+      throw new SessionRouteError('ترتیب جلسه معتبر نیست.');
+    }
+
+    if (!VALID_ACCESS_LEVELS.has(accessLevel)) {
+      throw new SessionRouteError('سطح دسترسی مدیا معتبر نیست.');
+    }
+
+    if (!VALID_SESSION_TYPES.has(type)) {
+      throw new SessionRouteError('نوع جلسه معتبر نیست.');
+    }
+
+    const updatedSession = await prismadb.$transaction(async (tx) => {
+      const session = await tx.session.findUnique({
+        where: {
+          id: sessionId,
+        },
+
+        include: {
+          video: true,
+          audio: true,
+        },
+      });
+
+      if (!session) {
+        throw new SessionRouteError('جلسه‌ای با این شناسه یافت نشد.', 404);
+      }
+
+      const sessionTerm = await tx.sessionTerm.findFirst({
+        where: {
+          termId,
+          sessionId,
+        },
+
+        select: {
+          id: true,
+        },
+      });
+
+      if (!sessionTerm) {
+        throw new SessionRouteError('این جلسه به ترم موردنظر متصل نیست.', 404);
+      }
+
+      if (type === 'VIDEO' && !session.video) {
+        throw new SessionRouteError('برای این جلسه فایل ویدئویی ثبت نشده است.');
+      }
+
+      if (type === 'AUDIO' && !session.audio) {
+        throw new SessionRouteError('برای این جلسه فایل صوتی ثبت نشده است.');
+      }
+
+      await tx.sessionTerm.update({
+        where: {
+          id: sessionTerm.id,
+        },
+
+        data: {
+          order,
+        },
+      });
+
+      const updateData = {
+        name,
+        duration,
+        type,
+      };
+
+      if (type === 'VIDEO' && session.video) {
+        updateData.video = {
+          update: {
+            accessLevel,
+          },
+        };
+      }
+
+      if (type === 'AUDIO' && session.audio) {
+        updateData.audio = {
+          update: {
+            accessLevel,
+          },
+        };
+      }
+
+      return tx.session.update({
+        where: {
+          id: sessionId,
+        },
+
+        data: updateData,
+
+        include: {
+          video: true,
+          audio: true,
+          sessionTerms: true,
+        },
+      });
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        message: 'جلسه با موفقیت به‌روزرسانی شد.',
+
+        updatedSession,
+      },
+      {
+        status: 200,
+      }
+    );
+  } catch (error) {
+    if (error instanceof SessionRouteError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
+
+    console.error('[session-update] Update error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'خطا در به‌روزرسانی جلسه.',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

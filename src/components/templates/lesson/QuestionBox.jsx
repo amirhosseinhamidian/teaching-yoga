@@ -54,14 +54,14 @@ const QuestionBox = ({ className, courseId, sessionId }) => {
 
         <div className='flex items-center gap-2'>
           <Image
-            src={user.avatar || '/images/default-profile.png'}
+            src={user?.avatar || '/images/default-profile.png'}
             alt='user profile'
             width={50}
             height={50}
             className='rounded-full'
           />
           <p className='text-subtext-light dark:text-subtext-dark'>
-            {user.username}
+            {user?.username}
           </p>
         </div>
         <TextArea

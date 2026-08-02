@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16
+    container_name: teaching-yoga-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: teaching_yoga
+      POSTGRES_PASSWORD: teaching_yoga_dev
+      POSTGRES_DB: teaching_yoga_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - teaching_yoga_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U teaching_yoga -d teaching_yoga_dev']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  teaching_yoga_postgres_data:

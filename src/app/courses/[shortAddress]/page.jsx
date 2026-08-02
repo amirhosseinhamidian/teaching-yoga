@@ -35,6 +35,10 @@ import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
 import { formatTime } from '@/utils/dateTimeHelper';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import CourseSubscriptionCard from '@/components/CourseCards/CourseSubscriptionCard';
+import {
+  toAbsoluteAppUrl,
+  toOpenGraphImages,
+} from '@/server/media/absolute-url';
 
 export async function generateMetadata({ params }) {
   const { shortAddress } = params;
@@ -77,13 +81,9 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: seoData?.ogTitle || '',
       description: seoData?.ogDescription || '',
-      url: seoData.ogUrl || `https://samaneyoga.ir/courses/${shortAddress}`,
-      images: [
-        {
-          url: seoData?.ogImage || '',
-          alt: seoData?.ogImageAlt || '',
-        },
-      ],
+      url: toAbsoluteAppUrl(seoData.ogUrl || `/courses/${shortAddress}`),
+
+      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
     },
   };
 }

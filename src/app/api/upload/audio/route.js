@@ -1,97 +1,199 @@
 /* eslint-disable no-undef */
+
 import { NextResponse } from 'next/server';
-import { S3 } from 'aws-sdk';
-import fs from 'fs/promises';
-import path from 'path';
-import os from 'os';
 
-// تنظیمات S3
-const s3 = new S3({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  endpoint: process.env.AWS_S3_ENDPOINT,
-  signatureVersion: 'v4',
-  s3ForcePathStyle: true,
-  params: {
-    Bucket: 'samane-yoga',
-  },
-});
+import { getMediaStorage, normalizeStorageKey } from '@/server/storage';
 
-const bucketName = process.env.AWS_S3_BUCKET_NAME;
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+import { toPublicMediaPath } from '@/server/media/public-media-path';
 
-// تابع آپلود به S3
-const uploadToS3 = async (filePath, key) => {
-  const fileContent = await fs.readFile(filePath);
-  const params = {
-    Bucket: bucketName,
-    Key: key,
-    Body: fileContent,
-  };
-  await s3.upload(params).promise();
-  return `${process.env.AWS_S3_BASE_URL}/${key}`;
+const DEFAULT_MAX_AUDIO_BYTES = 512 * 1024 * 1024;
+
+const AUDIO_MIME_TYPES = {
+  'audio/mpeg': 'mp3',
+  'audio/mp3': 'mp3',
+  'audio/x-m4a': 'm4a',
+  'audio/mp4': 'm4a',
+  'audio/wav': 'wav',
+  'audio/x-wav': 'wav',
+  'audio/webm': 'webm',
+  'audio/ogg': 'ogg',
+  'application/ogg': 'ogg',
 };
 
-// هندلر API
-export async function POST(req) {
-  const data = await req.formData();
-  const file = data.get('file');
-  const folderPath = data.get('folderPath');
-  let fileName = data.get('fileName');
+const ALLOWED_EXTENSIONS = new Set(['mp3', 'm4a', 'wav', 'webm', 'ogg']);
 
-  if (!file || typeof file.arrayBuffer !== 'function' || !folderPath) {
-    return NextResponse.json(
-      { error: 'لطفاً فایل صوتی و مسیر پوشه را ارسال کنید.' },
-      { status: 400 }
+class AudioUploadError extends Error {
+  constructor(message, status = 400) {
+    super(message);
+    this.name = 'AudioUploadError';
+    this.status = status;
+  }
+}
+
+const getMaxAudioBytes = () => {
+  const configuredValue = Number(process.env.MAX_AUDIO_BYTES);
+
+  if (Number.isFinite(configuredValue) && configuredValue > 0) {
+    return Math.floor(configuredValue);
+  }
+
+  return DEFAULT_MAX_AUDIO_BYTES;
+};
+
+const detectAudioExtension = (file) => {
+  const mimeType =
+    typeof file.type === 'string' ? file.type.toLowerCase().trim() : '';
+
+  const mimeExtension = AUDIO_MIME_TYPES[mimeType];
+
+  if (mimeExtension) {
+    return mimeExtension;
+  }
+
+  const originalName = typeof file.name === 'string' ? file.name.trim() : '';
+
+  const extension = originalName.split('.').pop()?.toLowerCase() || '';
+
+  if (ALLOWED_EXTENSIONS.has(extension)) {
+    return extension;
+  }
+
+  return null;
+};
+
+const normalizeFileName = (value) => {
+  const rawName = typeof value === 'string' ? value.trim() : '';
+
+  const nameWithoutExtension = rawName.replace(/\.[^.]+$/, '');
+
+  if (!nameWithoutExtension) {
+    throw new AudioUploadError('نام فایل صوتی معتبر نیست.');
+  }
+
+  if (!/^[a-zA-Z0-9_-]+$/.test(nameWithoutExtension)) {
+    throw new AudioUploadError(
+      'نام فایل صوتی فقط می‌تواند شامل حروف انگلیسی، عدد، خط تیره و زیرخط باشد.'
     );
   }
 
-  // فرمت‌های مجاز صوتی
-  const validAudioTypes = {
-    'audio/mpeg': 'mp3',
-    'audio/mp3': 'mp3',
-    'audio/x-m4a': 'm4a',
-    'audio/mp4': 'm4a',
-    'audio/wav': 'wav',
-    'audio/x-wav': 'wav',
-    'audio/webm': 'webm',
-    'audio/ogg': 'ogg',
-  };
+  return nameWithoutExtension;
+};
 
-  const fileExtension = validAudioTypes[file.type];
-  if (!fileExtension) {
-    return NextResponse.json(
-      { error: 'فقط فایل‌های صوتی (mp3, m4a, wav, ogg, webm) مجاز هستند.' },
-      { status: 400 }
-    );
+const normalizeFolderPath = (value) => {
+  const folderPath = typeof value === 'string' ? value.trim() : '';
+
+  if (!folderPath) {
+    throw new AudioUploadError('مسیر ذخیره‌سازی فایل صوتی ارسال نشده است.');
   }
-
-  // اضافه کردن پسوند اگر موجود نبود
-  if (!fileName.endsWith(`.${fileExtension}`)) {
-    fileName = `${fileName}.${fileExtension}`;
-  }
-
-  const tempDir = os.tmpdir();
-  const tempFilePath = path.join(tempDir, fileName);
 
   try {
-    // ذخیره فایل به صورت موقت
-    await fs.writeFile(tempFilePath, Buffer.from(await file.arrayBuffer()));
+    return normalizeStorageKey(folderPath);
+  } catch {
+    throw new AudioUploadError('مسیر ذخیره‌سازی فایل صوتی معتبر نیست.');
+  }
+};
 
-    // آپلود به S3
-    const key = `${folderPath}/${fileName}`;
-    const fileUrl = await uploadToS3(tempFilePath, key);
+export async function POST(request) {
+  try {
+    const formData = await request.formData();
 
-    return NextResponse.json({
-      fileUrl,
-      message: 'فایل صوتی با موفقیت آپلود شد.',
-    });
+    const file = formData.get('file');
+    const folderPath = normalizeFolderPath(formData.get('folderPath'));
+
+    const baseFileName = normalizeFileName(formData.get('fileName') || 'audio');
+
+    if (!file || typeof file.arrayBuffer !== 'function') {
+      throw new AudioUploadError('لطفاً یک فایل صوتی معتبر ارسال کنید.');
+    }
+
+    if (typeof file.size !== 'number' || file.size <= 0) {
+      throw new AudioUploadError('فایل صوتی خالی است.');
+    }
+
+    const maxAudioBytes = getMaxAudioBytes();
+
+    if (file.size > maxAudioBytes) {
+      throw new AudioUploadError(
+        `حجم فایل صوتی نباید بیشتر از ${Math.floor(
+          maxAudioBytes / 1024 / 1024
+        )} مگابایت باشد.`,
+        413
+      );
+    }
+
+    const fileExtension = detectAudioExtension(file);
+
+    if (!fileExtension) {
+      throw new AudioUploadError(
+        'فقط فایل‌های صوتی mp3، m4a، wav، ogg و webm مجاز هستند.'
+      );
+    }
+
+    const fileName = `${baseFileName}.${fileExtension}`;
+
+    const fileKey = normalizeStorageKey(`${folderPath}/${fileName}`);
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    const storage = getMediaStorage();
+
+    const savedFile = await storage.saveBuffer(fileBuffer, fileKey);
+
+    const publicPath = toPublicMediaPath(savedFile.key);
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        /*
+         * فایل صوتی جلسات باید این
+         * مقدار را ذخیره کند.
+         */
+        fileKey: savedFile.key,
+
+        /*
+         * پادکست و رسانه‌های عمومی
+         * این مقدار را ذخیره می‌کنند.
+         */
+        fileUrl: publicPath,
+
+        absoluteUrl: savedFile.url,
+
+        contentType: file.type || null,
+
+        size: file.size,
+
+        message: 'فایل صوتی با موفقیت آپلود شد.',
+      },
+      {
+        status: 201,
+      }
+    );
   } catch (error) {
-    console.error('خطا در آپلود فایل صوتی:', error);
-    return NextResponse.json({ error: 'خطا در پردازش آپلود' }, { status: 500 });
-  } finally {
-    // حذف فایل موقت
-    await fs
-      .unlink(tempFilePath)
-      .catch((err) => console.error('خطا در حذف فایل موقت:', err));
+    if (error instanceof AudioUploadError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+        }
+      );
+    }
+
+    console.error('[upload-audio] Upload error:', error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'خطا در پردازش فایل صوتی.',
+      },
+      {
+        status: 500,
+      }
+    );
   }
 }

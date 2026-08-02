@@ -1,0 +1,119 @@
+===== AWS PACKAGE =====
+teaching-yoga@0.1.0 /Users/amirhosseinhamidian/Projects/teaching-yoga
+├── @aws-sdk/client-s3@3.1079.0
+├─┬ @aws-sdk/lib-storage@3.1079.0
+│ └── @aws-sdk/client-s3@3.1079.0 deduped
+└── @aws-sdk/s3-request-presigner@3.1079.0
+
+
+===== AWS IMPORTS AND ENV =====
+
+===== LEGACY LINK FUNCTIONS =====
+src/app/a-panel/course/[id]/term-session-manager/page.jsx:448:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate-video-link`,
+src/app/a-panel/course/[id]/term-session-manager/page.jsx:462:      const { signedUrl } = await response.json();
+src/app/a-panel/course/[id]/term-session-manager/page.jsx:463:      setTempVideoUrl(signedUrl);
+src/app/a-panel/components/templates/session/SessionTable.jsx:173:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/generate-video-link`,
+src/app/a-panel/components/templates/session/SessionTable.jsx:187:      const { signedUrl } = await response.json();
+src/app/a-panel/components/templates/session/SessionTable.jsx:188:      setTempVideoUrl(signedUrl);
+src/app/actions/generateTemporaryLink.js:3:export async function generateTemporaryLink(mediaKey) {
+src/app/api/generate-video-link/route.js:3:import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
+src/app/api/generate-video-link/route.js:27:    const mediaUrl = await generateTemporaryLink(videoKey);
+src/app/api/generate-video-link/route.js:35:         * نام signedUrl را حفظ می‌کنیم.
+src/app/api/generate-video-link/route.js:37:        signedUrl: mediaUrl,
+src/app/api/generate-video-link/route.js:49:    console.error('[generate-video-link] Error:', error);
+src/app/api/courses/[shortAddress]/route.js:2:import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
+src/app/api/courses/[shortAddress]/route.js:105:      responseData.introLink = await generateTemporaryLink(
+src/app/api/lesson/route.js:4:import { generateTemporaryLink } from '@/app/actions/generateTemporaryLink';
+src/app/api/lesson/route.js:67:      mediaLink = await generateTemporaryLink(session.video.videoKey);
+src/app/api/lesson/route.js:69:      mediaLink = await generateTemporaryLink(session.audio.audioKey);
+
+===== LEGACY VIDEO UPLOAD ROUTES =====
+
+===== CURRENT MEDIA ROUTES =====
+src/app/api/admin/course-intro-video-jobs/route.js
+src/app/api/admin/video-jobs/[jobId]/route.js
+src/app/api/admin/video-jobs/[jobId]/source/route.js
+src/app/api/admin/video-jobs/route.js
+src/app/api/audio-proxy/route.js
+src/app/api/session-audio/route.js
+src/app/api/upload/audio/route.js
+src/app/api/upload/image/route.js
+
+===== RAW MEDIA URL CREATION =====
+src/app/a-panel/components/templates/podcast/EpisodeForm.jsx:66:          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast/episode/${id}`
+src/app/a-panel/components/templates/podcast/PodcastTable.jsx:38:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast/episode/${episodeTempId}`,
+src/app/a-panel/podcast/page.jsx:24:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast`,
+src/app/a-panel/podcast/page.jsx:43:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast/episode?&page=${page}&perPage=10`,
+src/app/a-panel/podcast/edit/page.jsx:71:        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/podcast`,
+src/app/api/audio-proxy/route.js:14:    process.env.MEDIA_PUBLIC_BASE_URL,
+src/app/api/audio-proxy/route.js:16:    process.env.VIDEO_PUBLIC_BASE_URL,
+src/server/storage/local-storage.js:130:      process.env.MEDIA_PUBLIC_BASE_URL || process.env.VIDEO_PUBLIC_BASE_URL;
+src/server/storage/local-storage.js:134:        'MEDIA_PUBLIC_BASE_URL or VIDEO_PUBLIC_BASE_URL is not configured.'
+src/server/media/absolute-url.js:62:        name: 'MEDIA_PUBLIC_BASE_URL',
+src/server/media/absolute-url.js:63:        value: process.env.MEDIA_PUBLIC_BASE_URL,
+src/server/media/absolute-url.js:66:        name: 'VIDEO_PUBLIC_BASE_URL',
+src/server/media/absolute-url.js:67:        value: process.env.VIDEO_PUBLIC_BASE_URL,
+scripts/migrate-media-paths.mjs:47:  addOrigin(origins, process.env.MEDIA_PUBLIC_BASE_URL);
+scripts/migrate-media-paths.mjs:49:  addOrigin(origins, process.env.VIDEO_PUBLIC_BASE_URL);
+
+===== RAW OG IMAGE VALUES =====
+
+===== MEDIA HELPERS =====
+src/app/layout.js:18:  getMetadataBase,
+src/app/layout.js:19:  toAbsoluteAppUrl,
+src/app/layout.js:20:  toAbsoluteMediaUrl,
+src/app/layout.js:127:    ogImageUrl = toAbsoluteMediaUrl(ogImageValue);
+src/app/layout.js:136:    openGraphUrl = toAbsoluteAppUrl(seoData.ogUrl || '/');
+src/app/layout.js:143:    openGraphUrl = toAbsoluteAppUrl('/');
+src/app/layout.js:147:    canonicalUrl = toAbsoluteAppUrl(seoData.canonicalTag || '/');
+src/app/layout.js:154:    canonicalUrl = toAbsoluteAppUrl('/');
+src/app/layout.js:162:    metadataBase: getMetadataBase(),
+src/app/shop/products/page.jsx:7:  toAbsoluteAppUrl,
+src/app/shop/products/page.jsx:8:  toOpenGraphImages,
+src/app/shop/products/page.jsx:55:      url: toAbsoluteAppUrl(seoData?.ogUrl || '/shop/products'),
+src/app/shop/products/page.jsx:57:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/app/shop/products/[slug]/page.jsx:11:  toAbsoluteAppUrl,
+src/app/shop/products/[slug]/page.jsx:12:  toOpenGraphImages,
+src/app/shop/products/[slug]/page.jsx:111:      url: toAbsoluteAppUrl(seoData?.ogUrl || `/shop/products/${slug}`),
+src/app/shop/products/[slug]/page.jsx:113:      images: toOpenGraphImages(
+src/app/articles/[shortAddress]/page.jsx:11:  toAbsoluteAppUrl,
+src/app/articles/[shortAddress]/page.jsx:12:  toOpenGraphImages,
+src/app/articles/[shortAddress]/page.jsx:63:      url: toAbsoluteAppUrl(seoData?.ogUrl || `/articles/${shortAddress}`),
+src/app/articles/[shortAddress]/page.jsx:65:      images: toOpenGraphImages(
+src/app/articles/page.jsx:9:  toAbsoluteAppUrl,
+src/app/articles/page.jsx:10:  toOpenGraphImages,
+src/app/articles/page.jsx:54:      url: toAbsoluteAppUrl(seoData?.ogUrl || '/articles'),
+src/app/articles/page.jsx:56:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/app/articles/page.jsx:62:      canonical: toAbsoluteAppUrl(seoData?.canonicalTag || '/articles'),
+src/app/subscriptions/page.jsx:10:  toAbsoluteAppUrl,
+src/app/subscriptions/page.jsx:11:  toOpenGraphImages,
+src/app/subscriptions/page.jsx:59:      url: toAbsoluteAppUrl(seoData?.ogUrl || '/subscriptions'),
+src/app/subscriptions/page.jsx:61:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/app/courses/[shortAddress]/page.jsx:39:  toAbsoluteAppUrl,
+src/app/courses/[shortAddress]/page.jsx:40:  toOpenGraphImages,
+src/app/courses/[shortAddress]/page.jsx:84:      url: toAbsoluteAppUrl(seoData.ogUrl || `/courses/${shortAddress}`),
+src/app/courses/[shortAddress]/page.jsx:86:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/app/courses/page.jsx:11:  toAbsoluteAppUrl,
+src/app/courses/page.jsx:12:  toOpenGraphImages,
+src/app/courses/page.jsx:56:      url: toAbsoluteAppUrl(seoData?.ogUrl || '/courses'),
+src/app/courses/page.jsx:58:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/app/courses/page.jsx:64:      canonical: toAbsoluteAppUrl(seoData?.canonicalTag || '/courses'),
+src/app/contact-us/page.jsx:9:  toAbsoluteAppUrl,
+src/app/contact-us/page.jsx:10:  toOpenGraphImages,
+src/app/contact-us/page.jsx:59:      url: toAbsoluteAppUrl(seoData?.ogUrl || '/contact-us'),
+src/app/contact-us/page.jsx:61:      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+src/server/media/public-media-path.js:13:export const normalizePublicMediaValue = (
+src/server/media/public-media-path.js:50:    return Boolean(normalizePublicMediaValue(value, options));
+src/server/media/public-media-path.js:57:  const normalizedValue = normalizePublicMediaValue(value, {
+src/server/media/absolute-url.js:147:export const toAbsoluteAppUrl = (value) => {
+src/server/media/absolute-url.js:166:export const toAbsoluteMediaUrl = (value, { allowExternal = true } = {}) => {
+src/server/media/absolute-url.js:200:export const toOpenGraphImages = (imageValue, alt = '') => {
+src/server/media/absolute-url.js:201:  const imageUrl = toAbsoluteMediaUrl(imageValue);
+src/server/media/absolute-url.js:215:export const getMetadataBase = () => {
+libs/rss/generatePodcastRss.js:2:  toAbsoluteAppUrl,
+libs/rss/generatePodcastRss.js:3:  toAbsoluteMediaUrl,
+libs/rss/generatePodcastRss.js:117:  const audioUrl = toAbsoluteMediaUrl(episode.audioUrl);
+libs/rss/generatePodcastRss.js:123:  const episodeImageUrl = toAbsoluteMediaUrl(
+libs/rss/generatePodcastRss.js:231:  const channelLink = toAbsoluteAppUrl(podcast.websiteUrl || '/podcast');
+libs/rss/generatePodcastRss.js:233:  const feedUrl = toAbsoluteAppUrl(
+libs/rss/generatePodcastRss.js:237:  const channelImageUrl = toAbsoluteMediaUrl(

@@ -5,9 +5,32 @@ import { normalizeUrlSlug } from '@/utils/slug';
 
 export const dynamic = 'force-dynamic';
 
-function isValidHttpUrl(url) {
-  return /^https?:\/\//i.test(String(url || '').trim());
-}
+const isValidHttpUrl = (value) => {
+  const normalizedValue = typeof value === 'string' ? value.trim() : '';
+
+  if (!normalizedValue) {
+    return false;
+  }
+
+  /*
+   * رسانه‌های داخلی پروژه.
+   */
+  if (/^\/(?:images|audio|videos|podcast)\//i.test(normalizedValue)) {
+    return !normalizedValue.includes('..') && !normalizedValue.includes('\\');
+  }
+
+  /*
+   * URLهای خارجی مجاز؛
+   * برای نمونه آواتار Google.
+   */
+  try {
+    const parsedUrl = new URL(normalizedValue);
+
+    return parsedUrl.protocol === 'http:' || parsedUrl.protocol === 'https:';
+  } catch {
+    return false;
+  }
+};
 
 export async function GET(_req, { params }) {
   try {
@@ -113,7 +136,7 @@ export async function PATCH(req, { params }) {
         data.coverImage = null;
       } else if (!isValidHttpUrl(c)) {
         return NextResponse.json(
-          { error: 'لینک کاور باید با http یا https شروع شود.' },
+          { error: 'مسیر یا آدرس تصویر کاور معتبر نیست.' },
           { status: 400 }
         );
       } else {

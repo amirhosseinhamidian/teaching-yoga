@@ -5,6 +5,10 @@ import ArticleItem from '@/components/templates/articles/ArticleItem';
 import PageTitle from '@/components/Ui/PageTitle/PageTitle';
 import { headers } from 'next/headers';
 import React from 'react';
+import {
+  toAbsoluteAppUrl,
+  toOpenGraphImages,
+} from '@/server/media/absolute-url';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -41,18 +45,21 @@ export async function generateMetadata() {
     robots: seoData?.robotsTag || defaultSeoData.robots,
     canonical: seoData?.canonicalTag || defaultSeoData.canonical,
     openGraph: {
-      title: seoData?.ogTitle || '',
-      description: seoData?.ogDescription || '',
-      url: seoData.ogUrl || 'https://samaneyoga.ir/articles',
-      images: [
-        {
-          url: seoData?.ogImage || '',
-          alt: seoData?.ogImageAlt || '',
-        },
-      ],
+      siteName: seoData?.ogSiteName || 'سمانه یوگا',
+
+      title: seoData?.ogTitle || seoData?.siteTitle || 'مقالات',
+
+      description: seoData?.ogDescription || seoData?.metaDescription || '',
+
+      url: toAbsoluteAppUrl(seoData?.ogUrl || '/articles'),
+
+      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+
+      type: 'website',
+      locale: 'fa_IR',
     },
     alternates: {
-      canonical: seoData?.canonicalTag || defaultSeoData.canonical,
+      canonical: toAbsoluteAppUrl(seoData?.canonicalTag || '/articles'),
     },
   };
 }

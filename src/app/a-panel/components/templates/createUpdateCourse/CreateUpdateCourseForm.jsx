@@ -27,6 +27,12 @@ import { FaCircleCheck } from 'react-icons/fa6';
 import { ImSpinner2 } from 'react-icons/im';
 import { IoIosCloseCircle } from 'react-icons/io';
 import { IoClose } from 'react-icons/io5';
+import {
+  cancelAdminVideoJob,
+  createAdminCourseIntroVideoJob,
+  uploadAdminVideoSource,
+  waitForAdminVideoJob,
+} from '@/server/videoJobClient';
 
 function CreateCourseUpdateForm({ courseToUpdate }) {
   const { isDark } = useTheme();
@@ -177,39 +183,93 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     setOpenUploadIntroModal(true);
   };
 
-  const handleIntroVideoUpload = async (outFiles) => {
-    if (!outFiles) {
-      toast.showErrorToast('لطفاً یک ویدیو انتخاب کنید.');
-      return;
+  const handleIntroVideoUpload = async (file, accessLevel, controls = {}) => {
+    const { signal, onProgress, onStageChange } = controls;
+
+    if (!(file instanceof File)) {
+      throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
     }
 
-    try {
-      const formData = new FormData();
-      outFiles.forEach((file, index) => {
-        formData.append(`file_${index}`, new Blob([file.data]), file.name);
-      });
-      formData.append('courseName', title);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/video/courseIntro`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+    const normalizedTitle =
+      typeof title === 'string' ? title.normalize('NFC').trim() : '';
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast.showErrorToast('خطایی رخ داده است.');
-        console.error('خطا در آپلود:', errorData.error || 'خطایی رخ داده است.');
-        return;
+    if (!normalizedTitle) {
+      throw new Error('ابتدا عنوان دوره را وارد کنید.');
+    }
+
+    const rawCourseId = courseToUpdate?.id;
+
+    const courseId =
+      rawCourseId === undefined || rawCourseId === null || rawCourseId === ''
+        ? null
+        : Number(rawCourseId);
+
+    if (courseId !== null && (!Number.isInteger(courseId) || courseId <= 0)) {
+      throw new Error('شناسه دوره معتبر نیست.');
+    }
+
+    let jobId = null;
+
+    try {
+      onStageChange?.('creating');
+      onProgress?.(0);
+
+      const createdJob = await createAdminCourseIntroVideoJob({
+        courseId,
+        courseTitle: normalizedTitle,
+        signal,
+      });
+
+      jobId = createdJob.id;
+
+      onStageChange?.('uploading');
+      onProgress?.(0);
+
+      await uploadAdminVideoSource({
+        jobId,
+        file,
+        signal,
+        onProgress,
+      });
+
+      onStageChange?.('queued');
+      onProgress?.(0);
+
+      const readyJob = await waitForAdminVideoJob({
+        jobId,
+        signal,
+
+        onUpdate: (job) => {
+          onStageChange?.(
+            job.stage || job.status?.toLowerCase() || 'processing'
+          );
+
+          onProgress?.(
+            Number.isFinite(job.displayProgress)
+              ? job.displayProgress
+              : job.progress || 0
+          );
+        },
+      });
+
+      if (!readyJob.outputKey) {
+        throw new Error('مسیر نهایی ویدئوی معرفی دریافت نشد.');
       }
-      const result = await response.json();
-      toast.showSuccessToast('آپلود با موفقیت انجام شد.');
-      setIntroLink(result.videoKey);
-      setOpenUploadIntroModal(false);
+
+      setIntroLink(readyJob.outputKey);
+
+      return {
+        job: readyJob,
+        message: 'ویدئوی معرفی دوره با موفقیت آپلود و پردازش شد.',
+      };
     } catch (error) {
-      toast.showErrorToast('خطای غیرمنتظره در آپلود');
-      console.error('خطای غیرمنتظره در آپلود:', error.message);
+      if (error?.name === 'AbortError' && jobId) {
+        await cancelAdminVideoJob({
+          jobId,
+        }).catch(() => {});
+      }
+
+      throw error;
     }
   };
 
@@ -681,7 +741,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
             thousandSeparator={true}
             className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
           />
-          <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
+          <p className='mr-2 mt-1 font-faNa text-green-light sm:text-sm dark:text-green-dark'>
             {time && getStringTime(time)}
           </p>
         </div>
@@ -704,7 +764,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
             {shortAddressStatus === 'valid' && (
               <FaCircleCheck
                 size={20}
-                className='text-green-light dark:text-green-dark absolute left-2 top-11'
+                className='absolute left-2 top-11 text-green-light dark:text-green-dark'
               />
             )}
             {shortAddressStatus === 'invalid' && (
