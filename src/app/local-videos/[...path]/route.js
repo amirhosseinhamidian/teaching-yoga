@@ -1,37 +1,60 @@
 import path from 'node:path';
+
 import { createReadStream } from 'node:fs';
+
 import { stat } from 'node:fs/promises';
+
 import { Readable } from 'node:stream';
 
+import { normalizeStorageKey } from '@/server/storage';
+
 import { resolveLocalVideoPath } from '@/server/storage/local-storage';
+import { logError, createChildLogger } from '@/server/logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
+const publicMediaLogger = createChildLogger({
+  component: 'public-local-media',
+});
+
 const CONTENT_TYPES = {
-  // HLS و ویدئو
   '.m3u8': 'application/vnd.apple.mpegurl',
+
   '.ts': 'video/mp2t',
+
   '.m4s': 'video/iso.segment',
+
   '.mp4': 'video/mp4',
+
   '.webm': 'video/webm',
 
-  // صوت
   '.mp3': 'audio/mpeg',
+
   '.m4a': 'audio/mp4',
+
   '.aac': 'audio/aac',
+
   '.wav': 'audio/wav',
+
   '.ogg': 'audio/ogg',
+
   '.oga': 'audio/ogg',
 
-  // تصویر
   '.jpg': 'image/jpeg',
+
   '.jpeg': 'image/jpeg',
+
   '.png': 'image/png',
+
   '.gif': 'image/gif',
+
   '.webp': 'image/webp',
 
-  // سایر فایل‌های HLS
+  '.svg': 'image/svg+xml',
+
+  '.vtt': 'text/vtt; charset=utf-8',
+
   '.key': 'application/octet-stream',
 };
 
@@ -39,6 +62,43 @@ const getContentType = (filePath) => {
   const extension = path.extname(filePath).toLowerCase();
 
   return CONTENT_TYPES[extension] || 'application/octet-stream';
+};
+
+const isPublicStorageKey = (storageKey) => {
+  const segments = storageKey.split('/');
+
+  if (segments.some((segment) => !segment || segment.startsWith('.'))) {
+    return false;
+  }
+
+  const root = segments[0];
+
+  /*
+   * تصاویر و پادکست‌ها عمومی هستند.
+   */
+  if (root === 'images' || root === 'podcast') {
+    return true;
+  }
+
+  /*
+   * فقط ویدئوی معرفی دوره عمومی است:
+   *
+   * videos/<course-title>/intro/master.m3u8
+   * videos/<course-title>/intro/<job-id>/master.m3u8
+   *
+   * ویدئوهای جلسه ساختار زیر دارند و رد می‌شوند:
+   *
+   * videos/<term-id>/<session-id>/...
+   */
+  if (root === 'videos' && segments.length >= 4 && segments[2] === 'intro') {
+    return true;
+  }
+
+  /*
+   * ریشه audio فقط برای جلسات است
+   * و باید از Protected Route ارائه شود.
+   */
+  return false;
 };
 
 const parseByteRange = (rangeHeader, fileSize) => {
@@ -53,6 +113,7 @@ const parseByteRange = (rangeHeader, fileSize) => {
   }
 
   const startText = match[1];
+
   const endText = match[2];
 
   if (!startText && !endText) {
@@ -103,7 +164,7 @@ const createBaseHeaders = ({ contentType }) => {
 
   headers.set('Accept-Ranges', 'bytes');
 
-  headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  headers.set('Cache-Control', 'public, max-age=300');
 
   headers.set('Access-Control-Allow-Origin', '*');
 
@@ -118,6 +179,8 @@ const createBaseHeaders = ({ contentType }) => {
 
   headers.set('Cross-Origin-Resource-Policy', 'cross-origin');
 
+  headers.set('X-Content-Type-Options', 'nosniff');
+
   return headers;
 };
 
@@ -128,16 +191,24 @@ const getStorageKey = async (context) => {
     return null;
   }
 
-  return params.path.join('/');
+  try {
+    return normalizeStorageKey(params.path.join('/'));
+  } catch {
+    return null;
+  }
 };
 
 const serveMedia = async ({ request, context, includeBody }) => {
+  let storageKey = null;
   try {
-    const storageKey = await getStorageKey(context);
+    storageKey = await getStorageKey(context);
 
-    if (!storageKey) {
+    if (!storageKey || !isPublicStorageKey(storageKey)) {
       return new Response('File not found.', {
         status: 404,
+        headers: {
+          'Cache-Control': 'no-store',
+        },
       });
     }
 
@@ -166,7 +237,7 @@ const serveMedia = async ({ request, context, includeBody }) => {
 
           'Accept-Ranges': 'bytes',
 
-          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'no-store',
         },
       });
     }
@@ -194,12 +265,11 @@ const serveMedia = async ({ request, context, includeBody }) => {
 
       const nodeStream = createReadStream(filePath, {
         start: range.start,
+
         end: range.end,
       });
 
-      const webStream = Readable.toWeb(nodeStream);
-
-      return new Response(webStream, {
+      return new Response(Readable.toWeb(nodeStream), {
         status: 206,
         headers,
       });
@@ -216,19 +286,38 @@ const serveMedia = async ({ request, context, includeBody }) => {
 
     const nodeStream = createReadStream(filePath);
 
-    const webStream = Readable.toWeb(nodeStream);
-
-    return new Response(webStream, {
+    return new Response(Readable.toWeb(nodeStream), {
       status: 200,
       headers,
     });
   } catch (error) {
     if (error?.code !== 'ENOENT' && error?.code !== 'EISDIR') {
-      console.error('[local-media] Delivery error:', error);
+      logError({
+        log: publicMediaLogger,
+        error,
+        message: 'Public local media delivery failed',
+        data: {
+          event: 'public_local_media_delivery_failed',
+          storageKey,
+          method: request.method,
+        },
+      });
+    } else {
+      publicMediaLogger.debug(
+        {
+          event: 'public_local_media_not_found',
+          storageKey,
+          errorCode: error?.code || null,
+        },
+        'Public local media file was not found'
+      );
     }
 
     return new Response('File not found.', {
       status: 404,
+      headers: {
+        'Cache-Control': 'no-store',
+      },
     });
   }
 };

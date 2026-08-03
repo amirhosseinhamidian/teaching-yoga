@@ -1,42 +1,171 @@
 import { NextResponse } from 'next/server';
+
 import prismadb from '@/libs/prismadb';
+
 import { getAuthUser } from '@/utils/getAuthUser';
 
-export const GET = async (request) => {
+import { logError } from '@/server/logger';
+
+import { getRequestLogger } from '@/server/logger/request-context';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+export const runtime = 'nodejs';
+
+export const dynamic = 'force-dynamic';
+
+const RESPONSE_HEADERS = {
+  'Cache-Control': 'private, no-store, no-cache, must-revalidate, max-age=0',
+
+  Pragma: 'no-cache',
+
+  Vary: 'Cookie',
+
+  'X-Content-Type-Options': 'nosniff',
+};
+
+const jsonResponse = (body, status = 200) => {
+  return NextResponse.json(body, {
+    status,
+    headers: RESPONSE_HEADERS,
+  });
+};
+
+const normalizePaymentId = (value) => {
+  const rawValue = typeof value === 'string' ? value.trim() : '';
+
+  /*
+   * parseInt("12abc") برابر 12 می‌شود؛
+   * به همین دلیل ابتدا کل رشته اعتبارسنجی می‌شود.
+   */
+  if (!/^\d+$/.test(rawValue)) {
+    return null;
+  }
+
+  const paymentId = Number(rawValue);
+
+  if (!Number.isSafeInteger(paymentId) || paymentId <= 0) {
+    return null;
+  }
+
+  return paymentId;
+};
+
+const createPaymentDetailsDto = (payment) => {
+  return {
+    id: payment.id,
+
+    /*
+     * BigInt مستقیماً JSON-serializable نیست.
+     */
+    transactionId:
+      payment.transactionId === null || payment.transactionId === undefined
+        ? null
+        : String(payment.transactionId),
+
+    amount: payment.amount,
+
+    status: payment.status,
+
+    method: payment.method,
+
+    kind: payment.kind,
+
+    createAt: payment.createAt,
+
+    updatedAt: payment.updatedAt,
+
+    /*
+     * ساختار این دو بخش برای سازگاری با
+     * PaymentSuccessfully حفظ شده است.
+     */
+    cart: payment.cart,
+
+    shopOrder: payment.shopOrder,
+  };
+};
+
+const handleGet = async (request) => {
+  let log = getRequestLogger({
+    component: 'payment-details',
+  });
+
+  let paymentId = null;
+
   try {
-    const { searchParams } = request.nextUrl;
-    const token = searchParams.get('token');
+    const authUser = await getAuthUser();
 
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token is required.' },
-        { status: 400 }
+    if (!authUser?.id) {
+      log.debug(
+        {
+          event: 'payment_details_unauthorized',
+        },
+        'Payment details request was unauthorized'
+      );
+
+      return jsonResponse(
+        {
+          success: false,
+
+          error: 'برای مشاهده نتیجه پرداخت باید وارد حساب کاربری شوید.',
+        },
+        401
       );
     }
 
-    const tokenNumber = parseInt(token, 10);
-    if (Number.isNaN(tokenNumber)) {
-      return NextResponse.json(
-        { error: 'Invalid token format.' },
-        { status: 400 }
+    const token = request.nextUrl.searchParams.get('token');
+
+    paymentId = normalizePaymentId(token);
+
+    if (!paymentId) {
+      return jsonResponse(
+        {
+          success: false,
+
+          error: 'شناسه پرداخت معتبر نیست.',
+        },
+        400
       );
     }
 
-    // ✅ اگر پرداخت موفق شد و قرار است bind discount انجام شود
-    // باید یوزر لاگین باشد (همان رفتار قبلی)
-    const authUser = getAuthUser(); // اگر async هست، await بگذار
-    const authUserId = authUser?.id || null;
+    log = log.child({
+      userId: authUser.id,
 
-    const paymentRecord = await prismadb.payment.findUnique({
-      where: { id: tokenNumber },
-      include: {
-        // -------------------
-        // Courses/Subscriptions
-        // -------------------
+      paymentId,
+    });
+
+    /*
+     * userId مستقیماً در Query اعمال شده است.
+     *
+     * بنابراین:
+     * - کاربر نمی‌تواند Payment کاربر دیگر را بخواند.
+     * - تفاوت بین «وجود ندارد» و «متعلق به فرد دیگری است»
+     *   افشا نمی‌شود.
+     */
+    const payment = await prismadb.payment.findFirst({
+      where: {
+        id: paymentId,
+
+        userId: authUser.id,
+      },
+
+      select: {
+        id: true,
+        amount: true,
+
+        status: true,
+        method: true,
+        kind: true,
+
+        transactionId: true,
+
+        createAt: true,
+        updatedAt: true,
+
         cart: {
           select: {
             id: true,
-            discountCodeId: true,
+
             cartCourses: {
               select: {
                 course: {
@@ -44,25 +173,34 @@ export const GET = async (request) => {
                     id: true,
                     title: true,
                     cover: true,
+
                     shortAddress: true,
                   },
                 },
               },
             },
+
             cartSubscriptions: {
               select: {
                 id: true,
                 price: true,
                 discount: true,
+
                 subscriptionPlan: {
                   select: {
                     id: true,
                     name: true,
+
                     description: true,
+
                     durationInDays: true,
+
                     intervalLabel: true,
+
                     price: true,
+
                     discountAmount: true,
+
                     isActive: true,
                   },
                 },
@@ -71,28 +209,41 @@ export const GET = async (request) => {
           },
         },
 
-        // -------------------
-        // Shop order
-        // -------------------
         shopOrder: {
           select: {
             id: true,
+
             status: true,
             paymentStatus: true,
+
             trackingCode: true,
+
             shippingTitle: true,
+
             shippingMethod: true,
+
             shippingCost: true,
+
             subtotal: true,
+
             discountAmount: true,
+
             payableOnline: true,
+
             payableCOD: true,
+
             createdAt: true,
 
+            /*
+             * اطلاعات ارسال فقط به صاحب Payment
+             * برگردانده می‌شود.
+             */
             fullName: true,
             phone: true,
+
             province: true,
             city: true,
+
             address1: true,
             postalCode: true,
 
@@ -101,102 +252,114 @@ export const GET = async (request) => {
                 id: true,
                 productId: true,
                 qty: true,
+
                 title: true,
                 unitPrice: true,
+
                 coverImage: true,
+
                 slug: true,
+
                 colorId: true,
                 sizeId: true,
               },
             },
-
-            // اگر برای نمایش در UI لازم داری:
-            shopCartId: true,
           },
         },
       },
     });
 
-    if (!paymentRecord) {
-      return NextResponse.json(
-        { error: 'Payment not found.' },
-        { status: 404 }
+    if (!payment) {
+      log.warn(
+        {
+          event: 'payment_details_not_found',
+        },
+        'Payment details were not found for authenticated user'
+      );
+
+      return jsonResponse(
+        {
+          success: false,
+
+          error: 'اطلاعات پرداخت یافت نشد.',
+        },
+        404
       );
     }
 
-    // ✅ امنیت ساده: فقط صاحب پرداخت بتواند جزئیات را ببیند
-    // (در نسخه قبلی نداشتی؛ ولی چون با credentials include صدا می‌زنی بهتره)
-    if (
-      authUserId &&
-      paymentRecord.userId &&
-      paymentRecord.userId !== authUserId
-    ) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    /*
+     * صفحه نتیجه موفق نباید اطلاعات Payment
+     * نیمه‌کاره یا ناموفق را نمایش دهد.
+     */
+    if (payment.status !== 'SUCCESSFUL') {
+      log.warn(
+        {
+          event: 'payment_details_not_finalized',
+
+          paymentStatus: payment.status,
+        },
+        'Payment details were requested before finalization'
+      );
+
+      return jsonResponse(
+        {
+          success: false,
+
+          error: 'پرداخت هنوز نهایی نشده است.',
+        },
+        409
+      );
     }
 
-    // ----------------------------------------------------
-    // ✅ Bind discount code (دوره‌ها) - idempotent
-    // فقط وقتی پرداخت SUCCESSFUL است و cart.discountCodeId دارد
-    // ----------------------------------------------------
-    if (
-      paymentRecord.status === 'SUCCESSFUL' &&
-      paymentRecord.cart?.discountCodeId
-    ) {
-      const discountCodeId = paymentRecord.cart.discountCodeId;
+    const dto = createPaymentDetailsDto(payment);
 
-      // باید لاگین باشد تا userDiscount ثبت شود
-      if (!authUserId) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-      }
+    log.info(
+      {
+        event: 'payment_details_loaded',
 
-      // وجود کد تخفیف را چک می‌کنیم
-      const discountCode = await prismadb.discountCode.findUnique({
-        where: { id: discountCodeId },
-        select: { id: true },
-      });
+        paymentKind: payment.kind,
 
-      if (discountCode) {
-        // ✅ جلوگیری از تکراری (به جای create خام)
-        // اگر قبلاً ثبت شده باشد، دیگر usageCount هم افزایش نده
-        const alreadyUsed = await prismadb.userDiscount.findFirst({
-          where: { userId: authUserId, discountCodeId },
-          select: { id: true },
-        });
+        hasCart: Boolean(payment.cart),
 
-        if (!alreadyUsed) {
-          await prismadb.$transaction([
-            prismadb.userDiscount.create({
-              data: { userId: authUserId, discountCodeId },
-            }),
-            prismadb.discountCode.update({
-              where: { id: discountCodeId },
-              data: { usageCount: { increment: 1 } },
-            }),
-          ]);
-        }
-      }
-    }
-
-    // ----------------------------------------------------
-    // (اختیاری) Bind discount code (فروشگاه)
-    // اگر تصمیم گرفتی برای shopCart هم userDiscount ثبت شود
-    // فعلاً چون shopOrder.discountCodeId در مدل نداری و shopCart هم include نکردیم،
-    // این بخش را عمداً نیاوردم تا با ساختارت تداخل ایجاد نکند.
-    // ----------------------------------------------------
-
-    // ✅ BigInt → string
-    const sanitizedRecord = JSON.parse(
-      JSON.stringify(paymentRecord, (_, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-      )
+        hasShopOrder: Boolean(payment.shopOrder),
+      },
+      'Payment details loaded successfully'
     );
 
-    return NextResponse.json(sanitizedRecord);
+    return jsonResponse(dto, 200);
   } catch (error) {
-    console.error('Error in GET handler:', error);
-    return NextResponse.json(
-      { error: 'Something went wrong. Please try again later.' },
-      { status: 500 }
+    logError({
+      log,
+      error,
+
+      message: 'Payment details request failed',
+
+      data: {
+        event: 'payment_details_load_failed',
+
+        paymentId,
+      },
+    });
+
+    return jsonResponse(
+      {
+        success: false,
+
+        error: 'خطا در دریافت اطلاعات پرداخت.',
+      },
+      500
     );
   }
 };
+
+export const GET = withApiLogging(handleGet, {
+  route: '/api/payment-details',
+
+  component: 'payment-details-api',
+
+  /*
+   * Event اختصاصی payment_details_loaded
+   * ثبت می‌شود.
+   */
+  logSuccess: false,
+});

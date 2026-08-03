@@ -24,6 +24,34 @@ import persian_fa from 'react-date-object/locales/persian_fa';
 import TimePicker from 'react-multi-date-picker/plugins/analog_time_picker';
 import { useRouter } from 'next/navigation';
 
+const getPodcastPreviewUrl = (value) => {
+  const rawValue = typeof value === 'string' ? value.trim() : '';
+
+  if (!rawValue) {
+    return '';
+  }
+
+  /*
+   * لینک خارجی، Blob محلی یا Data URL
+   * بدون تغییر استفاده می‌شود.
+   */
+  if (
+    /^https?:\/\//i.test(rawValue) ||
+    rawValue.startsWith('blob:') ||
+    rawValue.startsWith('data:')
+  ) {
+    return rawValue;
+  }
+
+  /*
+   * مقادیر دیتابیس ممکن است یکی از این دو حالت باشند:
+   *
+   * /podcast/example/audio.mp3
+   * podcast/example/audio.mp3
+   */
+  return `/${rawValue.replace(/^\/+/, '')}`;
+};
+
 const EpisodeForm = ({ id, podcastId, className }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
@@ -376,10 +404,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
               controls
               className='mt-4 w-full rounded-full border border-accent'
             >
-              <source
-                src={`/api/audio-proxy?url=${encodeURIComponent(audioUrl)}`}
-                type='audio/mpeg'
-              />
+              <source src={getPodcastPreviewUrl(audioUrl)} type='audio/mpeg' />
               مرورگر شما از پخش صوت پشتیبانی نمی‌کند.
             </audio>
           )}
@@ -396,7 +421,7 @@ const EpisodeForm = ({ id, podcastId, className }) => {
               type='number'
               className='bg-surface-light text-xs sm:text-sm dark:bg-surface-dark'
             />
-            <p className='text-green-light dark:text-green-dark mr-2 mt-1 font-faNa sm:text-sm'>
+            <p className='mr-2 mt-1 font-faNa text-green-light sm:text-sm dark:text-green-dark'>
               {duration && getStringTime(duration)}
             </p>
           </div>

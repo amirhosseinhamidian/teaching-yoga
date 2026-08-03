@@ -1,5 +1,7 @@
 import prismadb from '@/libs/prismadb';
 
+import { getVideoJobMaxAttempts } from './update-video-job';
+
 const MAX_CLAIM_ATTEMPTS = 5;
 
 const JOB_SELECT = {
@@ -30,13 +32,54 @@ const JOB_SELECT = {
   updatedAt: true,
 };
 
+const failInvalidQueuedJobs = async (maxAttempts) => {
+  await prismadb.videoProcessingJob.updateMany({
+    where: {
+      status: 'QUEUED',
+
+      OR: [
+        {
+          sourcePath: null,
+        },
+        {
+          attempts: {
+            gte: maxAttempts,
+          },
+        },
+      ],
+    },
+
+    data: {
+      status: 'FAILED',
+
+      errorMessage:
+        'The queued video job cannot be processed because its source is missing or its retry limit has been reached.',
+
+      completedAt: new Date(),
+    },
+  });
+};
+
 export async function claimNextVideoJob() {
-  for (let attempt = 0; attempt < MAX_CLAIM_ATTEMPTS; attempt += 1) {
+  const maxAttempts = getVideoJobMaxAttempts();
+
+  await failInvalidQueuedJobs(maxAttempts);
+
+  for (
+    let claimAttempt = 0;
+    claimAttempt < MAX_CLAIM_ATTEMPTS;
+    claimAttempt += 1
+  ) {
     const queuedJob = await prismadb.videoProcessingJob.findFirst({
       where: {
         status: 'QUEUED',
+
         sourcePath: {
           not: null,
+        },
+
+        attempts: {
+          lt: maxAttempts,
         },
       },
 
@@ -60,18 +103,29 @@ export async function claimNextVideoJob() {
 
     const startedAt = new Date();
 
+    /*
+     * Compare And Swap:
+     * فقط Workerی که هنوز Job را در وضعیت QUEUED ببیند
+     * می‌تواند آن را Claim کند.
+     */
     const claimResult = await prismadb.videoProcessingJob.updateMany({
       where: {
         id: queuedJob.id,
         status: 'QUEUED',
+
+        attempts: {
+          lt: maxAttempts,
+        },
       },
 
       data: {
         status: 'PROCESSING',
         progress: 1,
+
         attempts: {
           increment: 1,
         },
+
         startedAt,
         completedAt: null,
         errorMessage: null,

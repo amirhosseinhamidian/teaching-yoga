@@ -6,6 +6,11 @@ import { NextResponse } from 'next/server';
 
 import prismadb from '@/libs/prismadb';
 import { getVideoStorage } from '@/server/storage';
+import { requireAdminApi } from '@/server/auth/require-admin-api';
+import { logError } from '@/server/logger';
+import { getRequestLogger } from '@/server/logger/request-context';
+import { withApiLogging } from '@/server/logger/with-api-logging';
+import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -94,7 +99,7 @@ const getDisplayProgress = (job) => {
   }
 };
 
-const getPublicUrl = (outputKey) => {
+const getPublicUrl = (outputKey, log) => {
   if (typeof outputKey !== 'string' || !outputKey.trim()) {
     return null;
   }
@@ -104,15 +109,37 @@ const getPublicUrl = (outputKey) => {
 
     return storage.getPublicUrl(outputKey.trim());
   } catch (error) {
-    console.error('[admin-video-jobs] Public URL error:', error);
+    logError({
+      log,
+      error,
+      message: 'Video job public URL could not be generated',
+      data: {
+        event: 'admin_video_job_public_url_failed',
+      },
+    });
 
     return null;
   }
 };
 
-export async function GET(request, context) {
+const handleGet = async (request, context) => {
+  let log = getRequestLogger({
+    component: 'admin-video-job-status',
+  });
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
     const jobId = await getJobId(context);
+
+    log = getAdminVideoJobLogger({
+      jobId,
+      actor: auth.user,
+
+      component: 'admin-video-job-status',
+    });
 
     const job = await prismadb.videoProcessingJob.findUnique({
       where: {
@@ -203,7 +230,7 @@ export async function GET(request, context) {
 
           displayProgress: getDisplayProgress(job),
 
-          publicUrl: getPublicUrl(job.outputKey),
+          publicUrl: getPublicUrl(job.outputKey, log),
 
           canCancel: CANCELLABLE_STATUSES.includes(job.status),
         },
@@ -229,7 +256,16 @@ export async function GET(request, context) {
       );
     }
 
-    console.error('[admin-video-jobs] Get job error:', error);
+    logError({
+      log,
+      error,
+
+      message: 'Admin video job status request failed',
+
+      data: {
+        event: 'admin_video_job_status_failed',
+      },
+    });
 
     return NextResponse.json(
       {
@@ -241,11 +277,36 @@ export async function GET(request, context) {
       }
     );
   }
-}
+};
 
-export async function DELETE(request, context) {
+export const GET = withApiLogging(handleGet, {
+  route: '/api/admin/video-jobs/[jobId]',
+  component: 'admin-video-job-status-api',
+
+  /*
+   * این API هنگام پردازش هر دو ثانیه Poll می‌شود.
+   */
+  logSuccess: false,
+});
+
+const handleDelete = async (request, context) => {
+  let log = getRequestLogger({
+    component: 'admin-video-job-cancel',
+  });
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
     const jobId = await getJobId(context);
+
+    log = getAdminVideoJobLogger({
+      jobId,
+      actor: auth.user,
+
+      component: 'admin-video-job-cancel',
+    });
 
     const job = await prismadb.videoProcessingJob.findUnique({
       where: {
@@ -258,6 +319,10 @@ export async function DELETE(request, context) {
         status: true,
         sourcePath: true,
         outputKey: true,
+        sessionId: true,
+        termId: true,
+        courseId: true,
+        attempts: true,
       },
     });
 
@@ -272,6 +337,13 @@ export async function DELETE(request, context) {
         }
       );
     }
+
+    log = getAdminVideoJobLogger({
+      job,
+      actor: auth.user,
+
+      component: 'admin-video-job-cancel',
+    });
 
     if (!CANCELLABLE_STATUSES.includes(job.status)) {
       return NextResponse.json(
@@ -292,6 +364,15 @@ export async function DELETE(request, context) {
         }
       );
     }
+
+    log.info(
+      {
+        event: 'admin_video_job_cancel_started',
+
+        currentStatus: job.status,
+      },
+      'Admin video job cancellation started'
+    );
 
     const cancelResult = await prismadb.videoProcessingJob.updateMany({
       where: {
@@ -342,7 +423,7 @@ export async function DELETE(request, context) {
 
     const processingDirectory = path.join(getProcessingRoot(), jobId);
 
-    await Promise.allSettled([
+    const cleanupResults = await Promise.allSettled([
       rm(uploadDirectory, {
         recursive: true,
         force: true,
@@ -353,6 +434,28 @@ export async function DELETE(request, context) {
         force: true,
       }),
     ]);
+
+    const cleanupTargets = ['upload_directory', 'processing_directory'];
+
+    cleanupResults.forEach((result, index) => {
+      if (result.status !== 'rejected') {
+        return;
+      }
+
+      logError({
+        log,
+
+        error: result.reason,
+
+        message: 'Video job cancellation cleanup failed',
+
+        data: {
+          event: 'admin_video_job_cancel_cleanup_failed',
+
+          cleanupTarget: cleanupTargets[index] || 'unknown',
+        },
+      });
+    });
 
     const cancelledJob = await prismadb.videoProcessingJob.findUnique({
       where: {
@@ -385,6 +488,19 @@ export async function DELETE(request, context) {
       },
     });
 
+    log.info(
+      {
+        event: 'admin_video_job_cancelled',
+
+        previousStatus: job.status,
+
+        cleanupFailures: cleanupResults.filter(
+          (result) => result.status === 'rejected'
+        ).length,
+      },
+      'Admin video job was cancelled'
+    );
+
     return NextResponse.json(
       {
         success: true,
@@ -393,13 +509,9 @@ export async function DELETE(request, context) {
         job: cancelledJob
           ? {
               ...cancelledJob,
-
               stage: getStage(cancelledJob.status),
-
               displayProgress: getDisplayProgress(cancelledJob),
-
-              publicUrl: getPublicUrl(cancelledJob.outputKey),
-
+              publicUrl: getPublicUrl(cancelledJob.outputKey, log),
               canCancel: false,
             }
           : null,
@@ -421,7 +533,16 @@ export async function DELETE(request, context) {
       );
     }
 
-    console.error('[admin-video-jobs] Cancel job error:', error);
+    logError({
+      log,
+      error,
+
+      message: 'Admin video job cancellation failed',
+
+      data: {
+        event: 'admin_video_job_cancel_failed',
+      },
+    });
 
     return NextResponse.json(
       {
@@ -433,4 +554,9 @@ export async function DELETE(request, context) {
       }
     );
   }
-}
+};
+
+export const DELETE = withApiLogging(handleDelete, {
+  route: '/api/admin/video-jobs/[jobId]',
+  component: 'admin-video-job-cancel-api',
+});

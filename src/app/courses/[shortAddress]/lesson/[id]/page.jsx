@@ -119,13 +119,13 @@ const LessonPage = async ({ params }) => {
         <div className='lg:px-20 xl:px-36'>
           <PageTitle className='font-faNa'>{course.title}</PageTitle>
 
-          {session.video?.videoKey ? (
+          {session.mediaType === 'VIDEO' && session.mediaLink ? (
             <VideoPlayer
               videoUrl={session.mediaLink}
               posterUrl={course.cover}
               sessionId={lessonId}
             />
-          ) : session.audio?.audioKey ? (
+          ) : session.mediaType === 'AUDIO' && session.mediaLink ? (
             <AudioPlayer
               coverUrl={course.cover}
               duration={session.duration}

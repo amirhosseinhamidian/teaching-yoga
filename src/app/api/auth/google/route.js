@@ -1,21 +1,98 @@
-/* eslint-disable no-undef */
-
 import { NextResponse } from 'next/server';
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI;
+import {
+  attachGoogleOAuthCookies,
+  createGoogleOAuthRequest,
+  getApplicationBaseUrl,
+  getGoogleOAuthConfiguration,
+} from '@/server/auth/google-oauth';
 
-export async function GET() {
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_REDIRECT_URI,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'offline',
-    prompt: 'consent',
+import { logError } from '@/server/logger';
+
+import { getRequestLogger } from '@/server/logger/request-context';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+export const runtime = 'nodejs';
+
+export const dynamic = 'force-dynamic';
+
+const redirectToLogin = (request, errorCode) => {
+  const loginUrl = new URL('/login', getApplicationBaseUrl(request));
+
+  loginUrl.searchParams.set('error', errorCode);
+
+  return NextResponse.redirect(loginUrl);
+};
+
+const handleGet = async (request) => {
+  const log = getRequestLogger({
+    component: 'google-oauth-start',
   });
 
-  return NextResponse.redirect(
-    `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
-  );
-}
+  try {
+    const { clientId, redirectUri } = getGoogleOAuthConfiguration();
+
+    const { state, codeVerifier, codeChallenge } = createGoogleOAuthRequest();
+
+    const authorizationUrl = new URL(
+      'https://accounts.google.com/o/oauth2/v2/auth'
+    );
+
+    authorizationUrl.searchParams.set('client_id', clientId);
+
+    authorizationUrl.searchParams.set('redirect_uri', redirectUri);
+
+    authorizationUrl.searchParams.set('response_type', 'code');
+
+    authorizationUrl.searchParams.set('scope', 'openid email profile');
+
+    authorizationUrl.searchParams.set('state', state);
+
+    authorizationUrl.searchParams.set('code_challenge', codeChallenge);
+
+    authorizationUrl.searchParams.set('code_challenge_method', 'S256');
+
+    authorizationUrl.searchParams.set('access_type', 'online');
+
+    authorizationUrl.searchParams.set('include_granted_scopes', 'true');
+
+    authorizationUrl.searchParams.set('prompt', 'select_account');
+
+    const response = NextResponse.redirect(authorizationUrl);
+
+    attachGoogleOAuthCookies(response, {
+      state,
+      codeVerifier,
+    });
+
+    log.info(
+      {
+        event: 'google_oauth_started',
+      },
+
+      'Google OAuth authorization started'
+    );
+
+    return response;
+  } catch (error) {
+    logError({
+      log,
+      error,
+
+      message: 'Google OAuth start failed',
+
+      data: {
+        event: 'google_oauth_start_failed',
+      },
+    });
+
+    return redirectToLogin(request, 'google_configuration');
+  }
+};
+
+export const GET = withApiLogging(handleGet, {
+  route: '/api/auth/google',
+
+  component: 'google-oauth-start-api',
+});

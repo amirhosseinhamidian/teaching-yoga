@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 // app/api/admin/sessions/[sessionId]/messages/route.js
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
@@ -165,7 +166,10 @@ export async function POST(req, { params }) {
 
     // URL گفتگو (از سایت، نه API)
     // eslint-disable-next-line no-undef
-    const origin = process.env.NEXT_PUBLIC_API_BASE_URL;
+    const origin =
+      process.env.APP_PUBLIC_BASE_URL ||
+      process.env.NEXT_PUBLIC_API_BASE_URL ||
+      'https://samaneyoga.ir';
 
     // ارسال Web Push (non-blocking)
     try {

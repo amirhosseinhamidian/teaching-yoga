@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
-import { resolveStoredMediaUrl } from '@/server/media/resolve-stored-media-url';
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(req, { params }) {
   try {
@@ -102,12 +102,9 @@ export async function GET(req, { params }) {
     // اگر ویدیو معرفی دارد لینک موقت بساز
 
     if (course.introVideoUrl) {
-      responseData.introLink = await resolveStoredMediaUrl(
-        course.introVideoUrl,
-        {
-          allowedRoots: ['videos'],
-        }
-      );
+      responseData.introLink = toAbsoluteMediaUrl(course.introVideoUrl, {
+        allowedRoots: ['videos'],
+      });
     } else {
       responseData.introLink = null;
     }

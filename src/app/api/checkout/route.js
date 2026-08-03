@@ -3,8 +3,16 @@
 
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
-import { createPayment } from '@/app/actions/zarinpal';
 import { getAuthUser } from '@/utils/getAuthUser';
+import {
+  initializeOnlinePayment,
+  PaymentInitializationError,
+} from '@/server/payment/initialize-online-payment';
+import { PaymentGatewayError } from '@/server/payment/zarinpal-client';
+import { logError } from '@/server/logger';
+import { getRequestLogger } from '@/server/logger/request-context';
+import { withApiLogging } from '@/server/logger/with-api-logging';
+import { DiscountReservationError } from '@/server/discount/discount-reservation';
 
 /**
  * helpers
@@ -175,7 +183,12 @@ function computeCoursePayableLikeBuildCartResponse({
   };
 }
 
-export async function POST(req) {
+const handlePost = async (req) => {
+  let log = getRequestLogger({
+    component: 'checkout',
+  });
+
+  let userId = null;
   try {
     const body = await req.json().catch(() => ({}));
 
@@ -187,7 +200,11 @@ export async function POST(req) {
       );
     }
 
-    const userId = user.id;
+    userId = user.id;
+
+    log = log.child({
+      userId,
+    });
 
     const cartId = body?.cartId != null ? Number(body.cartId) : null;
     const shopCartId =
@@ -401,9 +418,14 @@ export async function POST(req) {
 
         shippingMeta = {
           addressId,
-          selected: resolved?.picked || null,
-          options: resolved?.options || [],
-          quoteRaw: resolved?.quoteRaw || null,
+
+          service: {
+            key: String(resolved?.picked?.key || postOptionKey || ''),
+            title: String(resolved?.picked?.title || shippingTitle || ''),
+            etaText: resolved?.picked?.etaText
+              ? String(resolved.picked.etaText)
+              : null,
+          },
         };
       } else {
         // COURIER
@@ -434,16 +456,18 @@ export async function POST(req) {
     // sanity-check (فقط لاگ)
     const clientAmount = toInt(body?.amount, -1);
     if (clientAmount >= 0 && Math.abs(clientAmount - onlinePayable) > 5000) {
-      console.warn('Amount mismatch', {
-        userId,
-        cartId,
-        shopCartId,
-        clientAmount,
-        onlinePayable,
-        coursePayable,
-        shopPayable,
-        shippingCost,
-      });
+      log.warn(
+        {
+          event: 'checkout_client_amount_mismatch',
+
+          cartId,
+          shopCartId,
+
+          hasCourses: hasCoursesInput,
+          hasShop: hasShopInput,
+        },
+        'Client checkout amount did not match server calculation'
+      );
     }
 
     // ----------------------------
@@ -503,12 +527,16 @@ export async function POST(req) {
       if (shippingTitle) notesParts.push(`shippingTitle=${shippingTitle}`);
       const notes = notesParts.length ? notesParts.join(' | ') : null;
 
-      const existingOrder = await prismadb.shopOrder
-        .findFirst({
-          where: { userId, shopCartId: shopCart.id },
-          orderBy: { id: 'desc' },
-        })
-        .catch(() => null);
+      const existingOrder = await prismadb.shopOrder.findFirst({
+        where: {
+          userId,
+          shopCartId: shopCart.id,
+        },
+
+        orderBy: {
+          id: 'desc',
+        },
+      });
 
       const orderData = {
         shopCartId: shopCart.id,
@@ -564,46 +592,8 @@ export async function POST(req) {
     }
 
     // ----------------------------
-    // 6) Payment create/update
+    // 6) Payment initialization
     // ----------------------------
-    const paymentWhereOr = [];
-    if (hasCoursesInput) paymentWhereOr.push({ cartId });
-    if (hasShopInput && shopOrder?.id)
-      paymentWhereOr.push({ shopOrderId: shopOrder.id });
-
-    const existingPayment =
-      paymentWhereOr.length > 0
-        ? await prismadb.payment
-            .findFirst({
-              where: { userId, OR: paymentWhereOr },
-              orderBy: { id: 'desc' },
-            })
-            .catch(() => null)
-        : null;
-
-    if (existingPayment && existingPayment.status === 'SUCCESSFUL') {
-      return NextResponse.json(
-        { error: 'پرداخت این سفارش قبلاً انجام شده است.' },
-        { status: 400 }
-      );
-    }
-
-    const desc =
-      typeof body?.desc === 'string' && body.desc.trim()
-        ? body.desc.trim()
-        : buildDefaultDesc({
-            hasCourses: hasCoursesInput,
-            hasShop: hasShopInput,
-          });
-
-    const amountInRial = Math.max(0, toInt(onlinePayable, 0)) * 10;
-
-    const paymentResponse = await createPayment({
-      amountInRial,
-      description: desc,
-      mobile: dbUser.phone || null,
-    });
-
     const kind =
       hasCoursesInput && hasShopInput
         ? 'BOTH'
@@ -611,63 +601,218 @@ export async function POST(req) {
           ? 'SHOP'
           : 'DIGITAL';
 
-    if (
-      existingPayment &&
-      ['PENDING', 'FAILED'].includes(existingPayment.status)
-    ) {
-      const updated = await prismadb.payment.update({
-        where: { id: existingPayment.id },
+    const amountInRial = Math.max(0, toInt(onlinePayable, 0)) * 10;
+
+    const description = buildDefaultDesc({
+      hasCourses: hasCoursesInput,
+      hasShop: hasShopInput,
+    });
+
+    const initializedPayment = await initializeOnlinePayment({
+      userId,
+
+      cartId: hasCoursesInput ? cartId : null,
+
+      shopOrderId: hasShopInput && shopOrder?.id ? shopOrder.id : null,
+
+      amountInRial,
+      kind,
+      description,
+      log,
+    });
+
+    log.info(
+      {
+        event: 'checkout_payment_initialized',
+
+        paymentId: initializedPayment.paymentId,
+
+        cartId,
+        shopOrderId: shopOrder?.id ?? null,
+
+        kind,
+
+        gatewayRedirectReused: initializedPayment.reused,
+      },
+      'Checkout payment initialized'
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        redirectUrl: initializedPayment.redirectUrl,
+
+        paymentId: initializedPayment.paymentId,
+
+        shopOrderId: shopOrder?.id ?? null,
+      },
+      {
+        status: 200,
+
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
+  } catch (error) {
+    if (error instanceof DiscountReservationError) {
+      log.warn(
+        {
+          event: 'checkout_discount_reservation_rejected',
+
+          userId,
+
+          status: error.status,
+          reasonCode: error.code,
+          discountCodeId: error.discountCodeId,
+        },
+        'Checkout discount reservation was rejected'
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
+    if (error instanceof PaymentInitializationError) {
+      log.warn(
+        {
+          event: 'checkout_payment_initialization_rejected',
+
+          userId,
+
+          status: error.status,
+          reasonCode: error.code,
+        },
+        'Checkout payment initialization was rejected'
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: error.message,
+        },
+        {
+          status: error.status,
+
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
+
+    if (error instanceof PaymentGatewayError) {
+      logError({
+        log,
+        error,
+
+        message: 'Checkout payment gateway request failed',
+
         data: {
-          amount: amountInRial,
-          status: 'PENDING',
-          method: 'ONLINE',
-          authority: paymentResponse.authority,
-          kind,
-          ...(hasCoursesInput ? { cartId } : {}),
-          ...(hasShopInput && shopOrder?.id
-            ? { shopOrderId: shopOrder.id }
-            : {}),
+          event: 'checkout_payment_gateway_failed',
+
+          userId,
+
+          operation: error.operation,
+          gatewayCode: error.gatewayCode,
+          gatewayHttpStatus: error.httpStatus,
+          retryable: error.retryable,
         },
       });
 
-      return NextResponse.json({
-        success: true,
-        message: 'Existing payment updated.',
-        paymentResponse,
-        payment: updated,
-        shopOrderId: shopOrder?.id ?? null,
-      });
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            'اتصال به درگاه پرداخت با خطا مواجه شد. کمی بعد دوباره تلاش کنید.',
+        },
+        {
+          status: 502,
+
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
     }
 
-    const newPayment = await prismadb.payment.create({
+    const expectedStatus = Number(error?.status);
+
+    if (
+      Number.isInteger(expectedStatus) &&
+      expectedStatus >= 400 &&
+      expectedStatus < 500
+    ) {
+      log.warn(
+        {
+          event: 'checkout_request_rejected',
+
+          userId,
+          status: expectedStatus,
+        },
+        'Checkout request was rejected'
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+
+          error:
+            error instanceof Error
+              ? error.message
+              : 'درخواست پرداخت معتبر نیست.',
+        },
+        {
+          status: expectedStatus,
+
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
+
+    logError({
+      log,
+      error,
+
+      message: 'Checkout request failed',
+
       data: {
+        event: 'checkout_failed',
         userId,
-        amount: amountInRial,
-        status: 'PENDING',
-        method: 'ONLINE',
-        authority: paymentResponse.authority,
-        kind,
-        ...(hasCoursesInput ? { cartId } : {}),
-        ...(hasShopInput && shopOrder?.id ? { shopOrderId: shopOrder.id } : {}),
       },
     });
 
-    return NextResponse.json({
-      success: true,
-      message: 'Payment created successfully.',
-      paymentResponse,
-      payment: newPayment,
-      shopOrderId: shopOrder?.id ?? null,
-    });
-  } catch (err) {
-    console.error('Checkout Error:', err);
     return NextResponse.json(
       {
         success: false,
-        error: 'Internal Server Error',
-        details: String(err?.message || 'Unknown error'),
+        error: 'خطای داخلی سرور.',
       },
-      { status: 500 }
+      {
+        status: 500,
+
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
     );
   }
-}
+};
+
+export const POST = withApiLogging(handlePost, {
+  route: '/api/checkout',
+  component: 'checkout-api',
+});

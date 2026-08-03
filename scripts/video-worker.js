@@ -1,60 +1,123 @@
 /* eslint-disable no-undef */
+
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 const abortController = new AbortController();
 
-let shuttingDown = false;
-let fatalError = false;
-
-const requestShutdown = (reason, options = {}) => {
-  if (shuttingDown) {
-    return;
+const normalizeFatalError = (value) => {
+  if (value instanceof Error) {
+    return value;
   }
 
-  shuttingDown = true;
-  fatalError = options.fatal === true;
-
-  console.log(`[video-worker] Shutdown requested: ${reason}`);
-
-  abortController.abort();
+  try {
+    return new Error(typeof value === 'string' ? value : JSON.stringify(value));
+  } catch {
+    return new Error('Unknown fatal worker error');
+  }
 };
 
-process.on('SIGINT', () => {
-  requestShutdown('SIGINT');
-});
+async function bootstrap() {
+  const [loggerModule, workerModule, prismaModule] = await Promise.all([
+    import('../src/server/logger/index.js'),
 
-process.on('SIGTERM', () => {
-  requestShutdown('SIGTERM');
-});
+    import('../src/server/video/worker/run-video-worker.js'),
 
-process.on('unhandledRejection', (error) => {
-  console.error('[video-worker] Unhandled promise rejection:', error);
+    import('../libs/prismadb.js'),
+  ]);
 
-  requestShutdown('unhandledRejection', {
-    fatal: true,
+  const { logger, logFatal, logError } = loggerModule;
+
+  const { runVideoWorker } = workerModule;
+
+  const prismadb = prismaModule.default;
+
+  const log = logger.child({
+    component: 'video-worker-entrypoint',
   });
-});
 
-process.on('uncaughtException', (error) => {
-  console.error('[video-worker] Uncaught exception:', error);
+  let shuttingDown = false;
+  let fatalError = false;
 
-  requestShutdown('uncaughtException', {
-    fatal: true,
+  const requestShutdown = (reason, { fatal = false } = {}) => {
+    if (shuttingDown) {
+      return;
+    }
+
+    shuttingDown = true;
+
+    if (fatal) {
+      fatalError = true;
+    }
+
+    log.info(
+      {
+        event: 'video_worker_shutdown_requested',
+
+        reason,
+        fatal,
+      },
+
+      'Video worker shutdown requested'
+    );
+
+    abortController.abort();
+  };
+
+  process.once('SIGINT', () => {
+    requestShutdown('SIGINT');
   });
-});
 
-async function main() {
-  let prismadb;
+  process.once('SIGTERM', () => {
+    requestShutdown('SIGTERM');
+  });
+
+  process.once('unhandledRejection', (reason) => {
+    logFatal({
+      log,
+
+      error: normalizeFatalError(reason),
+
+      message: 'Unhandled promise rejection in video worker',
+
+      data: {
+        event: 'video_worker_unhandled_rejection',
+      },
+    });
+
+    requestShutdown('unhandledRejection', {
+      fatal: true,
+    });
+  });
+
+  process.once('uncaughtException', (error) => {
+    logFatal({
+      log,
+      error,
+
+      message: 'Uncaught exception in video worker',
+
+      data: {
+        event: 'video_worker_uncaught_exception',
+      },
+    });
+
+    requestShutdown('uncaughtException', {
+      fatal: true,
+    });
+  });
 
   try {
-    const [{ runVideoWorker }, prismaModule] = await Promise.all([
-      import('../src/server/video/worker/run-video-worker.js'),
-      import('../libs/prismadb.js'),
-    ]);
+    log.info(
+      {
+        event: 'video_worker_process_started',
 
-    prismadb = prismaModule.default;
+        nodeVersion: process.version,
+      },
+
+      'Video worker process started'
+    );
 
     await runVideoWorker({
       signal: abortController.signal,
@@ -62,22 +125,49 @@ async function main() {
   } catch (error) {
     fatalError = true;
 
-    console.error(
-      '[video-worker] Fatal worker error:',
-      error instanceof Error ? error.stack || error.message : error
-    );
+    logFatal({
+      log,
+      error,
+
+      message: 'Fatal video worker error',
+
+      data: {
+        event: 'video_worker_fatal_error',
+      },
+    });
   } finally {
-    if (prismadb) {
-      console.log('[video-worker] Closing database connection...');
+    log.info(
+      {
+        event: 'video_worker_database_disconnect_started',
+      },
 
-      await prismadb.$disconnect().catch((error) => {
-        fatalError = true;
+      'Closing video worker database connection'
+    );
 
-        console.error('[video-worker] Prisma disconnect error:', error);
+    await prismadb.$disconnect().catch((error) => {
+      fatalError = true;
+
+      logError({
+        log,
+        error,
+
+        message: 'Video worker Prisma disconnect failed',
+
+        data: {
+          event: 'video_worker_database_disconnect_failed',
+        },
       });
-    }
+    });
 
-    console.log('[video-worker] Worker stopped.');
+    log.info(
+      {
+        event: 'video_worker_process_stopped',
+
+        fatal: fatalError,
+      },
+
+      'Video worker process stopped'
+    );
 
     if (fatalError) {
       process.exitCode = 1;
@@ -85,11 +175,29 @@ async function main() {
   }
 }
 
-main().catch((error) => {
-  console.error(
-    '[video-worker] Startup error:',
-    error instanceof Error ? error.stack || error.message : error
-  );
+bootstrap().catch((error) => {
+  /*
+   * این Fallback فقط زمانی اجرا می‌شود که حتی
+   * خود Logger یا ماژول‌های اولیه قابل Import نباشند.
+   */
+  const payload = {
+    level: 'fatal',
+    time: new Date().toISOString(),
+
+    service: 'teaching-yoga-video-worker',
+
+    event: 'video_worker_bootstrap_failed',
+
+    error: {
+      name: error?.name || 'Error',
+
+      message: error?.message || String(error),
+
+      stack: error?.stack || null,
+    },
+  };
+
+  process.stderr.write(`${JSON.stringify(payload)}\n`);
 
   process.exitCode = 1;
 });

@@ -1,6 +1,15 @@
 import { NextResponse } from 'next/server';
 
 import prismadb from '@/libs/prismadb';
+
+import { requireAdminApi } from '@/server/auth/require-admin-api';
+
+import { logError } from '@/server/logger';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
+
 import { createVideoJob } from '@/server/video/jobs';
 
 export const runtime = 'nodejs';
@@ -10,8 +19,73 @@ const ALLOWED_ACCESS_LEVELS = ['PUBLIC', 'REGISTERED', 'PURCHASED'];
 
 const ACTIVE_JOB_STATUSES = ['UPLOADING', 'QUEUED', 'PROCESSING', 'PUBLISHING'];
 
-export async function POST(request) {
+const createValidationResponse = (error) => {
+  return NextResponse.json(
+    {
+      success: false,
+      error,
+    },
+    {
+      status: 400,
+    }
+  );
+};
+
+const classifyCreateError = (error) => {
+  if (error instanceof SyntaxError) {
+    return {
+      status: 400,
+      expected: true,
+      message: 'بدنه درخواست معتبر نیست.',
+    };
+  }
+
+  const message =
+    error instanceof Error ? error.message : 'خطا در ساخت عملیات پردازش ویدئو.';
+
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes('not found')) {
+    return {
+      status: 404,
+      expected: true,
+      message,
+    };
+  }
+
+  if (
+    normalizedMessage.includes('required') ||
+    normalizedMessage.includes('must be') ||
+    normalizedMessage.includes('invalid')
+  ) {
+    return {
+      status: 400,
+      expected: true,
+      message,
+    };
+  }
+
+  return {
+    status: 500,
+    expected: false,
+    message: 'خطا در ساخت عملیات پردازش ویدئو.',
+  };
+};
+
+const handlePost = async (request) => {
+  let log = getAdminVideoJobLogger();
+
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    log = getAdminVideoJobLogger({
+      actor: auth.user,
+    });
+
     const body = await request.json();
 
     const sessionId =
@@ -25,60 +99,50 @@ export async function POST(request) {
         : '';
 
     if (!sessionId) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'شناسه جلسه معتبر نیست.',
-        },
-        {
-          status: 400,
-        }
-      );
+      return createValidationResponse('شناسه جلسه معتبر نیست.');
     }
 
     if (!Number.isInteger(termId) || termId <= 0) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'شناسه ترم معتبر نیست.',
-        },
-        {
-          status: 400,
-        }
-      );
+      return createValidationResponse('شناسه ترم معتبر نیست.');
     }
 
     if (!ALLOWED_ACCESS_LEVELS.includes(accessLevel)) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'سطح دسترسی ویدئو معتبر نیست.',
-        },
-        {
-          status: 400,
-        }
-      );
+      return createValidationResponse('سطح دسترسی ویدئو معتبر نیست.');
     }
 
-    /*
-     * جلوگیری از ساخت دو Job فعال برای یک جلسه.
-     * اگر آپلود قبلی هنوز باز باشد، همان Job به کلاینت
-     * برگردانده می‌شود تا امکان Resume یا Cancel داشته باشیم.
-     */
+    log = log.child({
+      sessionId,
+      termId,
+      accessLevel,
+      targetType: 'SESSION_VIDEO',
+    });
+
     const activeJob = await prismadb.videoProcessingJob.findFirst({
       where: {
         sessionId,
         termId,
+
         status: {
           in: ACTIVE_JOB_STATUSES,
         },
       },
+
       orderBy: {
         createdAt: 'desc',
       },
     });
 
     if (activeJob) {
+      log.warn(
+        {
+          event: 'admin_video_job_active_conflict',
+
+          activeJobId: activeJob.id,
+          activeJobStatus: activeJob.status,
+        },
+        'An active video job already exists for the session'
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -97,6 +161,18 @@ export async function POST(request) {
       accessLevel,
     });
 
+    getAdminVideoJobLogger({
+      actor: auth.user,
+      job,
+    }).info(
+      {
+        event: 'admin_video_job_created',
+
+        accessLevel,
+      },
+      'Session video processing job created'
+    );
+
     return NextResponse.json(
       {
         success: true,
@@ -107,23 +183,44 @@ export async function POST(request) {
       }
     );
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'خطا در ساخت عملیات پردازش ویدئو.';
+    const classified = classifyCreateError(error);
 
-    console.error('[admin-video-jobs] Create job error:', error);
+    if (classified.expected) {
+      log.warn(
+        {
+          event: 'admin_video_job_create_rejected',
 
-    const status = message.toLowerCase().includes('not found') ? 404 : 400;
+          status: classified.status,
+          reason: classified.message,
+        },
+        'Video job creation was rejected'
+      );
+    } else {
+      logError({
+        log,
+        error,
+
+        message: 'Admin video job creation failed',
+
+        data: {
+          event: 'admin_video_job_create_failed',
+        },
+      });
+    }
 
     return NextResponse.json(
       {
         success: false,
-        error: message,
+        error: classified.message,
       },
       {
-        status,
+        status: classified.status,
       }
     );
   }
-}
+};
+
+export const POST = withApiLogging(handlePost, {
+  route: '/api/admin/video-jobs',
+  component: 'admin-video-job-create-api',
+});
