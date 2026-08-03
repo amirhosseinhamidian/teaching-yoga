@@ -13,19 +13,19 @@
 /.next/
 /out/
 
-# production
+# production build
 /build
 
-# misc
+# local operating system files
 .DS_Store
 *.pem
 
-# debug
+# debug logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# local env files
+# environment files
 .env
 .env.*
 !.env.example
@@ -37,10 +37,15 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local video processing
+# local media processing and runtime storage
 /storage/
 /tmp/
+
+# generated and uploaded media
 *.mp4
 *.m3u8
 *.ts
 *.m4s
+
+# local backups and migration artifacts
+/backups/
