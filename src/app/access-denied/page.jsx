@@ -1,47 +1,37 @@
-/* eslint-disable no-undef */
+/* eslint-disable react/react-in-jsx-scope */
 import Footer from '@/components/Footer/Footer';
-import React from 'react';
-import AccessDeniedView from '@/components/templates/access-denied/AccessDeniedView';
-import { headers } from 'next/headers';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import ErrorState from '@/components/templates/error-state/ErrorState';
 
-export async function generateMetadata() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/access-denied`,
-    {
-      method: 'GET',
-      headers: headers(),
-    }
-  );
+export const metadata = {
+  title: 'دسترسی غیرمجاز | سمانه یوگا',
+  description: 'شما مجوز مشاهده این بخش را ندارید.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
-  const result = await res.json();
-
-  // اطلاعات پیش‌فرض
-  const defaultSeoData = {
-    title: 'دسترسی غیر مجاز',
-    robots: 'noindex, nofollow',
-  };
-
-  if (!result.success || !result.data) {
-    return defaultSeoData;
-  }
-
-  const seoData = result.data;
-
-  return {
-    title: seoData?.siteTitle || defaultSeoData.title,
-    robots: seoData?.robotsTag || defaultSeoData.robots,
-  };
-}
-
-async function AccessDeniedPage() {
+const AccessDeniedPage = () => {
   return (
-    <div>
+    <>
       <HeaderWrapper />
-      <AccessDeniedView />
+
+      <ErrorState
+        code='403'
+        variant='forbidden'
+        eyebrow='دسترسی محدود'
+        title='شما اجازه مشاهده این بخش را ندارید'
+        description='این صفحه فقط برای کاربران دارای دسترسی معتبر قابل مشاهده است. ممکن است لازم باشد وارد حساب کاربری شوید، دوره را تهیه کنید یا از حسابی با سطح دسترسی مناسب استفاده کنید.'
+        primaryHref='/login'
+        primaryLabel='ورود به حساب'
+        secondaryHref='/courses'
+        secondaryLabel='مشاهده دوره‌ها'
+      />
+
       <Footer />
-    </div>
+    </>
   );
-}
+};
 
 export default AccessDeniedPage;

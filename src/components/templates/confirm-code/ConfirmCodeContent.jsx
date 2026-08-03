@@ -24,7 +24,7 @@ const ConfirmCodeContent = () => {
   const { phone, username, otpToken, setOtpToken, clearForm } = useUserForm();
 
   // اکشن های Redux
-  const { verifyOtp, signupUser, loginOtp, loadUser } = useUserActions();
+  const { loginOtp, loadUser } = useUserActions();
   const { fetchCart } = useCartActions();
 
   const { isDark } = useTheme();
@@ -87,78 +87,64 @@ const ConfirmCodeContent = () => {
       return;
     }
 
-    setOtpToken(data.token);
+    setOtpToken(data.challengeId);
   };
 
   // مرحله اصلی ورود
   const loginHandle = async () => {
     if (confirmCode.length !== 5) {
       toast.showErrorToast('کد تایید باید ۵ رقمی باشد.');
+
+      return;
+    }
+
+    if (!otpToken) {
+      toast.showErrorToast('درخواست تأیید معتبر نیست. دوباره کد دریافت کنید.');
+
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // -----------------------
-      // 1) Verify OTP
-      // -----------------------
-      const verify = await verifyOtp({ phone, code: confirmCode });
+      const login = await loginOtp({
+        phone,
 
-      console.log(verify.meta.requestStatus);
+        code: confirmCode,
 
-      if (verify.meta.requestStatus !== 'fulfilled') {
-        toast.showErrorToast('کد تایید نادرست است.');
-        setIsSubmitting(false);
-        return;
-      }
+        challengeId: otpToken,
 
-      // -----------------------
-      // 2) Signup (اگر username وجود داشت یعنی کاربر جدید است)
-      // -----------------------
-      if (username) {
-        const sign = await signupUser({ username, phone });
-
-        if (sign.meta.requestStatus !== 'fulfilled') {
-          toast.showErrorToast('ثبت نام ناموفق بود.');
-          setIsSubmitting(false);
-          return;
-        }
-
-        toast.showSuccessToast('ثبت نام موفقیت‌آمیز بود');
-      }
-
-      // -----------------------
-      // 3) Login OTP → سرور کوکی ایجاد می‌کند
-      // -----------------------
-      const login = await loginOtp({ phone });
+        username: username || null,
+      });
 
       if (login.meta.requestStatus !== 'fulfilled') {
-        toast.showErrorToast('ورود ناموفق بود.');
-        setIsSubmitting(false);
+        toast.showErrorToast(
+          login.payload || 'کد تأیید نامعتبر یا منقضی شده است.'
+        );
+
         return;
       }
 
-      // -----------------------
-      // 4) Load full user profile
-      // -----------------------
       await loadUser();
 
-      // 5) Load cart from server
       await fetchCart();
 
-      toast.showSuccessToast('با موفقیت وارد شدید');
+      toast.showSuccessToast(
+        username ? 'ثبت‌نام و ورود با موفقیت انجام شد.' : 'با موفقیت وارد شدید.'
+      );
 
       const previousPage = sessionStorage.getItem('previousPage') || '/';
+
       sessionStorage.removeItem('previousPage');
 
       clearForm();
-      router.replace(previousPage);
-    } catch (err) {
-      toast.showErrorToast('خطا در ارتباط با سرور.');
-    }
 
-    setIsSubmitting(false);
+      router.replace(previousPage);
+    } catch {
+      toast.showErrorToast('خطا در ارتباط با سرور.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

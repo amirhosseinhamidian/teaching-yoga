@@ -1,116 +1,190 @@
-// components/templates/complete-payment/PaymentCompleteMain.jsx
-/* eslint-disable no-undef */
 'use client';
 
 import React, { useEffect, useState } from 'react';
+
 import PropTypes from 'prop-types';
+
 import { IoBagCheckOutline } from 'react-icons/io5';
-import PageCheckoutTitle from '@/components/Ui/PageCheckoutTitle/PageCheckoutTitle';
-import PaymentSuccessfully from '@/components/templates/complete-payment/PaymentSuccessfully';
-import PaymentFailed from '@/components/templates/complete-payment/PaymentFailed';
+
 import { ImSpinner2 } from 'react-icons/im';
-import { updateUser } from '@/app/actions/updateUser';
+
 import { useRouter } from 'next/navigation';
 
-async function fetchPaymentDetails(token) {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/payment-details?token=${token}`,
+import PageCheckoutTitle from '@/components/Ui/PageCheckoutTitle/PageCheckoutTitle';
+
+import PaymentSuccessfully from '@/components/templates/complete-payment/PaymentSuccessfully';
+
+import PaymentFailed from '@/components/templates/complete-payment/PaymentFailed';
+
+import { updateUser } from '@/app/actions/updateUser';
+
+const normalizePaymentToken = (value) => {
+  const token = typeof value === 'string' ? value.trim() : '';
+
+  if (!/^\d+$/.test(token)) {
+    return null;
+  }
+
+  return token;
+};
+
+const fetchPaymentDetails = async (token, signal) => {
+  const response = await fetch(
+    `/api/payment-details?token=${encodeURIComponent(token)}`,
     {
       method: 'GET',
+
       cache: 'no-store',
+
       credentials: 'include',
+
+      signal,
+
+      headers: {
+        Accept: 'application/json',
+      },
     }
   );
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error(
-      data?.error || `Failed to fetch payment details: ${res.status}`
-    );
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok || !data) {
+    const error = new Error(data?.error || 'دریافت اطلاعات پرداخت ناموفق بود.');
+
+    error.status = response.status;
+
+    throw error;
   }
 
-  return res.json();
-}
+  return data;
+};
 
 const PaymentCompleteMain = ({ token, status }) => {
   const router = useRouter();
 
   const [loading, setLoading] = useState(true);
+
   const [paymentDetails, setPaymentDetails] = useState(null);
 
-  const fetchDetails = async () => {
-    if (!token || isNaN(Number(token))) {
-      throw new Error('Invalid token: Token must be a valid number.');
-    }
-    const data = await fetchPaymentDetails(token);
-    setPaymentDetails(data);
-  };
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
-    let isMounted = true;
+    const controller = new AbortController();
+
+    let active = true;
 
     const run = async () => {
-      // پرداخت ناموفق
       if (status !== 'OK') {
-        if (isMounted) setLoading(false);
+        if (active) {
+          setLoading(false);
+          setLoadFailed(true);
+        }
+
         return;
       }
 
-      if (isMounted) setLoading(true);
+      const normalizedToken = normalizePaymentToken(token);
+
+      if (!normalizedToken) {
+        if (active) {
+          setLoading(false);
+          setLoadFailed(true);
+        }
+
+        return;
+      }
+
+      if (active) {
+        setLoading(true);
+        setLoadFailed(false);
+      }
 
       try {
-        // 1) جزئیات پرداخت
-        await fetchDetails();
+        const details = await fetchPaymentDetails(
+          normalizedToken,
+          controller.signal
+        );
 
-        // 2) آپدیت یوزر (سرور اکشن)
-        // اگر این اکشن کوکی/یوزر رو sync می‌کنه، بعدش باید RSC refresh بشه
-        await updateUser();
+        if (!active) {
+          return;
+        }
 
-        // 3) مهم‌ترین بخش برای حل مشکل هدر/لاگین در SSR
-        router.refresh();
+        setPaymentDetails(details);
+
+        /*
+         * شکست Sync کردن Header نباید صفحه نتیجه
+         * پرداخت موفق را به حالت ناموفق تبدیل کند.
+         */
+        try {
+          await updateUser();
+
+          if (active) {
+            router.refresh();
+          }
+        } catch {
+          // Payment Details با موفقیت دریافت شده است.
+        }
       } catch (error) {
-        console.error('Error fetching details or updating user:', error);
+        if (error?.name === 'AbortError') {
+          return;
+        }
+
+        if (active) {
+          setPaymentDetails(null);
+
+          setLoadFailed(true);
+        }
       } finally {
-        if (isMounted) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
     run();
 
     return () => {
-      isMounted = false;
+      active = false;
+
+      controller.abort();
     };
   }, [token, status, router]);
 
+  const isSuccessful =
+    status === 'OK' && !loadFailed && Boolean(paymentDetails);
+
   return (
     <div className='container'>
-      <PageCheckoutTitle icon={IoBagCheckOutline} isSuccess={status === 'OK'}>
-        {status === 'OK' ? 'تکمیل خرید' : 'پرداخت ناموفق'}
+      <PageCheckoutTitle icon={IoBagCheckOutline} isSuccess={isSuccessful}>
+        {isSuccessful
+          ? 'تکمیل خرید'
+          : status === 'OK' && loading
+            ? 'در حال بررسی پرداخت'
+            : 'پرداخت ناموفق'}
       </PageCheckoutTitle>
 
       {loading ? (
         <div className='my-12 flex h-56 w-full flex-col items-center justify-center gap-4 rounded-xl bg-surface-light dark:bg-surface-dark'>
           <ImSpinner2 size={46} className='animate-spin text-secondary' />
-          <p>درحال دریافت اطلاعات از درگاه بانک ...</p>
+
+          <p>در حال دریافت اطلاعات پرداخت...</p>
         </div>
+      ) : isSuccessful ? (
+        <PaymentSuccessfully
+          paymentDetails={paymentDetails}
+
+          transactionId={paymentDetails.transactionId}
+        />
       ) : (
-        <>
-          {status === 'OK' && paymentDetails ? (
-            <PaymentSuccessfully
-              paymentDetails={paymentDetails}
-              transactionId={paymentDetails.transactionId}
-            />
-          ) : (
-            <PaymentFailed />
-          )}
-        </>
+        <PaymentFailed />
       )}
     </div>
   );
 };
 
 PaymentCompleteMain.propTypes = {
-  token: PropTypes.string, // ممکنه null هم بیاد
+  token: PropTypes.string,
+
   status: PropTypes.string,
 };
 

@@ -89,7 +89,7 @@ const LoginContent = () => {
       const data = await req.json();
 
       if (data.success) {
-        setOtpToken(data.token);
+        setOtpToken(data.challengeId);
         router.push('/confirm-code');
       } else {
         toast.showErrorToast(data.error || 'ارسال کد ناموفق بود.');

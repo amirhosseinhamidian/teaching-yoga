@@ -1,6 +1,10 @@
 /* eslint-disable no-undef */
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
+  experimental: {
+    instrumentationHook: true,
+  },
   images: {
     domains: [
       'samane-yoga.storage.c2.liara.site',
@@ -62,10 +66,6 @@ const nextConfig = {
       {
         source: '/images/:path*',
         destination: '/local-videos/images/:path*',
-      },
-      {
-        source: '/audio/:path*',
-        destination: '/local-videos/audio/:path*',
       },
       {
         source: '/videos/:path*',

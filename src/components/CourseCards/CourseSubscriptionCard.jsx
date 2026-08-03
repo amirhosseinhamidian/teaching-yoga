@@ -10,6 +10,7 @@ import { LuLogIn } from 'react-icons/lu';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { usePathname, useRouter } from 'next/navigation';
 import Modal from '../modules/Modal/Modal';
+import { reportClientError } from '@/utils/reportClientError';
 
 const CourseSubscriptionCard = ({ courseId, className = '' }) => {
   const [plans, setPlans] = useState([]);
@@ -48,7 +49,15 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
           setSelectedPlanId(filtered[0].id);
         }
       } catch (err) {
-        console.error('[SUBSCRIPTION_PLANS_FETCH_ERROR]', err);
+        reportClientError(error, {
+          event: 'course_subscription_plans_load_failed',
+          component: 'CourseSubscriptionCard',
+          severity: 'warn',
+          data: {
+            courseId,
+          },
+        });
+
         setError('خطا در دریافت اطلاعات اشتراک');
       } finally {
         setLoadingPlans(false);
@@ -63,45 +72,111 @@ const CourseSubscriptionCard = ({ courseId, className = '' }) => {
   const handleCheckout = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
+
       return;
     }
-    if (!selectedPlanId) return;
+
+    if (!selectedPlanId) {
+      return;
+    }
 
     try {
       setCheckoutLoading(true);
+
       setError('');
 
-      const res = await fetch('/api/subscription/checkout', {
+      const response = await fetch('/api/subscription/checkout', {
         method: 'POST',
+
+        credentials: 'include',
+
+        cache: 'no-store',
+
         headers: {
           'Content-Type': 'application/json',
+
+          Accept: 'application/json',
         },
-        body: JSON.stringify({ planId: selectedPlanId }),
+
+        body: JSON.stringify({
+          planId: selectedPlanId,
+        }),
       });
 
-      const data = await res.json();
+      const data = await response.json().catch(() => null);
 
-      if (!res.ok) {
-        console.error('[SUBSCRIPTION_CHECKOUT_ERROR]', data);
-        setError(data?.error || 'خطا در شروع فرآیند خرید اشتراک');
+      if (response.status === 401) {
+        setShowLoginModal(true);
+
         return;
       }
 
-      // اینجا می‌تونی:
-      // - ریدایرکت کنی به صفحه پرداخت
-      // - یا از data.redirectUrl استفاده کنی (وقتی اضافه‌اش کردی)
-      // فعلا فرض می‌کنیم بعدش می‌ری به صفحه پرداخت کلی:
-      // window.location.href = `/payment?cartId=${data.cartId}`;
+      if (!response.ok || !data?.success) {
+        if (response.status >= 500) {
+          reportClientError(
+            new Error(
+              'Course subscription checkout API returned a server error'
+            ),
+            {
+              event: 'course_subscription_checkout_api_failed',
 
-      if (data?.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        // اگر redirectUrl هنوز پیاده نشده، حداقل cartId رو لاگ کن
-        console.log('Subscription cart created:', data);
-        alert('سبد خرید اشتراک ساخته شد، لطفاً پرداخت را تکمیل کنید.');
+              component: 'CourseSubscriptionCard',
+
+              data: {
+                status: response.status,
+
+                courseId,
+
+                planId: selectedPlanId,
+              },
+            }
+          );
+        }
+
+        setError(data?.error || 'خطا در شروع فرآیند خرید اشتراک');
+
+        return;
       }
-    } catch (err) {
-      console.error('[SUBSCRIPTION_CHECKOUT_EXCEPTION]', err);
+
+      if (typeof data.redirectUrl === 'string' && data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
+
+        return;
+      }
+
+      reportClientError(
+        new Error(
+          'Course subscription checkout response did not contain redirectUrl'
+        ),
+        {
+          event: 'course_subscription_checkout_response_invalid',
+
+          component: 'CourseSubscriptionCard',
+
+          data: {
+            courseId,
+
+            planId: selectedPlanId,
+
+            hasPaymentId: Number.isInteger(data?.paymentId),
+          },
+        }
+      );
+
+      setError('پاسخ درگاه پرداخت معتبر نیست.');
+    } catch (error) {
+      reportClientError(error, {
+        event: 'course_subscription_checkout_network_failed',
+
+        component: 'CourseSubscriptionCard',
+
+        data: {
+          courseId,
+
+          planId: selectedPlanId,
+        },
+      });
+
       setError('خطا در برقراری ارتباط با سرور');
     } finally {
       setCheckoutLoading(false);

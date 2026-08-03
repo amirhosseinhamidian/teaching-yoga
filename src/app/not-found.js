@@ -1,49 +1,37 @@
-import React from 'react';
 import Footer from '@/components/Footer/Footer';
-import Image from 'next/image';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
-import Link from 'next/link';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import ErrorState from '@/components/templates/error-state/ErrorState';
+import React from 'react';
 
-export async function generateMetadata() {
-  return {
-    title: 'صفحه ای یافت نشد!',
-    robots: 'noindex, nofollow',
-  };
-}
+export const metadata = {
+  title: 'صفحه پیدا نشد | سمانه یوگا',
+  description: 'صفحه‌ای که به دنبال آن هستید پیدا نشد.',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
-async function NotFound() {
+const NotFound = () => {
   return (
-    <div>
+    <>
       <HeaderWrapper />
-      <div className='flex flex-col gap-6 py-16'>
-        <div className='flex flex-wrap items-center justify-center gap-4'>
-          <h1 className='font-faNa text-4xl font-bold opacity-30 xs:text-6xl sm:text-7xl'>
-            404
-          </h1>
-          <Image
-            src='/images/not-found.jpg'
-            alt='not-found'
-            width={200}
-            height={200}
-            className='rounded-full opacity-65'
-          />
-        </div>
-        <h2 className='text-center text-lg opacity-30 sm:text-2xl'>
-          صفحه ای یافت نشد!
-        </h2>
-        <div className='flex flex-wrap items-center justify-center gap-4'>
-          <Link href='/'>
-            <OutlineButton color='subtext'>خانه</OutlineButton>
-          </Link>
-          <Link href='/courses'>
-            <OutlineButton color='subtext'>مشاهده دوره ها</OutlineButton>
-          </Link>
-        </div>
-      </div>
+
+      <ErrorState
+        code='404'
+        variant='notFound'
+        eyebrow='مسیر پیدا نشد'
+        title='به نظر می‌رسد این صفحه دیگر اینجا نیست'
+        description='ممکن است آدرس صفحه تغییر کرده باشد، محتوا حذف شده باشد یا نشانی را اشتباه وارد کرده باشید. از مسیرهای زیر می‌توانید به بخش‌های اصلی سایت برگردید.'
+        primaryHref='/'
+        primaryLabel='بازگشت به خانه'
+        secondaryHref='/courses'
+        secondaryLabel='مشاهده دوره‌ها'
+      />
+
       <Footer />
-    </div>
+    </>
   );
-}
+};
 
 export default NotFound;

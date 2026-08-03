@@ -45,11 +45,10 @@ const AddTermSessionPage = () => {
   const [sessions, setSessions] = useState({});
   const [loadingSessions, setLoadingSessions] = useState({});
   const [sessionTempId, setSessionTempId] = useState();
-  const [tempVideoUrl, setTempVideoUrl] = useState('');
   const [showVideoModal, setShowVideoModal] = useState(false);
-  const [videoLoadingId, setVideoLoadingId] = useState(null);
   const [showAudioModal, setShowAudioModal] = useState(false);
-  const [tempAudioUrl, setTempAudioUrl] = useState('');
+  const [previewVideoSessionId, setPreviewVideoSessionId] = useState(null);
+  const [previewAudioSessionId, setPreviewAudioSessionId] = useState(null);
 
   const [showDeleteSessionModal, setShowDeleteSessionModal] = useState(false);
   const [showEditSessionModal, setShowEditSessionModal] = useState(false);
@@ -441,43 +440,16 @@ const AddTermSessionPage = () => {
     setShowEditSessionModal(false);
   };
 
-  const openVideoModal = async (videoKey, videoId) => {
-    try {
-      setVideoLoadingId(videoId);
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/media-url`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            mediaKey: videoKey,
-          }),
-        }
-      );
+  const openVideoModal = (sessionId) => {
+    setPreviewVideoSessionId(sessionId);
 
-      if (!response.ok) {
-        throw new Error('Failed to fetch temporary link');
-      }
-
-      const result = await response.json();
-
-      if (!response.ok || !result?.mediaUrl) {
-        throw new Error(result?.error || 'دریافت آدرس ویدئو ناموفق بود.');
-      }
-
-      setTempVideoUrl(result.mediaUrl);
-      setShowVideoModal(true);
-      setVideoLoadingId(null);
-    } catch (error) {
-      console.error('Error fetching video link:', error);
-    }
+    setShowVideoModal(true);
   };
 
-  const openAudioModal = async (audioKey) => {
+  const openAudioModal = (sessionId) => {
+    setPreviewAudioSessionId(sessionId);
+
     setShowAudioModal(true);
-    setTempAudioUrl(audioKey);
   };
 
   const toggleActiveStatus = async (row, currentStatus) => {
@@ -605,20 +577,16 @@ const AddTermSessionPage = () => {
           return (
             <div
               className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-              onClick={() => openVideoModal(row.video.videoKey, row.video.id)}
+              onClick={() => openVideoModal(row.id)}
             >
-              {videoLoadingId === row.video.id ? (
-                <ImSpinner2 size={32} className='animate-spin text-white' />
-              ) : (
-                <IoPlay size={32} className='text-white' />
-              )}
+              <IoPlay size={32} className='text-white' />
             </div>
           );
         } else if (row.audio?.audioKey) {
           return (
             <div
               className='mx-auto flex h-16 w-full flex-col items-center justify-center rounded-xl bg-black opacity-85 md:cursor-pointer'
-              onClick={() => openAudioModal(row.audio.audioKey)}
+              onClick={() => openAudioModal(row.id)}
             >
               <IoPlay size={32} className='text-white' />
             </div>
@@ -819,22 +787,23 @@ const AddTermSessionPage = () => {
           }
         />
       )}
-      {showVideoModal && (
+      {showVideoModal && previewVideoSessionId && (
         <VideoModal
+          sessionId={previewVideoSessionId}
           onClose={() => {
             setShowVideoModal(false);
-            setTempVideoUrl('');
+            setPreviewVideoSessionId(null);
           }}
-          videoKey={tempVideoUrl}
         />
       )}
-      {showAudioModal && (
+
+      {showAudioModal && previewAudioSessionId && (
         <AudioModal
+          sessionId={previewAudioSessionId}
           onClose={() => {
             setShowAudioModal(false);
-            setTempAudioUrl('');
+            setPreviewAudioSessionId(null);
           }}
-          audioKey={tempAudioUrl}
         />
       )}
     </div>

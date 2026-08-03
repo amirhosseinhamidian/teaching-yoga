@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server';
 
-import { getVideoJob } from '@/server/video/jobs';
+import { requireAdminApi } from '@/server/auth/require-admin-api';
+
+import { logError } from '@/server/logger';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
+
+import { getVideoJob, markVideoJobQueued } from '@/server/video/jobs';
 
 import {
   deleteJobUploadDirectory,
   saveSourceVideo,
   SourceVideoUploadError,
 } from '@/server/video/uploads/source-video';
-import prismadb from '@/libs/prismadb';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -20,6 +27,16 @@ const ALLOWED_CONTENT_TYPES = new Set([
   'application/octet-stream',
 ]);
 
+const normalizeJobId = (value) => {
+  const jobId = typeof value === 'string' ? value.trim() : '';
+
+  if (!jobId || !/^[a-zA-Z0-9_-]+$/.test(jobId)) {
+    return null;
+  }
+
+  return jobId;
+};
+
 const getFileName = (request) => {
   const value = request.headers.get('x-file-name') || 'source.mp4';
 
@@ -30,22 +47,82 @@ const getFileName = (request) => {
   }
 };
 
-export async function PUT(request, { params }) {
-  if (process.env.NODE_ENV !== 'development') {
-    return NextResponse.json({ error: 'Not found.' }, { status: 404 });
+const getContentLength = (request) => {
+  const value = request.headers.get('content-length');
+
+  if (!value) {
+    return null;
   }
 
-  const { jobId } = await params;
+  const number = Number(value);
+
+  if (!Number.isSafeInteger(number) || number < 0) {
+    return null;
+  }
+
+  return number;
+};
+
+const getUploadErrorStatus = (error) => {
+  if (error instanceof SourceVideoUploadError) {
+    return error.statusCode;
+  }
+
+  if (error instanceof Error && error.message.includes('status')) {
+    return 409;
+  }
+
+  return 500;
+};
+
+const handlePut = async (request, context) => {
+  let jobId = null;
+
   let sourceSaved = false;
 
+  let log = getAdminVideoJobLogger({
+    component: 'admin-video-source-upload',
+  });
+
+  const uploadStartedAt = Date.now();
+
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    const params = await context.params;
+
+    jobId = normalizeJobId(params?.jobId);
+
+    log = getAdminVideoJobLogger({
+      jobId,
+      actor: auth.user,
+
+      component: 'admin-video-source-upload',
+    });
+
+    if (!jobId) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'شناسه عملیات ویدئو معتبر نیست.',
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     const job = await getVideoJob(jobId);
 
     if (!job) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Video processing job not found.',
+          error: 'عملیات پردازش ویدئو پیدا نشد.',
         },
         {
           status: 404,
@@ -53,11 +130,28 @@ export async function PUT(request, { params }) {
       );
     }
 
+    log = getAdminVideoJobLogger({
+      job,
+      actor: auth.user,
+
+      component: 'admin-video-source-upload',
+    });
+
     if (job.status !== 'UPLOADING') {
+      log.warn(
+        {
+          event: 'video_source_upload_invalid_job_status',
+
+          currentStatus: job.status,
+        },
+        'Video source upload rejected due to job status'
+      );
+
       return NextResponse.json(
         {
           success: false,
-          error: `Cannot upload a source video for a job with status ${job.status}.`,
+
+          error: `امکان بارگذاری Source برای Job با وضعیت ${job.status} وجود ندارد.`,
         },
         {
           status: 409,
@@ -70,11 +164,23 @@ export async function PUT(request, { params }) {
       .trim()
       .toLowerCase();
 
+    const contentLength = getContentLength(request);
+
     if (!ALLOWED_CONTENT_TYPES.has(contentType)) {
+      log.warn(
+        {
+          event: 'video_source_upload_content_type_rejected',
+
+          contentType: contentType || null,
+          contentLength,
+        },
+        'Video source content type was rejected'
+      );
+
       return NextResponse.json(
         {
           success: false,
-          error: 'Unsupported video content type.',
+          error: 'نوع فایل ویدئویی پشتیبانی نمی‌شود.',
         },
         {
           status: 415,
@@ -82,63 +188,140 @@ export async function PUT(request, { params }) {
       );
     }
 
-    const contentLengthHeader = request.headers.get('content-length');
+    log.info(
+      {
+        event: 'video_source_upload_started',
 
-    const contentLength = contentLengthHeader
-      ? Number(contentLengthHeader)
-      : null;
+        contentType,
+        expectedSizeBytes: contentLength,
+      },
+      'Video source upload started'
+    );
 
     const savedVideo = await saveSourceVideo({
       jobId,
+
       body: request.body,
+
+      /*
+       * نام فایل برای ذخیره داخلی استفاده می‌شود
+       * ولی در لاگ ثبت نمی‌شود.
+       */
       fileName: getFileName(request),
+
       contentLength,
+
       signal: request.signal,
     });
 
     sourceSaved = true;
 
-    const queuedJob = await prismadb.videoProcessingJob.update({
-      where: {
-        id: jobId,
-      },
-      data: {
-        sourcePath: savedVideo.sourcePath,
-        status: 'QUEUED',
-        uploadProgress: 100,
-        progress: 0,
-        errorMessage: null,
-      },
+    const queuedJob = await markVideoJobQueued({
+      jobId,
+
+      sourcePath: savedVideo.sourcePath,
     });
 
-    return NextResponse.json({
-      success: true,
-      file: {
-        sourcePath: savedVideo.sourcePath,
-        size: savedVideo.size,
+    log.info(
+      {
+        event: 'video_source_upload_completed',
+
+        sizeBytes: savedVideo.size,
+
+        durationMs: Date.now() - uploadStartedAt,
+
+        nextStatus: queuedJob.status,
       },
-      job: queuedJob,
-    });
+      'Video source upload completed and job was queued'
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+
+        file: {
+          sourcePath: savedVideo.sourcePath,
+          size: savedVideo.size,
+        },
+
+        job: queuedJob,
+      },
+      {
+        status: 200,
+
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
   } catch (error) {
-    if (sourceSaved) {
-      await deleteJobUploadDirectory(jobId).catch((cleanupError) => {
-        console.error('Source video cleanup error:', cleanupError);
-      });
+    if (sourceSaved && jobId) {
+      try {
+        await deleteJobUploadDirectory(jobId);
+      } catch (cleanupError) {
+        logError({
+          log,
+          error: cleanupError,
+
+          message: 'Failed to clean uploaded video source after API failure',
+
+          data: {
+            event: 'video_source_upload_cleanup_failed',
+          },
+        });
+      }
     }
 
-    console.error('Source video upload error:', error);
+    const status = getUploadErrorStatus(error);
 
-    const status =
-      error instanceof SourceVideoUploadError ? error.statusCode : 500;
+    if (status < 500) {
+      log.warn(
+        {
+          event: 'video_source_upload_rejected',
+
+          status,
+
+          reason:
+            error instanceof Error
+              ? error.message
+              : 'Unknown video upload error',
+
+          durationMs: Date.now() - uploadStartedAt,
+        },
+        'Video source upload was rejected'
+      );
+    } else {
+      logError({
+        log,
+        error,
+
+        message: 'Video source upload failed',
+
+        data: {
+          event: 'video_source_upload_failed',
+
+          durationMs: Date.now() - uploadStartedAt,
+        },
+      });
+    }
 
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown upload error.',
+
+        error:
+          error instanceof Error
+            ? error.message
+            : 'خطای ناشناخته در آپلود ویدئو.',
       },
       {
         status,
       }
     );
   }
-}
+};
+
+export const PUT = withApiLogging(handlePut, {
+  route: '/api/admin/video-jobs/[jobId]/source',
+  component: 'admin-video-source-upload-api',
+});

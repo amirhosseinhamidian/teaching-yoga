@@ -54,20 +54,42 @@ export const signupUser = createAsyncThunk(
 // ----------------------------------------
 export const loginOtp = createAsyncThunk(
   'user/loginOtp',
-  async ({ phone }, { rejectWithValue }) => {
+
+  async (
+    { phone, code, challengeId, username = null },
+
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await fetch(`${API_BASE}/api/login-otp`, {
+      const res = await fetch('/api/login-otp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone }),
+
+        headers: {
+          'Content-Type': 'application/json',
+        },
+
+        body: JSON.stringify({
+          phone,
+          code,
+          challengeId,
+
+          username: username || null,
+        }),
+
         credentials: 'include',
       });
 
       const data = await res.json();
-      if (!data.success) return rejectWithValue(data.error);
+
+      if (!res.ok || !data.success) {
+        return rejectWithValue(data.error || 'ورود ناموفق بود.');
+      }
+
       return data;
-    } catch (err) {
-      return rejectWithValue(err.message);
+    } catch (error) {
+      return rejectWithValue(
+        error instanceof Error ? error.message : 'خطا در ارتباط با سرور.'
+      );
     }
   }
 );
@@ -93,7 +115,15 @@ export const sendOtp = createAsyncThunk(
 
       // expected: { success: true, token: "12345" }
       return {
-        token: data.token,
+        /*
+         * این مقدار کد OTP نیست؛
+         * شناسه تصادفی Challenge است.
+         */
+        token: data.challengeId,
+
+        expiresInSeconds: data.expiresInSeconds,
+
+        resendAfterSeconds: data.resendAfterSeconds,
       };
     } catch (err) {
       return rejectWithValue('خطا در ارتباط با سرور.');

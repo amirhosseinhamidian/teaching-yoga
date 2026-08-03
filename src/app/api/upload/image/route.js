@@ -2,11 +2,20 @@
 
 import { NextResponse } from 'next/server';
 
+import { requireAdminApi } from '@/server/auth/require-admin-api';
+
+import { logError } from '@/server/logger';
+
+import { getRequestLogger } from '@/server/logger/request-context';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+import { toPublicMediaPath } from '@/server/media/public-media-path';
+
 import { getMediaStorage, normalizeStorageKey } from '@/server/storage';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
-import { toPublicMediaPath } from '@/server/media/public-media-path';
 
 const DEFAULT_MAX_IMAGE_BYTES = 20 * 1024 * 1024;
 
@@ -17,6 +26,8 @@ const IMAGE_MIME_TYPES = {
   'image/gif': 'gif',
   'image/webp': 'webp',
 };
+
+const ALLOWED_IMAGE_ROOTS = new Set(['images']);
 
 class ImageUploadError extends Error {
   constructor(message, status = 400) {
@@ -49,11 +60,24 @@ const normalizeFolderPath = (value) => {
     throw new ImageUploadError('مسیر ذخیره‌سازی تصویر بیش از حد طولانی است.');
   }
 
+  let normalizedPath;
+
   try {
-    return normalizeStorageKey(folderPath);
+    normalizedPath = normalizeStorageKey(folderPath);
   } catch {
     throw new ImageUploadError('مسیر ذخیره‌سازی تصویر معتبر نیست.');
   }
+
+  const rootDirectory = normalizedPath.split('/')[0];
+
+  if (!ALLOWED_IMAGE_ROOTS.has(rootDirectory)) {
+    throw new ImageUploadError(
+      'تصاویر فقط در مسیر images قابل ذخیره‌سازی هستند.',
+      403
+    );
+  }
+
+  return normalizedPath;
 };
 
 const normalizeFileName = (value) => {
@@ -149,8 +173,25 @@ const validateImageType = ({ file, buffer }) => {
   return detectedExtension;
 };
 
-export async function POST(request) {
+const handlePost = async (request) => {
+  let log = getRequestLogger({
+    component: 'image-upload',
+  });
+
+  let uploadContext = {};
+
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    log = log.child({
+      actorUserId: auth.user.id,
+      actorRole: auth.user.role,
+    });
+
     const formData = await request.formData();
 
     const file = formData.get('file');
@@ -189,11 +230,34 @@ export async function POST(request) {
 
     const fileKey = normalizeStorageKey(`${folderPath}/${fileName}`);
 
+    uploadContext = {
+      storageKey: fileKey,
+      sizeBytes: file.size,
+      contentType: file.type || null,
+      extension: fileExtension,
+    };
+
+    log.info(
+      {
+        event: 'image_upload_started',
+        ...uploadContext,
+      },
+      'Image upload started'
+    );
+
     const storage = getMediaStorage();
 
     const savedFile = await storage.saveBuffer(fileBuffer, fileKey);
 
     const publicPath = toPublicMediaPath(savedFile.key);
+
+    log.info(
+      {
+        event: 'image_upload_completed',
+        ...uploadContext,
+      },
+      'Image upload completed'
+    );
 
     return NextResponse.json(
       {
@@ -202,19 +266,17 @@ export async function POST(request) {
         fileKey: savedFile.key,
 
         /*
-         * مقداری که فرم‌ها و دیتابیس
-         * استفاده می‌کنند.
+         * مقداری که فرم‌ها و دیتابیس استفاده می‌کنند.
          */
         fileUrl: publicPath,
 
         /*
-         * فقط برای تست و دیباگ.
+         * فقط برای سازگاری با کلاینت فعلی.
          * در دیتابیس ذخیره نشود.
          */
         absoluteUrl: savedFile.url,
 
         contentType: file.type || null,
-
         size: file.size,
 
         message: 'تصویر با موفقیت آپلود شد.',
@@ -225,6 +287,18 @@ export async function POST(request) {
     );
   } catch (error) {
     if (error instanceof ImageUploadError) {
+      log.warn(
+        {
+          event: 'image_upload_rejected',
+
+          status: error.status,
+          reason: error.message,
+
+          ...uploadContext,
+        },
+        'Image upload was rejected'
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -236,7 +310,17 @@ export async function POST(request) {
       );
     }
 
-    console.error('[upload-image] Upload error:', error);
+    logError({
+      log,
+      error,
+
+      message: 'Image upload failed',
+
+      data: {
+        event: 'image_upload_failed',
+        ...uploadContext,
+      },
+    });
 
     return NextResponse.json(
       {
@@ -248,4 +332,9 @@ export async function POST(request) {
       }
     );
   }
-}
+};
+
+export const POST = withApiLogging(handlePost, {
+  route: '/api/upload/image',
+  component: 'image-upload-api',
+});

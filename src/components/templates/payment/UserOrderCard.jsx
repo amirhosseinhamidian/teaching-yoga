@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 /* eslint-disable no-undef */
 'use client';
 
@@ -9,7 +10,7 @@ import Button from '@/components/Ui/Button/Button';
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
-
+import { reportClientError } from '@/utils/reportClientError';
 import CoursePaymentItem from './CoursePaymentItem';
 import Image from 'next/image';
 
@@ -74,8 +75,7 @@ export default function UserOrderCard({ data, className, addressId }) {
         // اگر API تک‌آدرس داری بهتره اینو بزنی:
         // GET /api/user/addresses/:id
         // ولی چون ممکنه نداشته باشی، از لیست می‌گیریم:
-        const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-        const res = await fetch(`${base}/api/user/addresses`, {
+        const res = await fetch('/api/user/addresses', {
           method: 'GET',
           credentials: 'include',
           cache: 'no-store',
@@ -98,10 +98,28 @@ export default function UserOrderCard({ data, className, addressId }) {
           list.find((a) => Number(a?.id) === Number(addressId)) || null;
 
         if (!ignore) setSelectedAddress(found);
-      } catch (e) {
-        if (e?.name === 'AbortError') return;
-        console.error(e);
-        if (!ignore) setSelectedAddress(null);
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+
+        reportClientError(error, {
+          event: 'checkout_address_load_failed',
+
+          component: 'UserOrderCard',
+
+          severity: 'warn',
+
+          data: {
+            operation: 'load_checkout_address',
+
+            hasAddressId: Boolean(addressId),
+          },
+        });
+
+        if (!ignore) {
+          setSelectedAddress(null);
+        }
       } finally {
         if (!ignore) setAddressLoading(false);
       }
@@ -113,7 +131,7 @@ export default function UserOrderCard({ data, className, addressId }) {
       ignore = true;
       ctrl.abort();
     };
-  }, [hasShop, addressId]);
+  }, [hasShop, addressId, addressIsTehran, shippingMethod]);
 
   useEffect(() => {
     if (!hasShop) return;
@@ -141,9 +159,22 @@ export default function UserOrderCard({ data, className, addressId }) {
         if (!ignore && Number.isFinite(n) && n >= 0) {
           setLeadTimeDays(Math.trunc(n));
         }
-      } catch (e) {
-        if (e?.name === 'AbortError') return;
-        console.error(e);
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+
+        reportClientError(error, {
+          event: 'checkout_lead_time_load_failed',
+
+          component: 'UserOrderCard',
+
+          severity: 'warn',
+
+          data: {
+            operation: 'load_shop_lead_time',
+          },
+        });
       } finally {
         if (!ignore) setLeadTimeLoading(false);
       }
@@ -234,9 +265,26 @@ export default function UserOrderCard({ data, className, addressId }) {
         if (!addressIsTehran && shippingMethod === 'COURIER_COD') {
           setShippingMethod('POST');
         }
-      } catch (e) {
-        if (e?.name === 'AbortError') return;
-        console.error(e);
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+
+        reportClientError(error, {
+          event: 'checkout_shipping_quote_failed',
+
+          component: 'UserOrderCard',
+
+          severity: 'warn',
+
+          data: {
+            operation: 'load_shipping_quote',
+
+            hasAddressId: Boolean(addressId),
+
+            shippingMethod,
+          },
+        });
 
         if (!ignore) {
           // UI-safe fallback (صرفاً برای اینکه UI خالی نشه)
@@ -323,22 +371,26 @@ export default function UserOrderCard({ data, className, addressId }) {
   const handlePayment = async () => {
     if (!user?.firstname || !user?.lastname) {
       toast.showErrorToast('لطفا نام و نام خانوادگی خود را ثبت کنید.');
+
       return;
     }
 
     if (hasShop) {
       if (!addressId) {
         toast.showErrorToast('لطفاً ابتدا یک آدرس برای ارسال انتخاب کنید.');
+
         return;
       }
 
       if (shippingMethod === 'POST' && !selectedShippingKey) {
         toast.showErrorToast('لطفاً سرویس ارسال با پست را انتخاب کنید.');
+
         return;
       }
 
       if (shippingMethod === 'COURIER_COD' && !addressIsTehran) {
         toast.showErrorToast('ارسال با پیک فقط برای تهران فعال است.');
+
         return;
       }
     }
@@ -347,70 +399,163 @@ export default function UserOrderCard({ data, className, addressId }) {
       toast.showErrorToast(
         'برای پرداخت لازم است قوانین و مقررات را تایید کنید.'
       );
+
       return;
     }
 
     try {
       setPaymentLoading(true);
 
-      // validate discount (دوره‌ها)
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/apply-discount-code`,
-        { method: 'PATCH' }
-      );
+      /*
+       * رزرو منقضی‌شده تخفیف پیش از محاسبه نهایی پاک می‌شود.
+       */
+      let discountResponse;
+      try {
+        discountResponse = await fetch('/api/apply-discount-code', {
+          method: 'PATCH',
+          credentials: 'include',
+          cache: 'no-store',
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+      } catch (error) {
+        reportClientError(error, {
+          event: 'checkout_discount_refresh_network_failed',
+          component: 'UserOrderCard',
+          data: {
+            operation: 'refresh_discount',
+          },
+        });
 
+        toast.showErrorToast('بررسی تخفیف با مشکل مواجه شد.');
+
+        return;
+      }
+
+      const discountData = await discountResponse.json().catch(() => null);
+
+      if (!discountResponse.ok) {
+        if (discountResponse.status >= 500) {
+          reportClientError(new Error('Discount reservation refresh failed'), {
+            event: 'checkout_discount_refresh_failed',
+
+            component: 'UserOrderCard',
+
+            data: {
+              status: discountResponse.status,
+            },
+          });
+        }
+
+        toast.showErrorToast(
+          discountData?.message || 'بررسی کد تخفیف ناموفق بود.'
+        );
+
+        return;
+      }
+
+      /*
+       * مبلغ و هزینه ارسال اعلام‌شده توسط Client
+       * مبنای Checkout نیستند.
+       *
+       * سرور مبلغ و Quote را مجدداً محاسبه می‌کند.
+       */
       const payload = {
         cartId: cart?.id || null,
+
         shopCartId: shopCart?.id || null,
 
         addressId: hasShop ? Number(addressId) : null,
 
         shipping: hasShop
           ? {
-              method: shippingMethod, // POST | COURIER
+              method: shippingMethod,
+
               postOptionKey:
                 shippingMethod === 'POST' ? selectedShippingKey : null,
-              postOptionTitle:
-                shippingMethod === 'POST'
-                  ? selectedShipping?.title || ''
-                  : null,
-              shippingCost: shippingMethod === 'POST' ? shippingCost : 0, // تومان
-              payShippingAtDestination: shippingMethod === 'COURIER_COD', // فقط هزینه ارسال در محل
-              source: shippingSource || null,
             }
           : null,
-
-        amount: onlinePayable, // تومان
       };
 
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/checkout`,
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+
+        credentials: 'include',
+
+        cache: 'no-store',
+
+        headers: {
+          'Content-Type': 'application/json',
+
+          Accept: 'application/json',
+        },
+
+        body: JSON.stringify(payload),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.success) {
+        if (response.status >= 500) {
+          reportClientError(new Error('Checkout API returned a server error'), {
+            event: 'checkout_api_failed',
+
+            component: 'UserOrderCard',
+
+            data: {
+              status: response.status,
+
+              hasCourses,
+              hasShop,
+
+              shippingMethod: hasShop ? shippingMethod : null,
+            },
+          });
+        }
+
+        toast.showErrorToast(
+          data?.error || data?.message || 'خطا در ایجاد پرداخت'
+        );
+
+        return;
+      }
+
+      if (typeof data.redirectUrl === 'string' && data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
+
+        return;
+      }
+
+      reportClientError(
+        new Error('Checkout response did not contain redirectUrl'),
         {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          event: 'checkout_response_invalid',
+
+          component: 'UserOrderCard',
+
+          data: {
+            hasPaymentId: Number.isInteger(data?.paymentId),
+          },
         }
       );
 
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.showErrorToast(json?.message || 'خطا در ایجاد پرداخت');
-        return;
-      }
-      if (json?.paymentResponse?.paymentUrl) {
-        window.location.href = json.paymentResponse.paymentUrl;
-        return;
-      }
+      toast.showErrorToast('پاسخ پرداخت معتبر نیست.');
+    } catch (error) {
+      reportClientError(error, {
+        event: 'checkout_network_failed',
 
-      if (json?.successUrl) {
-        window.location.href = json.successUrl;
-        return;
-      }
+        component: 'UserOrderCard',
 
-      toast.showErrorToast('پاسخ پرداخت نامعتبر است.');
-    } catch (e) {
-      console.error(e);
-      toast.showErrorToast('خطای ناشناخته در پرداخت');
+        data: {
+          operation: 'initialize_checkout',
+
+          hasCourses,
+          hasShop,
+        },
+      });
+
+      toast.showErrorToast('ارتباط با سرور پرداخت برقرار نشد.');
     } finally {
       setPaymentLoading(false);
     }

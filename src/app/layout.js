@@ -2,18 +2,13 @@
 /* eslint-disable no-undef */
 
 import './globals.css';
-
 import React from 'react';
-
 import { AppProviders } from './providers';
-
 import prismadb from '@/libs/prismadb';
-
 import { getSSRUser } from '@/components/server/HydrateUser';
-
 import ReduxProvider from '@/libs/redux/ReduxProvider';
 import UserHydration from '@/components/UserHydration';
-
+import ClientErrorReporter from '@/components/modules/ClientErrorReporter/ClientErrorReporter';
 import {
   getMetadataBase,
   toAbsoluteAppUrl,
@@ -218,6 +213,8 @@ export default async function RootLayout({ children }) {
 
   return (
     <html lang='fa' dir='rtl'>
+      <ClientErrorReporter />
+
       <body className='flex flex-col bg-background-light font-main text-text-light antialiased dark:bg-background-dark dark:text-text-dark'>
         <ReduxProvider>
           <UserHydration user={user} />

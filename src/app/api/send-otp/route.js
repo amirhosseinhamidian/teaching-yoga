@@ -1,78 +1,234 @@
-/* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
-import { generateCode } from '@/utils/generateCode';
-import axios from 'axios';
-import prismadb from '@/libs/prismadb';
 
-const apiKey = process.env.KAVENEGAR_API_KEY;
-const template = 'samanehyoga';
+import {
+  createOtpChallenge,
+  getAuthSubjectId,
+  invalidateOtpChallenge,
+  OtpAuthError,
+} from '@/server/auth/otp';
 
-export async function POST(request) {
-  const { phone } = await request.json();
+import {
+  OtpDeliveryError,
+  sendOtpWithKavenegar,
+} from '@/server/auth/kavenegar-otp';
+
+import { logError } from '@/server/logger';
+
+import { getRequestLogger } from '@/server/logger/request-context';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+const handlePost = async (request) => {
+  let log = getRequestLogger({
+    component: 'send-otp',
+  });
+
+  let challengeId = null;
 
   try {
-    // Check for existing verification code for the user
-    const existingCode = await prismadb.verificationCode.findUnique({
-      where: { phone },
+    const body = await request.json();
+
+    const challenge = await createOtpChallenge(body?.phone);
+
+    challengeId = challenge.challengeId;
+
+    log = log.child({
+      subjectId: getAuthSubjectId(challenge.phone),
     });
 
-    if (existingCode) {
-      const now = new Date();
-      const expiresAt = new Date(existingCode.expiresAt);
+    log.info(
+      {
+        event: 'otp_delivery_started',
 
-      // If the expiration time has not passed yet
-      if (now < expiresAt) {
-        const remainingTime = Math.ceil((expiresAt - now) / 1000); // Remaining time in seconds
-        return NextResponse.json({
-          success: false,
-          error: `لطفاً ${remainingTime} ثانیه دیگر برای ارسال درخواست جدید صبر کنید.`,
+        challengeId,
+
+        expiresInSeconds: challenge.expiresInSeconds,
+      },
+
+      'OTP delivery started'
+    );
+
+    try {
+      await sendOtpWithKavenegar({
+        phone: challenge.phone,
+
+        code: challenge.code,
+      });
+    } catch (error) {
+      await invalidateOtpChallenge(challengeId).catch((invalidateError) => {
+        logError({
+          log,
+
+          error: invalidateError,
+
+          message: 'Failed to invalidate undelivered OTP challenge',
+
+          data: {
+            event: 'otp_delivery_invalidation_failed',
+
+            challengeId,
+          },
         });
-      }
+      });
+
+      throw error;
     }
 
-    const token = generateCode();
-
-    const smsResponse = await axios.get(
-      `https://api.kavenegar.com/v1/${apiKey}/verify/lookup.json`,
+    log.info(
       {
-        params: {
-          receptor: phone,
-          token,
-          template,
+        event: 'otp_delivered',
+
+        challengeId,
+
+        expiresInSeconds: challenge.expiresInSeconds,
+      },
+
+      'OTP delivered successfully'
+    );
+
+    /*
+     * کد OTP در پاسخ API قرار نمی‌گیرد.
+     * challengeId یک شناسه تصادفی و غیرمحرمانه است.
+     */
+    return NextResponse.json(
+      {
+        success: true,
+
+        challengeId,
+
+        expiresInSeconds: challenge.expiresInSeconds,
+
+        resendAfterSeconds: challenge.resendAfterSeconds,
+
+        message: 'کد تأیید ارسال شد.',
+      },
+      {
+        status: 200,
+
+        headers: {
+          'Cache-Control': 'no-store',
         },
       }
     );
-
-    if (smsResponse.status !== 200 || !smsResponse.data) {
-      return NextResponse.json({
-        success: false,
-        error: 'ارسال کد تایید موفقیت‌آمیز نبود.',
-      });
-    } else {
-      try {
-        const expiresAt = new Date(Date.now() + 2 * 60 * 1000); // 2 minutes
-        await prismadb.verificationCode.upsert({
-          where: { phone },
-          update: { code: token, expiresAt },
-          create: { phone, code: token, expiresAt },
-        });
-      } catch (error) {
-        console.error('Error saving verification code:', error);
-        return NextResponse.json(
-          { success: false, error: 'خطا در ثبت کد تایید' },
-          { status: 500 }
-        );
-      }
-    }
-    return NextResponse.json({
-      success: true,
-      token,
-    });
   } catch (error) {
-    console.error('Error in send-otp API:', error.response.data);
-    return NextResponse.json({
-      success: false,
-      error: error.response.data.return.message || 'خطا در پردازش درخواست.',
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'بدنه درخواست معتبر نیست.',
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    if (error instanceof OtpAuthError) {
+      log.warn(
+        {
+          event: 'otp_delivery_rejected',
+
+          reasonCode: error.code,
+
+          status: error.status,
+
+          retryAfterSeconds: error.retryAfterSeconds,
+        },
+
+        'OTP delivery was rejected'
+      );
+
+      const headers = {
+        'Cache-Control': 'no-store',
+      };
+
+      if (error.retryAfterSeconds) {
+        headers['Retry-After'] = String(error.retryAfterSeconds);
+      }
+
+      return NextResponse.json(
+        {
+          success: false,
+
+          error: error.message,
+
+          retryAfterSeconds: error.retryAfterSeconds,
+        },
+        {
+          status: error.status,
+
+          headers,
+        }
+      );
+    }
+
+    if (error instanceof OtpDeliveryError) {
+      logError({
+        log,
+        error,
+
+        message: 'OTP provider delivery failed',
+
+        data: {
+          event: 'otp_provider_delivery_failed',
+
+          challengeId,
+
+          providerStatus: error.providerStatus,
+        },
+      });
+
+      return NextResponse.json(
+        {
+          success: false,
+
+          error: 'ارسال پیامک با خطا مواجه شد. کمی بعد دوباره تلاش کنید.',
+        },
+        {
+          status: 502,
+
+          headers: {
+            'Cache-Control': 'no-store',
+          },
+        }
+      );
+    }
+
+    logError({
+      log,
+      error,
+
+      message: 'Send OTP request failed',
+
+      data: {
+        event: 'otp_delivery_failed',
+
+        challengeId,
+      },
     });
+
+    return NextResponse.json(
+      {
+        success: false,
+
+        error: 'خطا در پردازش درخواست ارسال کد.',
+      },
+      {
+        status: 500,
+
+        headers: {
+          'Cache-Control': 'no-store',
+        },
+      }
+    );
   }
-}
+};
+
+export const POST = withApiLogging(handlePost, {
+  route: '/api/send-otp',
+
+  component: 'send-otp-api',
+});

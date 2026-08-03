@@ -1,0 +1,125 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL}
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+        NEXT_PUBLIC_POSTEX_API_KEY: ${NEXT_PUBLIC_POSTEX_API_KEY}
+
+    image: teaching-yoga-app:latest
+    pull_policy: never
+
+    container_name: teaching-yoga-web
+
+    restart: unless-stopped
+
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+
+      LOG_SERVICE: teaching-yoga-web
+      LOG_LEVEL: info
+      LOG_EXIT_ON_FATAL: 'true'
+
+      LOCAL_MEDIA_ROOT: /app/storage/published
+      LOCAL_VIDEO_ROOT: /app/storage/published
+
+      VIDEO_UPLOAD_ROOT: /app/storage/uploads/jobs
+      VIDEO_PROCESSING_ROOT: /app/storage/processing/jobs
+
+    ports:
+      - '127.0.0.1:3000:3000'
+
+    volumes:
+      - ./storage/published:/app/storage/published
+      - ./storage/uploads:/app/storage/uploads
+      - ./storage/processing:/app/storage/processing
+
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'curl',
+          '--fail',
+          '--silent',
+          '--show-error',
+          'http://127.0.0.1:3000/api/health',
+        ]
+
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+    logging:
+      driver: local
+
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+    stop_grace_period: 30s
+
+  video-worker:
+    image: teaching-yoga-app:latest
+
+    container_name: teaching-yoga-video-worker
+
+    restart: unless-stopped
+
+    depends_on:
+      web:
+        condition: service_healthy
+
+    env_file:
+      - .env.production
+
+    environment:
+      NODE_ENV: production
+
+      LOG_SERVICE: teaching-yoga-video-worker
+      LOG_LEVEL: info
+      LOG_EXIT_ON_FATAL: 'true'
+
+      LOCAL_MEDIA_ROOT: /app/storage/published
+      LOCAL_VIDEO_ROOT: /app/storage/published
+
+      VIDEO_UPLOAD_ROOT: /app/storage/uploads/jobs
+      VIDEO_PROCESSING_ROOT: /app/storage/processing/jobs
+
+    command:
+      [
+        './node_modules/.bin/tsx',
+        '--tsconfig',
+        'tsconfig.worker.json',
+        'scripts/video-worker.js',
+      ]
+
+    volumes:
+      - ./storage/published:/app/storage/published
+      - ./storage/uploads:/app/storage/uploads
+      - ./storage/processing:/app/storage/processing
+
+    healthcheck:
+      test: ['CMD-SHELL', "ps -o args= 1 | grep -q 'scripts/video-worker.js'"]
+
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+    logging:
+      driver: local
+
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+    stop_grace_period: 60s

@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 
 import prismadb from '@/libs/prismadb';
 
+import { requireAdminApi } from '@/server/auth/require-admin-api';
+
+import { logError } from '@/server/logger';
+
+import { getRequestLogger } from '@/server/logger/request-context';
+
+import { withApiLogging } from '@/server/logger/with-api-logging';
+
 import { getMediaStorage, normalizeStorageKey } from '@/server/storage';
 
 export const runtime = 'nodejs';
@@ -12,12 +20,15 @@ const VALID_ACCESS_LEVELS = new Set(['PUBLIC', 'REGISTERED', 'PURCHASED']);
 class SessionAudioError extends Error {
   constructor(message, status = 400) {
     super(message);
+
     this.name = 'SessionAudioError';
     this.status = status;
   }
 }
 
-const isAbsoluteHttpUrl = (value) => /^https?:\/\//i.test(value);
+const isAbsoluteHttpUrl = (value) => {
+  return /^https?:\/\//i.test(String(value || ''));
+};
 
 const normalizeAudioKey = (value) => {
   const audioKey = typeof value === 'string' ? value.trim() : '';
@@ -27,18 +38,30 @@ const normalizeAudioKey = (value) => {
   }
 
   /*
-   * برای سازگاری با فایل‌های قدیمی S3،
-   * URLهای کامل را فعلاً قبول می‌کنیم.
+   * برای سازگاری موقت با فایل‌های قدیمی S3،
+   * URLهای کامل همچنان پذیرفته می‌شوند.
    */
   if (isAbsoluteHttpUrl(audioKey)) {
     return audioKey;
   }
 
+  let normalizedKey;
+
   try {
-    return normalizeStorageKey(audioKey);
+    normalizedKey = normalizeStorageKey(audioKey);
   } catch {
     throw new SessionAudioError('مسیر فایل صوتی معتبر نیست.');
   }
+
+  const rootDirectory = normalizedKey.split('/')[0];
+
+  if (rootDirectory !== 'audio') {
+    throw new SessionAudioError(
+      'فایل صوتی جلسه باید در مسیر audio ذخیره شده باشد.'
+    );
+  }
+
+  return normalizedKey;
 };
 
 const normalizeSessionId = (value) => {
@@ -62,7 +85,12 @@ const normalizeAccessLevel = (value) => {
   return accessLevel;
 };
 
-const publishSessionAudio = async ({ audioKey, accessLevel, sessionId }) => {
+const publishSessionAudio = async ({
+  audioKey,
+  accessLevel,
+  sessionId,
+  log,
+}) => {
   const result = await prismadb.$transaction(async (tx) => {
     const session = await tx.session.findUnique({
       where: {
@@ -89,6 +117,7 @@ const publishSessionAudio = async ({ audioKey, accessLevel, sessionId }) => {
     const previousAudioKey = session.audio?.audioKey || null;
 
     let sessionAudio;
+    let mutationType;
 
     if (session.audioId) {
       sessionAudio = await tx.sessionAudio.update({
@@ -102,6 +131,8 @@ const publishSessionAudio = async ({ audioKey, accessLevel, sessionId }) => {
           status: 'AVAILABLE',
         },
       });
+
+      mutationType = 'UPDATED';
     } else {
       sessionAudio = await tx.sessionAudio.create({
         data: {
@@ -110,6 +141,8 @@ const publishSessionAudio = async ({ audioKey, accessLevel, sessionId }) => {
           status: 'AVAILABLE',
         },
       });
+
+      mutationType = 'CREATED';
     }
 
     const updatedSession = await tx.session.update({
@@ -136,47 +169,147 @@ const publishSessionAudio = async ({ audioKey, accessLevel, sessionId }) => {
     return {
       audio: sessionAudio,
       session: updatedSession,
+
+      mutationType,
+
       previousAudioKey,
     };
   });
 
   const previousAudioKey = result.previousAudioKey;
 
-  if (
-    previousAudioKey &&
-    previousAudioKey !== audioKey &&
-    !isAbsoluteHttpUrl(previousAudioKey)
-  ) {
+  const previousAudioReplaced = Boolean(
+    previousAudioKey && previousAudioKey !== audioKey
+  );
+
+  let previousAudioDeleted = false;
+
+  /*
+   * حذف فایل قبلی خارج از تراکنش دیتابیس انجام می‌شود.
+   * شکست Cleanup نباید اتصال موفق فایل جدید را Rollback کند.
+   */
+  if (previousAudioReplaced && !isAbsoluteHttpUrl(previousAudioKey)) {
     const storage = getMediaStorage();
 
-    await storage.deletePath(previousAudioKey).catch((error) => {
-      console.error('[session-audio] Failed to delete previous audio:', error);
-    });
+    try {
+      await storage.deletePath(previousAudioKey);
+
+      previousAudioDeleted = true;
+
+      log.info(
+        {
+          event: 'session_previous_audio_deleted',
+
+          previousStorageKey: previousAudioKey,
+        },
+        'Previous session audio file deleted'
+      );
+    } catch (error) {
+      logError({
+        log,
+        error,
+
+        message: 'Failed to delete previous session audio file',
+
+        data: {
+          event: 'session_previous_audio_delete_failed',
+
+          previousStorageKey: previousAudioKey,
+        },
+      });
+    }
   }
 
-  return result;
+  return {
+    ...result,
+
+    previousAudioReplaced,
+    previousAudioDeleted,
+  };
 };
 
-const handleRequest = async (request) => {
+const handleMutation = async (request, httpMethod) => {
+  let log = getRequestLogger({
+    component: 'session-audio-mutation',
+
+    mutationMethod: httpMethod,
+  });
+
+  let sessionId = null;
+  let accessLevel = null;
+  let storageKind = null;
+  let localStorageKey = null;
+
   try {
+    const auth = await requireAdminApi();
+
+    if (!auth.ok) {
+      return auth.response;
+    }
+
+    log = log.child({
+      actorUserId: auth.user.id,
+      actorRole: auth.user.role,
+    });
+
     const body = await request.json();
 
     const audioKey = normalizeAudioKey(body?.audioKey);
 
-    const sessionId = normalizeSessionId(body?.sessionId);
+    sessionId = normalizeSessionId(body?.sessionId);
 
-    const accessLevel = normalizeAccessLevel(body?.accessLevel);
+    accessLevel = normalizeAccessLevel(body?.accessLevel);
+
+    storageKind = isAbsoluteHttpUrl(audioKey) ? 'LEGACY_EXTERNAL' : 'LOCAL';
+
+    localStorageKey = storageKind === 'LOCAL' ? audioKey : null;
+
+    log = log.child({
+      sessionId,
+      mediaType: 'AUDIO',
+      accessLevel,
+      storageKind,
+    });
+
+    log.info(
+      {
+        event: 'session_audio_publish_started',
+
+        storageKey: localStorageKey,
+      },
+      'Session audio publish started'
+    );
 
     const result = await publishSessionAudio({
       audioKey,
       sessionId,
       accessLevel,
+      log,
     });
+
+    log.info(
+      {
+        event: 'session_audio_published',
+
+        audioId: result.audio.id,
+
+        mutationType: result.mutationType,
+
+        previousAudioReplaced: result.previousAudioReplaced,
+
+        previousAudioDeleted: result.previousAudioDeleted,
+
+        sessionActive: result.session.isActive,
+      },
+      'Session audio published successfully'
+    );
 
     return NextResponse.json(
       {
         success: true,
+
         data: result.audio,
+
         session: result.session,
       },
       {
@@ -184,7 +317,43 @@ const handleRequest = async (request) => {
       }
     );
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      log.warn(
+        {
+          event: 'session_audio_publish_rejected',
+
+          status: 400,
+          reason: 'INVALID_JSON',
+        },
+        'Session audio request body was invalid'
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'بدنه درخواست معتبر نیست.',
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
     if (error instanceof SessionAudioError) {
+      log.warn(
+        {
+          event: 'session_audio_publish_rejected',
+
+          status: error.status,
+          reason: error.message,
+
+          sessionId,
+          accessLevel,
+          storageKind,
+        },
+        'Session audio publish was rejected'
+      );
+
       return NextResponse.json(
         {
           success: false,
@@ -196,7 +365,22 @@ const handleRequest = async (request) => {
       );
     }
 
-    console.error('[session-audio] Save error:', error);
+    logError({
+      log,
+      error,
+
+      message: 'Session audio publish failed',
+
+      data: {
+        event: 'session_audio_publish_failed',
+
+        sessionId,
+        accessLevel,
+        storageKind,
+
+        storageKey: localStorageKey,
+      },
+    });
 
     return NextResponse.json(
       {
@@ -210,10 +394,22 @@ const handleRequest = async (request) => {
   }
 };
 
-export async function POST(request) {
-  return handleRequest(request);
-}
+const handlePost = (request) => {
+  return handleMutation(request, 'POST');
+};
 
-export async function PUT(request) {
-  return handleRequest(request);
-}
+const handlePut = (request) => {
+  return handleMutation(request, 'PUT');
+};
+
+export const POST = withApiLogging(handlePost, {
+  route: '/api/session-audio',
+
+  component: 'session-audio-api',
+});
+
+export const PUT = withApiLogging(handlePut, {
+  route: '/api/session-audio',
+
+  component: 'session-audio-api',
+});

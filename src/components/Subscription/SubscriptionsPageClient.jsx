@@ -1,3 +1,4 @@
+/* eslint-disable react/prop-types */
 // components/Subscription/SubscriptionsPageClient.jsx
 'use client';
 
@@ -7,6 +8,7 @@ import Button from '../Ui/Button/Button';
 import Modal from '../modules/Modal/Modal';
 import { LuLogIn } from 'react-icons/lu';
 import { usePathname, useRouter } from 'next/navigation';
+import { reportClientError } from '@/utils/reportClientError';
 
 const SubscriptionsPageClient = ({ plans, subscriptionStatus }) => {
   const [loadingPlanId, setLoadingPlanId] = useState(null);
@@ -31,36 +33,91 @@ const SubscriptionsPageClient = ({ plans, subscriptionStatus }) => {
   const handleCheckout = async (planId) => {
     try {
       setLoadingPlanId(planId);
+
       setError('');
 
-      const res = await fetch('/api/subscription/checkout', {
+      const response = await fetch('/api/subscription/checkout', {
         method: 'POST',
+
+        credentials: 'include',
+
+        cache: 'no-store',
+
         headers: {
           'Content-Type': 'application/json',
+
+          Accept: 'application/json',
         },
-        body: JSON.stringify({ planId }),
+
+        body: JSON.stringify({
+          planId,
+        }),
       });
 
-      const data = await res.json();
+      const data = await response.json().catch(() => null);
 
-      if (res.status === 401) {
+      if (response.status === 401) {
         setShowLoginModal(true);
+
         return;
       }
 
-      if (!res.ok) {
-        console.error('[SUBSCRIPTION_CHECKOUT_ERROR]', data);
+      if (!response.ok || !data?.success) {
+        if (response.status >= 500) {
+          reportClientError(
+            new Error('Subscription checkout API returned a server error'),
+            {
+              event: 'subscription_checkout_api_failed',
+
+              component: 'SubscriptionsPageClient',
+
+              data: {
+                status: response.status,
+
+                planId: Number(planId),
+              },
+            }
+          );
+        }
+
         setError(data?.error || 'خطا در شروع فرآیند خرید اشتراک');
+
         return;
       }
 
-      if (data?.redirectUrl) {
-        window.location.href = data.redirectUrl;
-      } else {
-        console.log('Subscription cart created:', data);
+      if (typeof data.redirectUrl === 'string' && data.redirectUrl) {
+        window.location.assign(data.redirectUrl);
+
+        return;
       }
-    } catch (err) {
-      console.error('[SUBSCRIPTION_CHECKOUT_EXCEPTION]', err);
+
+      reportClientError(
+        new Error('Subscription checkout response did not contain redirectUrl'),
+        {
+          event: 'subscription_checkout_response_invalid',
+
+          component: 'SubscriptionsPageClient',
+
+          data: {
+            planId: Number(planId),
+
+            hasPaymentId: Number.isInteger(data?.paymentId),
+          },
+        }
+      );
+
+      setError('پاسخ درگاه پرداخت معتبر نیست.');
+    } catch (error) {
+      reportClientError(error, {
+        event: 'subscription_checkout_network_failed',
+
+        component: 'SubscriptionsPageClient',
+
+        data: {
+          planId: Number(planId),
+        },
+      });
+
       setError('خطا در برقراری ارتباط با سرور');
     } finally {
       setLoadingPlanId(null);
@@ -118,13 +175,13 @@ const SubscriptionsPageClient = ({ plans, subscriptionStatus }) => {
                 )}
 
                 <div className='flex flex-wrap items-baseline gap-1'>
-                  <span className='text-green-light dark:text-green-dark text-xl font-extrabold'>
+                  <span className='text-xl font-extrabold text-green-light dark:text-green-dark'>
                     {finalPrice.toLocaleString('fa-IR')}
                   </span>
-                  <span className='text-green-light dark:text-green-dark text-xs'>
+                  <span className='text-xs text-green-light dark:text-green-dark'>
                     تومان
                   </span>
-                  <span className='text-green-light dark:text-green-dark text-[11px]'>
+                  <span className='text-[11px] text-green-light dark:text-green-dark'>
                     / {plan.intervalLabel || 'مدت اشتراک'}
                   </span>
                 </div>
