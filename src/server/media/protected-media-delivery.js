@@ -12,6 +12,11 @@ import { normalizeStorageKey } from '@/server/storage';
 
 import { resolveLocalVideoPath } from '@/server/storage/local-storage';
 
+import {
+  fetchRemoteMediaOrigin,
+  usesRemoteMediaOrigin,
+} from './remote-media-origin';
+
 import { createProtectedSessionMediaUrl } from './session-media-token';
 
 const MAX_MANIFEST_BYTES = 2 * 1024 * 1024;
@@ -264,12 +269,227 @@ export const resolveVideoAssetStorageKey = ({
   return candidateKey;
 };
 
+
+const createMissingRemoteMediaError = () => {
+  const error = new Error('Remote media file was not found.');
+
+  error.code = 'ENOENT';
+
+  return error;
+};
+
+const cancelOriginBody = async (response) => {
+  await response.body?.cancel().catch(() => {});
+};
+
+const throwUnexpectedOriginResponse = async ({
+  response,
+  storageKey,
+}) => {
+  const status = response.status;
+
+  await cancelOriginBody(response);
+
+  throw new Error(
+    `Media origin returned status ${status} for ${storageKey}.`
+  );
+};
+
+const createRemoteRangeErrorResponse = (contentRange = null) => {
+  const headers = new Headers();
+
+  headers.set('Accept-Ranges', 'bytes');
+  headers.set('Cache-Control', 'private, no-store');
+  headers.set('X-Content-Type-Options', 'nosniff');
+
+  if (contentRange) {
+    headers.set('Content-Range', contentRange);
+  }
+
+  return new Response(null, {
+    status: 416,
+    headers,
+  });
+};
+
+const copyRemoteRepresentationHeaders = ({
+  originResponse,
+  headers,
+}) => {
+  for (const headerName of ['content-length', 'content-range']) {
+    const value = originResponse.headers.get(headerName);
+
+    if (value) {
+      headers.set(headerName, value);
+    }
+  }
+};
+
+const REMOTE_RANGE_PATTERN = /^bytes=(?:\d+-\d*|-\d+)$/i;
+
+const serveRemoteProtectedMedia = async ({
+  request,
+  storageKey,
+  includeBody,
+  manifestContext,
+}) => {
+  const normalizedStorageKey = normalizeStorageKey(storageKey);
+
+  const contentType = getContentType(normalizedStorageKey);
+
+  const extension = path.extname(normalizedStorageKey).toLowerCase();
+
+  /*
+   * Manifest از Origin خوانده می‌شود و تمام Variantها و Segmentها
+   * دوباره به Route محافظت‌شده با همان Token اشاره می‌کنند.
+   */
+  if (extension === '.m3u8' && manifestContext) {
+    const originResponse = await fetchRemoteMediaOrigin({
+      storageKey: normalizedStorageKey,
+      method: 'GET',
+      requestSignal: request.signal,
+    });
+
+    if (originResponse.status === 404) {
+      await cancelOriginBody(originResponse);
+
+      throw createMissingRemoteMediaError();
+    }
+
+    if (originResponse.status !== 200) {
+      await throwUnexpectedOriginResponse({
+        response: originResponse,
+        storageKey: normalizedStorageKey,
+      });
+    }
+
+    const declaredLength = Number(
+      originResponse.headers.get('content-length') || 0
+    );
+
+    if (
+      Number.isFinite(declaredLength) &&
+      declaredLength > MAX_MANIFEST_BYTES
+    ) {
+      await cancelOriginBody(originResponse);
+
+      throw new Error('HLS manifest is unexpectedly large.');
+    }
+
+    const manifestBuffer = Buffer.from(
+      await originResponse.arrayBuffer()
+    );
+
+    if (manifestBuffer.length > MAX_MANIFEST_BYTES) {
+      throw new Error('HLS manifest is unexpectedly large.');
+    }
+
+    const rewrittenManifest = rewriteHlsManifest({
+      manifest: manifestBuffer.toString('utf8'),
+
+      sessionId: manifestContext.sessionId,
+
+      token: manifestContext.token,
+
+      currentAssetPath: manifestContext.currentAssetPath,
+    });
+
+    const responseBuffer = Buffer.from(rewrittenManifest, 'utf8');
+
+    const headers = createBaseHeaders({
+      contentType,
+    });
+
+    headers.set('Content-Length', String(responseBuffer.length));
+
+    return new Response(includeBody ? responseBuffer : null, {
+      status: 200,
+      headers,
+    });
+  }
+
+  const rawRange = request.headers.get('range');
+
+  const range = rawRange ? rawRange.trim() : null;
+
+  if (range && !REMOTE_RANGE_PATTERN.test(range)) {
+    return createRemoteRangeErrorResponse();
+  }
+
+  const originResponse = await fetchRemoteMediaOrigin({
+    storageKey: normalizedStorageKey,
+    method: includeBody ? 'GET' : 'HEAD',
+    range,
+    requestSignal: request.signal,
+  });
+
+  if (originResponse.status === 404) {
+    await cancelOriginBody(originResponse);
+
+    throw createMissingRemoteMediaError();
+  }
+
+  if (originResponse.status === 416) {
+    const contentRange =
+      originResponse.headers.get('content-range');
+
+    await cancelOriginBody(originResponse);
+
+    return createRemoteRangeErrorResponse(contentRange);
+  }
+
+  const expectedStatus = range ? 206 : 200;
+
+  if (originResponse.status !== expectedStatus) {
+    await throwUnexpectedOriginResponse({
+      response: originResponse,
+      storageKey: normalizedStorageKey,
+    });
+  }
+
+  const headers = createBaseHeaders({
+    contentType,
+  });
+
+  copyRemoteRepresentationHeaders({
+    originResponse,
+    headers,
+  });
+
+  if (!includeBody) {
+    await cancelOriginBody(originResponse);
+
+    return new Response(null, {
+      status: originResponse.status,
+      headers,
+    });
+  }
+
+  if (!originResponse.body) {
+    throw new Error('Media origin returned an empty response body.');
+  }
+
+  return new Response(originResponse.body, {
+    status: originResponse.status,
+    headers,
+  });
+};
+
 export async function serveProtectedMedia({
   request,
   storageKey,
   includeBody,
   manifestContext = null,
 }) {
+  if (usesRemoteMediaOrigin()) {
+    return serveRemoteProtectedMedia({
+      request,
+      storageKey,
+      includeBody,
+      manifestContext,
+    });
+  }
+
   const filePath = resolveLocalVideoPath(storageKey);
 
   const fileStats = await stat(filePath);
