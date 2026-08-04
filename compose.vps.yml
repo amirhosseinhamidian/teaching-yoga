@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16
+    container_name: teaching-yoga-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+
+    volumes:
+      - teaching_yoga_postgres_data:/var/lib/postgresql/data
+
+    shm_size: 256mb
+
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+    logging:
+      driver: local
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+    stop_grace_period: 60s
+
+  web:
+    depends_on:
+      db:
+        condition: service_healthy
+
+  video-worker:
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  teaching_yoga_postgres_data:
+    name: teaching_yoga_postgres_data
