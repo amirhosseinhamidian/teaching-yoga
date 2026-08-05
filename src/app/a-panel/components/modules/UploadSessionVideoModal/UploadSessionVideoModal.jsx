@@ -9,6 +9,7 @@ import Button from '@/components/Ui/Button/Button';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
+import { cancelAdminVideoJob } from '@/server/videoJobClient';
 
 import { PUBLIC, PURCHASED, REGISTERED } from '@/constants/videoAccessLevel';
 
@@ -47,11 +48,15 @@ const UploadSessionMediaModal = ({
 
   const fileInputRef = useRef(null);
   const uploadControllerRef = useRef(null);
+  const cancelRequestedRef = useRef(false);
 
   const [file, setFile] = useState(null);
   const [accessLevel, setAccessLevel] = useState(mediaAccessLevel || '');
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [activeJobId, setActiveJobId] = useState(null);
+  const [uploadError, setUploadError] = useState('');
 
   const [progress, setProgress] = useState(0);
 
@@ -60,6 +65,14 @@ const UploadSessionMediaModal = ({
   const [errorMessages, setErrorMessages] = useState({
     accessLevel: '',
   });
+
+  const isOperationLocked =
+    isLoading || isCancelling || Boolean(activeJobId);
+
+  const canCancelVideoJob =
+    mediaType === 'VIDEO' &&
+    Boolean(activeJobId) &&
+    ['uploading', 'queued', 'failed'].includes(currentStage);
 
   const accessMediaOptions = [
     {
@@ -96,6 +109,7 @@ const UploadSessionMediaModal = ({
     setFile(selectedFile);
     setProgress(0);
     setCurrentStage('idle');
+    setUploadError('');
   };
 
   const handleFileChange = (event) => {
@@ -106,7 +120,7 @@ const UploadSessionMediaModal = ({
     event.preventDefault();
     event.stopPropagation();
 
-    if (isLoading) {
+    if (isOperationLocked) {
       return;
     }
 
@@ -119,7 +133,7 @@ const UploadSessionMediaModal = ({
   };
 
   const openFilePicker = () => {
-    if (isLoading) {
+    if (isOperationLocked) {
       return;
     }
 
@@ -154,7 +168,10 @@ const UploadSessionMediaModal = ({
     const abortController = new AbortController();
 
     uploadControllerRef.current = abortController;
+    cancelRequestedRef.current = false;
 
+    setActiveJobId(null);
+    setUploadError('');
     setIsLoading(true);
     setProgress(0);
     setCurrentStage(mediaType === 'VIDEO' ? 'creating' : 'uploading');
@@ -173,6 +190,12 @@ const UploadSessionMediaModal = ({
               setCurrentStage(stage);
             }
           },
+
+          onJobCreated: (jobId) => {
+            if (typeof jobId === 'string' && jobId.length > 0) {
+              setActiveJobId(jobId);
+            }
+          },
         });
 
         setCurrentStage('ready');
@@ -181,6 +204,7 @@ const UploadSessionMediaModal = ({
         toast.showSuccessToast(result?.message || 'ویدئو با موفقیت ثبت شد.');
 
         uploadControllerRef.current = null;
+        setActiveJobId(null);
         onClose();
 
         return;
@@ -197,23 +221,82 @@ const UploadSessionMediaModal = ({
       if (error?.name === 'AbortError') {
         setCurrentStage('cancelled');
 
-        toast.showErrorToast(
-          mediaType === 'VIDEO' ? 'آپلود ویدئو لغو شد.' : 'آپلود صدا لغو شد.'
-        );
+        if (!cancelRequestedRef.current) {
+          toast.showErrorToast(
+            mediaType === 'VIDEO'
+              ? 'آپلود ویدئو لغو شد.'
+              : 'آپلود صدا لغو شد.'
+          );
+        }
 
         return;
       }
 
+      const message =
+        error?.message || 'خطایی در آپلود فایل رخ داده است.';
+
       setCurrentStage('failed');
+      setUploadError(message);
 
       console.error('Media upload error:', error);
 
-      toast.showErrorToast(
-        error?.message || 'خطایی در آپلود فایل رخ داده است.'
-      );
+      toast.showErrorToast(message);
     } finally {
       uploadControllerRef.current = null;
       setIsLoading(false);
+    }
+  };
+
+  const handleCancelVideoJob = async () => {
+    if (!canCancelVideoJob || isCancelling) {
+      return;
+    }
+
+    const jobId = activeJobId;
+
+    cancelRequestedRef.current = true;
+    setIsCancelling(true);
+    uploadControllerRef.current?.abort();
+
+    try {
+      await cancelAdminVideoJob({
+        jobId,
+      });
+
+      setActiveJobId(null);
+      setCurrentStage('cancelled');
+      setProgress(0);
+      setUploadError('');
+
+      toast.showSuccessToast(
+        'عملیات آپلود ویدئو متوقف و پاک‌سازی شد.'
+      );
+    } catch (error) {
+      const stoppedStatus = error?.data?.job?.status;
+
+      const isAlreadyStopped =
+        error?.status === 409 &&
+        ['FAILED', 'CANCELLED'].includes(stoppedStatus);
+
+      if (isAlreadyStopped) {
+        setActiveJobId(null);
+        setCurrentStage('cancelled');
+        setProgress(0);
+        setUploadError('');
+
+        toast.showSuccessToast('عملیات ویدئو متوقف شده است.');
+      } else {
+        const message =
+          error?.message || 'لغو عملیات ویدئو با خطا مواجه شد.';
+
+        setUploadError(message);
+        toast.showErrorToast(message);
+      }
+    } finally {
+      uploadControllerRef.current = null;
+      cancelRequestedRef.current = false;
+      setIsLoading(false);
+      setIsCancelling(false);
     }
   };
 
@@ -234,9 +317,13 @@ const UploadSessionMediaModal = ({
           <button
             type='button'
             onClick={onClose}
-            disabled={isLoading}
+            disabled={isOperationLocked}
             aria-label='بستن'
-            className={isLoading ? 'cursor-not-allowed opacity-50' : ''}
+            className={
+              isOperationLocked
+                ? 'cursor-not-allowed opacity-50'
+                : ''
+            }
           >
             <IoClose
               size={24}
@@ -281,7 +368,9 @@ const UploadSessionMediaModal = ({
           role='button'
           tabIndex={0}
           className={`mt-4 flex h-40 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark ${
-            isLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+            isOperationLocked
+              ? 'cursor-not-allowed opacity-60'
+              : 'cursor-pointer'
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
@@ -297,13 +386,13 @@ const UploadSessionMediaModal = ({
             type='file'
             accept={
               mediaType === 'VIDEO'
-                ? 'video/*'
+                ? '.mp4,.mov,.m4v,.webm,.mkv,video/mp4,video/quicktime,video/x-m4v,video/webm,video/x-matroska'
                 : '.mp3,.m4a,.wav,.aac,.ogg,audio/*'
             }
             className='hidden'
             ref={fileInputRef}
             onChange={handleFileChange}
-            disabled={isLoading}
+            disabled={isOperationLocked}
           />
 
           <div className='cursor-pointer'>
@@ -327,7 +416,7 @@ const UploadSessionMediaModal = ({
           </div>
         </div>
 
-        {isLoading && (
+        {(isLoading || currentStage === 'failed') && (
           <div>
             <div className='mt-4 h-3 w-full overflow-hidden rounded-full bg-foreground-light dark:bg-foreground-dark'>
               <div
@@ -346,18 +435,38 @@ const UploadSessionMediaModal = ({
 
         <p
           className={`mt-2 text-xs text-secondary sm:text-sm ${
-            isLoading ? 'block' : 'hidden'
+            isLoading || activeJobId ? 'block' : 'hidden'
           }`}
         >
-          تا پایان آپلود اولیه این پنجره را نبندید. پس از ورود ویدئو به صف،
-          پردازش روی سرور انجام می‌شود.
+          {currentStage === 'failed'
+            ? 'آپلود ناقص مانده است. برای آزاد شدن جلسه، دکمه توقف و لغو عملیات را بزنید.'
+            : 'تا پایان آپلود اولیه این پنجره را نبندید. پس از ورود ویدئو به صف، پردازش روی سرور انجام می‌شود.'}
         </p>
+
+        {uploadError && (
+          <p className='mt-3 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300'>
+            {uploadError}
+          </p>
+        )}
+
+        {canCancelVideoJob && (
+          <button
+            type='button'
+            onClick={handleCancelVideoJob}
+            disabled={isCancelling}
+            className='mt-4 w-full rounded-lg border border-red-500 px-4 py-3 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60 dark:text-red-400 dark:hover:bg-red-950/30'
+          >
+            {isCancelling
+              ? 'در حال توقف عملیات...'
+              : 'توقف و لغو عملیات'}
+          </button>
+        )}
 
         <Button
           onClick={handleUpload}
           className='mt-8 text-xs sm:text-base'
-          isLoading={isLoading}
-          disabled={isLoading}
+          isLoading={isLoading || isCancelling}
+          disabled={isOperationLocked}
         >
           {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
         </Button>

@@ -6,6 +6,7 @@ const nextConfig = {
     instrumentationHook: true,
   },
   images: {
+    unoptimized: true,
     domains: [
       'samane-yoga.storage.c2.liara.site',
       'beta.samaneyoga.ir',

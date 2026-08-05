@@ -8,7 +8,11 @@ import { withApiLogging } from '@/server/logger/with-api-logging';
 
 import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
 
-import { getVideoJob, markVideoJobQueued } from '@/server/video/jobs';
+import {
+  getVideoJob,
+  markVideoJobFailed,
+  markVideoJobQueued,
+} from '@/server/video/jobs';
 
 import {
   deleteJobUploadDirectory,
@@ -77,8 +81,6 @@ const getUploadErrorStatus = (error) => {
 
 const handlePut = async (request, context) => {
   let jobId = null;
-
-  let sourceSaved = false;
 
   let log = getAdminVideoJobLogger({
     component: 'admin-video-source-upload',
@@ -214,8 +216,6 @@ const handlePut = async (request, context) => {
       signal: request.signal,
     });
 
-    sourceSaved = true;
-
     const queuedJob = await markVideoJobQueued({
       jobId,
 
@@ -255,7 +255,7 @@ const handlePut = async (request, context) => {
       }
     );
   } catch (error) {
-    if (sourceSaved && jobId) {
+    if (jobId) {
       try {
         await deleteJobUploadDirectory(jobId);
       } catch (cleanupError) {
@@ -268,6 +268,31 @@ const handlePut = async (request, context) => {
           data: {
             event: 'video_source_upload_cleanup_failed',
           },
+        });
+      }
+    }
+
+    if (jobId) {
+      const currentJob = await getVideoJob(jobId).catch(() => null);
+
+      if (currentJob?.status === 'UPLOADING') {
+        const failureError =
+          error instanceof Error && error.name === 'AbortError'
+            ? new Error('آپلود فایل ویدئویی پیش از تکمیل قطع شد.')
+            : error;
+
+        await markVideoJobFailed({
+          jobId,
+          error: failureError,
+        }).catch((statusError) => {
+          logError({
+            log,
+            error: statusError,
+            message: 'Failed to update interrupted upload job status',
+            data: {
+              event: 'video_source_upload_status_update_failed',
+            },
+          });
         });
       }
     }
