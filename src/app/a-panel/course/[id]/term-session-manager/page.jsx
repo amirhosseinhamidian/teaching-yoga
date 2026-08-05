@@ -222,7 +222,12 @@ const AddTermSessionPage = () => {
   };
 
   const handleSessionVideoUpload = async (file, accessLevel, controls = {}) => {
-    const { signal, onProgress, onStageChange } = controls;
+    const {
+      signal,
+      onProgress,
+      onStageChange,
+      onJobCreatedd,
+    } = controls;
 
     if (!(file instanceof File)) {
       throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
@@ -249,6 +254,7 @@ const AddTermSessionPage = () => {
       });
 
       jobId = createdJob.id;
+      onJobCreatedd?.(jobId);
 
       onStageChange?.('uploading');
       onProgress?.(0);

@@ -208,7 +208,12 @@ const SessionTable = ({
   // آپلود/بروزرسانی ویدیو
   // -----------------------------
   const handleSessionVideoUpload = async (file, accessLevel, controls = {}) => {
-    const { signal, onProgress, onStageChange } = controls;
+    const {
+      signal,
+      onProgress,
+      onStageChange,
+      onJobCreated,
+    } = controls;
 
     if (!(file instanceof File)) {
       throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
@@ -235,6 +240,7 @@ const SessionTable = ({
       });
 
       jobId = createdJob.id;
+      onJobCreated?.(jobId);
 
       onStageChange?.('uploading');
       onProgress?.(0);
