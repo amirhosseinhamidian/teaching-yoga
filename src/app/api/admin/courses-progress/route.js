@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(request) {
   try {
@@ -81,7 +82,7 @@ export async function GET(request) {
       return {
         courseId: course.id,
         courseTitle: course.title,
-        courseCover: course.cover,
+        courseCover: toAbsoluteMediaUrl(course.cover),
         progress: progressPercentage,
       };
     });

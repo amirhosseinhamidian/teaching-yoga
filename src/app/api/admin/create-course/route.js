@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function POST(request) {
   try {
@@ -112,7 +113,16 @@ export async function POST(request) {
       return newCourse;
     });
 
-    return NextResponse.json({ course: created }, { status: 201 });
+    return NextResponse.json(
+      {
+        course: {
+          ...created,
+          cover: normalizeMediaUrl(created.cover),
+          introVideoUrl: normalizeMediaUrl(created.introVideoUrl),
+        },
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error(error);
     return NextResponse.json(

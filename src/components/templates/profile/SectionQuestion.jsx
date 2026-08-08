@@ -1,33 +1,38 @@
 /* eslint-disable no-undef */
 'use client';
+
 import React, { useEffect, useState } from 'react';
-import { Swiper, SwiperSlide } from 'swiper/react'; // Swiper
+import { Swiper, SwiperSlide } from 'swiper/react';
 import 'swiper/css';
 import 'swiper/css/pagination';
-import QuestionSliderItem from './QuestionSliderItem';
 import { Pagination } from 'swiper/modules';
+
+import QuestionSliderItem from './QuestionSliderItem';
+
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
+import {
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineQuestionMarkCircle,
+} from 'react-icons/hi2';
 import { ImSpinner2 } from 'react-icons/im';
-import { PiEmptyLight } from 'react-icons/pi';
 
 async function fetchQuestions() {
   try {
     const res = await fetch(
       `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/questions`,
       {
-        cache: 'no-store', // Ensures SSR by disabling caching
+        cache: 'no-store',
         method: 'GET',
       }
     );
 
-    // اگر پاسخ از سرور موفقیت‌آمیز نبود، خطا پرتاب می‌شود
     if (!res.ok) {
       throw new Error('Failed to fetch course data');
     }
 
-    // بازگشت داده‌ها در صورتی که درخواست موفقیت‌آمیز باشد
     return res.json();
   } catch (error) {
-    // در صورت بروز هرگونه خطا، پیام خطا در کنسول ثبت می‌شود
     console.error('Error fetching data:', error);
   }
 }
@@ -81,7 +86,6 @@ const SectionQuestion = () => {
     ) {
       await markQuestionAsRead(currentQuestion.id);
 
-      // به‌روزرسانی وضعیت در آرایه محلی
       setQuestions((prevQuestions) => ({
         ...prevQuestions,
         [activeTab]: prevQuestions[activeTab].map((q) =>
@@ -92,7 +96,6 @@ const SectionQuestion = () => {
   };
 
   useEffect(() => {
-    // بررسی آیتم اول هنگام لود یا تغییر تب
     const checkFirstItem = async () => {
       const currentQuestion = questions[activeTab]?.[0];
       if (
@@ -102,7 +105,6 @@ const SectionQuestion = () => {
       ) {
         await markQuestionAsRead(currentQuestion.id);
 
-        // به‌روزرسانی وضعیت در آرایه محلی
         setQuestions((prevQuestions) => ({
           ...prevQuestions,
           [activeTab]: prevQuestions[activeTab].map((q) =>
@@ -115,63 +117,82 @@ const SectionQuestion = () => {
     checkFirstItem();
   }, [questions, activeTab]);
 
+  const currentCount = questions[activeTab]?.length || 0;
+
   return (
     <div>
-      {/* تب‌ها */}
-      <div className='grid grid-cols-2 rounded-xl bg-foreground-light dark:bg-foreground-dark'>
+      <div className='grid grid-cols-2 gap-2 rounded-[20px] border border-black/5 bg-background-light/45 p-1.5 dark:border-white/10 dark:bg-background-dark/30'>
         <button
+          type='button'
           onClick={() => setActiveTab('allQuestions')}
-          className={`px-1 py-2 text-xs font-semibold xs:text-sm sm:px-4 md:text-base ${activeTab === 'allQuestions' ? 'rounded-xl bg-secondary text-text-light' : 'text-subtext-light dark:text-subtext-dark'}`}
+          className={`flex min-h-11 items-center justify-center gap-2 rounded-2xl px-3 text-[11px] font-black transition-all sm:text-xs ${
+            activeTab === 'allQuestions'
+              ? 'bg-secondary text-white shadow-[0_10px_25px_rgba(38,145,125,0.18)]'
+              : 'text-subtext-light hover:bg-surface-light/60 hover:text-text-light dark:text-subtext-dark dark:hover:bg-surface-dark/50 dark:hover:text-text-dark'
+          }`}
         >
+          <HiOutlineChatBubbleLeftRight size={17} />
           همه سوالات
         </button>
+
         <button
+          type='button'
           onClick={() => setActiveTab('unansweredQuestions')}
-          className={`px-1 py-2 text-xs font-semibold xs:text-sm sm:px-4 md:text-base ${activeTab === 'unansweredQuestions' ? 'rounded-xl bg-secondary text-text-light' : 'text-subtext-light dark:text-subtext-dark'}`}
+          className={`flex min-h-11 items-center justify-center gap-2 rounded-2xl px-3 text-[11px] font-black transition-all sm:text-xs ${
+            activeTab === 'unansweredQuestions'
+              ? 'bg-secondary text-white shadow-[0_10px_25px_rgba(38,145,125,0.18)]'
+              : 'text-subtext-light hover:bg-surface-light/60 hover:text-text-light dark:text-subtext-dark dark:hover:bg-surface-dark/50 dark:hover:text-text-dark'
+          }`}
         >
+          <HiOutlineQuestionMarkCircle size={17} />
           پاسخ داده نشده
         </button>
       </div>
 
-      {/* اسلایدر */}
-      <div className='my-6 max-w-[544px] rounded-xl border border-accent p-2 md:max-w-[668px] md:p-4 lg:max-w-[766px] xl:max-w-[996px] 2xl:max-w-[1240px]'>
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        className='mt-4 overflow-hidden p-3 sm:p-4'
+      >
         {isLoading ? (
-          <div className='flex min-h-64 w-full items-center justify-center'>
-            <ImSpinner2 size={42} className='animate-spin text-secondary' />
+          <div className='flex min-h-[340px] w-full flex-col items-center justify-center gap-3'>
+            <ImSpinner2 size={34} className='animate-spin text-secondary' />
+            <span className='text-xs text-subtext-light dark:text-subtext-dark'>
+              در حال دریافت سوالات...
+            </span>
+          </div>
+        ) : currentCount === 0 ? (
+          <div className='flex min-h-[340px] w-full flex-col items-center justify-center gap-3 text-center'>
+            <span className='flex h-16 w-16 items-center justify-center rounded-[22px] bg-secondary/10 text-secondary'>
+              <HiOutlineQuestionMarkCircle size={30} />
+            </span>
+            <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+              سوالی در این بخش وجود ندارد
+            </h3>
+            <p className='max-w-sm text-[10px] leading-6 text-subtext-light sm:text-xs dark:text-subtext-dark'>
+              سوال‌هایی که در دوره‌ها ثبت کرده‌اید از این قسمت قابل مشاهده و
+              پیگیری هستند.
+            </p>
           </div>
         ) : (
-          <>
-            {questions[activeTab]?.length === 0 ? (
-              <div className='flex min-h-64 w-full flex-col items-center justify-center gap-4'>
-                <PiEmptyLight
-                  size={46}
-                  className='text-subtext-light dark:text-subtext-dark'
-                />
-                <span className='text-subtext-light dark:text-subtext-dark'>
-                  سوالی در این بخش وجود ندارد.
-                </span>
-              </div>
-            ) : (
-              <Swiper
-                dir='rtl'
-                pagination={{
-                  dynamicBullets: true,
-                }}
-                modules={[Pagination]}
-                spaceBetween={14}
-                slidesPerView={1}
-                onSlideChange={handleSlideChange}
-              >
-                {questions[activeTab]?.map((question) => (
-                  <SwiperSlide key={question.id}>
-                    <QuestionSliderItem question={question} />
-                  </SwiperSlide>
-                ))}
-              </Swiper>
-            )}
-          </>
+          <Swiper
+            dir='rtl'
+            pagination={{ dynamicBullets: true }}
+            modules={[Pagination]}
+            spaceBetween={16}
+            slidesPerView={1}
+            onSlideChange={handleSlideChange}
+            className='profile-questions-swiper'
+          >
+            {questions[activeTab]?.map((question) => (
+              <SwiperSlide key={question.id}>
+                <QuestionSliderItem question={question} />
+              </SwiperSlide>
+            ))}
+          </Swiper>
         )}
-      </div>
+      </SiteCard>
     </div>
   );
 };

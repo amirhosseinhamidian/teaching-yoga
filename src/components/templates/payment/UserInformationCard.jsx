@@ -1,34 +1,40 @@
 /* eslint-disable no-undef */
 'use client';
 
-import React, { useMemo, useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import Input from '@/components/Ui/Input/Input';
-import Button from '@/components/Ui/Button/Button';
+import Checkbox from '@/components/Ui/Checkbox/Checkbox';
+import DropDown from '@/components/Ui/DropDown/DropDwon';
 import Modal from '@/components/modules/Modal/Modal';
+
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
 
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useUserActions } from '@/hooks/auth/useUserActions';
 
-import { FiEdit2 } from 'react-icons/fi';
-import { MdAddLocationAlt } from 'react-icons/md';
-import Checkbox from '@/components/Ui/Checkbox/Checkbox';
-import DropDown from '@/components/Ui/DropDown/DropDwon';
+import {
+  HiOutlineCheck,
+  HiOutlineMapPin,
+  HiOutlinePencilSquare,
+  HiOutlinePlus,
+  HiOutlineUser,
+  HiOutlineUserCircle,
+} from 'react-icons/hi2';
 
-function safeStr(v) {
-  return String(v ?? '');
+function safeStr(value) {
+  return String(value ?? '');
 }
 
 function validatePhone(phone) {
   return /^09\d{9}$/.test(String(phone || '').trim());
 }
 
-/* -------------------------
- * Address Modal (create/edit)
- * ------------------------ */
 function AddressModal({
   open,
   mode,
@@ -60,24 +66,32 @@ function AddressModal({
 
   useEffect(() => {
     if (!open) return;
-    const d = initialData || {};
-    setFullName(safeStr(d.fullName ? d.fullName : defaultFullname));
-    setPhone(safeStr(d.phone ? d.phone : defaultPhone));
-    setProvince(safeStr(d.province));
-    setCity(safeStr(d.city));
-    setAddress1(safeStr(d.address1));
-    setPostalCode(safeStr(d.postalCode));
-    setNotes(safeStr(d.notes));
-    setIsDefault(!!d.isDefault);
+
+    const data = initialData || {};
+
+    setFullName(safeStr(data.fullName ? data.fullName : defaultFullname));
+    setPhone(safeStr(data.phone ? data.phone : defaultPhone));
+    setProvince(safeStr(data.province));
+    setCity(safeStr(data.city));
+    setAddress1(safeStr(data.address1));
+    setPostalCode(safeStr(data.postalCode));
+    setNotes(safeStr(data.notes));
+    setIsDefault(Boolean(data.isDefault));
     setErrors({});
-  }, [open, initialData]);
+  }, [open, initialData, defaultFullname, defaultPhone]);
 
   useEffect(() => {
     (async () => {
-      const res = await fetch('/api/locality/provinces', { cache: 'no-store' });
+      const res = await fetch('/api/locality/provinces', {
+        cache: 'no-store',
+      });
       const data = await res.json();
+
       setProvinceOptions(
-        (data.items || []).map((p) => ({ label: p, value: p }))
+        (data.items || []).map((item) => ({
+          label: item,
+          value: item,
+        }))
       );
     })();
   }, []);
@@ -92,29 +106,57 @@ function AddressModal({
     (async () => {
       const res = await fetch(
         `/api/locality/cities?province=${encodeURIComponent(province)}`,
-        {
-          cache: 'no-store',
-        }
+        { cache: 'no-store' }
       );
       const data = await res.json();
-      setCityOptions((data.items || []).map((c) => ({ label: c, value: c })));
-      setCity(''); // وقتی استان عوض شد شهر ریست شود
+      const items = data.items || [];
+
+      setCityOptions(
+        items.map((item) => ({
+          label: item,
+          value: item,
+        }))
+      );
+
+      // در حالت ویرایش، شهر فعلی را اگر متعلق به استان است حفظ کن.
+      setCity((prev) => (prev && items.includes(prev) ? prev : ''));
     })();
   }, [province]);
 
   const validate = () => {
-    const e = {};
-    if (!fullName.trim()) e.fullName = 'نام و نام خانوادگی گیرنده الزامی است.';
-    if (!validatePhone(phone)) e.phone = 'شماره موبایل گیرنده معتبر نیست.';
-    if (!province.trim()) e.province = 'استان الزامی است.';
-    if (!city.trim()) e.city = 'شهر الزامی است.';
-    if (!address1.trim()) e.address1 = 'آدرس الزامی است.';
-    if (!postalCode.trim()) e.postalCode = 'کد پستی الزامی است.';
-    const pc = postalCode.trim();
-    if (pc && !/^\d{10}$/.test(pc)) e.postalCode = 'کدپستی باید ۱۰ رقم باشد.';
+    const nextErrors = {};
 
-    setErrors(e);
-    return Object.keys(e).length === 0;
+    if (!fullName.trim()) {
+      nextErrors.fullName = 'نام و نام خانوادگی گیرنده الزامی است.';
+    }
+
+    if (!validatePhone(phone)) {
+      nextErrors.phone = 'شماره موبایل گیرنده معتبر نیست.';
+    }
+
+    if (!province.trim()) {
+      nextErrors.province = 'استان الزامی است.';
+    }
+
+    if (!city.trim()) {
+      nextErrors.city = 'شهر الزامی است.';
+    }
+
+    if (!address1.trim()) {
+      nextErrors.address1 = 'آدرس الزامی است.';
+    }
+
+    if (!postalCode.trim()) {
+      nextErrors.postalCode = 'کد پستی الزامی است.';
+    }
+
+    const normalizedPostalCode = postalCode.trim();
+    if (normalizedPostalCode && !/^\d{10}$/.test(normalizedPostalCode)) {
+      nextErrors.postalCode = 'کدپستی باید ۱۰ رقم باشد.';
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
   };
 
   const handleSave = async () => {
@@ -134,7 +176,7 @@ function AddressModal({
         address1: address1.trim(),
         postalCode: postalCode.trim() || null,
         notes: notes.trim() || null,
-        isDefault: !!isDefault,
+        isDefault: Boolean(isDefault),
       };
 
       const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -166,7 +208,7 @@ function AddressModal({
       toast.showSuccessToast(isEdit ? 'آدرس بروزرسانی شد' : 'آدرس ثبت شد');
       onSaved?.(data);
       onClose?.();
-    } catch (e) {
+    } catch (error) {
       toast.showErrorToast('خطای غیرمنتظره در ذخیره آدرس');
     } finally {
       setSaving(false);
@@ -179,12 +221,13 @@ function AddressModal({
     <Modal
       title={isEdit ? 'ویرایش آدرس' : 'افزودن آدرس جدید'}
       desc='اطلاعات گیرنده و آدرس را وارد کنید.'
-      icon={MdAddLocationAlt}
-      iconSize={34}
+      icon={HiOutlineMapPin}
+      iconSize={26}
       primaryButtonClick={handleSave}
       secondaryButtonClick={onClose}
-      primaryButtonText={saving ? 'در حال ذخیره...' : 'ذخیره'}
+      primaryButtonText={saving ? 'در حال ذخیره...' : 'ذخیره آدرس'}
       secondaryButtonText='انصراف'
+      loadingPrimaryButton={saving}
       className='overflow-y-auto'
     >
       <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
@@ -195,6 +238,7 @@ function AddressModal({
           errorMessage={errors.fullName}
           className='bg-surface-light dark:bg-surface-dark'
         />
+
         <Input
           label='موبایل گیرنده'
           value={phone}
@@ -208,7 +252,7 @@ function AddressModal({
           label='استان'
           options={provinceOptions}
           value={province || undefined}
-          onChange={(val) => setProvince(val || '')}
+          onChange={(value) => setProvince(value || '')}
           placeholder='انتخاب استان'
           fullWidth
           errorMessage={errors.province}
@@ -219,7 +263,7 @@ function AddressModal({
           label='شهر'
           options={cityOptions}
           value={city || undefined}
-          onChange={(val) => setCity(val || '')}
+          onChange={(value) => setCity(value || '')}
           placeholder={province ? 'انتخاب شهر' : 'اول استان را انتخاب کنید'}
           fullWidth
           errorMessage={errors.city}
@@ -244,6 +288,7 @@ function AddressModal({
           errorMessage={errors.postalCode}
           className='bg-surface-light dark:bg-surface-dark'
         />
+
         <Input
           label='توضیحات (اختیاری)'
           value={notes}
@@ -251,7 +296,7 @@ function AddressModal({
           className='bg-surface-light dark:bg-surface-dark'
         />
 
-        <div className='flex items-center gap-2 sm:col-span-2'>
+        <div className='rounded-2xl border border-black/5 bg-background-light/40 p-3 sm:col-span-2 dark:border-white/10 dark:bg-background-dark/30'>
           <Checkbox
             checked={isDefault}
             onChange={setIsDefault}
@@ -275,9 +320,6 @@ AddressModal.propTypes = {
   defaultPhone: PropTypes.string,
 };
 
-/* -------------------------
- * Main Component
- * ------------------------ */
 const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
@@ -285,12 +327,10 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   const { user } = useAuthUser();
   const { loadUser } = useUserActions();
 
-  // user info
   const [firstname, setFirstname] = useState('');
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-
   const [isLoading, setIsLoading] = useState(false);
 
   const [errorMessages, setErrorMessages] = useState({
@@ -300,24 +340,21 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
     phone: '',
   });
 
-  // addresses
   const [addressesLoading, setAddressesLoading] = useState(true);
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
 
-  // modal
   const [addressModalOpen, setAddressModalOpen] = useState(false);
-  const [addressModalMode, setAddressModalMode] = useState('create'); // create | edit
+  const [addressModalMode, setAddressModalMode] = useState('create');
   const [addressToEdit, setAddressToEdit] = useState(null);
 
-  // ✔ فرم را بعد از لود شدن user آپدیت کن
   useEffect(() => {
-    if (user) {
-      setFirstname(user.firstname || '');
-      setLastname(user.lastname || '');
-      setEmail(user.email || '');
-      setPhone(user.phone || '');
-    }
+    if (!user) return;
+
+    setFirstname(user.firstname || '');
+    setLastname(user.lastname || '');
+    setEmail(user.email || '');
+    setPhone(user.phone || '');
   }, [user]);
 
   const fetchAddresses = async () => {
@@ -332,52 +369,48 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
       });
 
       const data = await res.json().catch(() => ({}));
+
       if (!res.ok) {
         setAddresses([]);
         toast.showErrorToast(data?.error || 'خطا در دریافت آدرس‌ها');
         return;
       }
 
-      // انتظار: {items:[...]} یا [...]
       const list = Array.isArray(data) ? data : data?.items || [];
-
-      // از آخر به اول
       const sorted = [...list].sort((a, b) => Number(b.id) - Number(a.id));
+
       setAddresses(sorted);
 
-      // اگر هیچ آدرسی نداریم
       if (!sorted.length) {
         setSelectedAddressId(null);
-        if (typeof onAddressSelect === 'function') onAddressSelect(null);
+        onAddressSelect?.(null);
         return;
       }
 
-      // پیش‌فرض: اول default، اگر نبود آخرین (sorted[0]) چون از آخر به اوله
-      const defaultAddr = sorted.find((a) => a.isDefault) || null;
-      const fallbackSelectedId = defaultAddr?.id ?? sorted[0]?.id ?? null;
+      const defaultAddress = sorted.find((item) => item.isDefault) || null;
+      const fallbackSelectedId = defaultAddress?.id ?? sorted[0]?.id ?? null;
 
-      // ✅ انتخاب نهایی با حفظ انتخاب قبلی (اگر هنوز وجود دارد)
       let finalSelectedId = fallbackSelectedId;
 
-      setSelectedAddressId((prevSelectedId) => {
-        const stillExists = sorted.some((a) => a.id === prevSelectedId);
+      setSelectedAddressId((previousSelectedId) => {
+        const stillExists = sorted.some(
+          (item) => item.id === previousSelectedId
+        );
 
-        // اگر انتخاب قبلی هنوز معتبر است، همان را نگه دار
-        finalSelectedId = stillExists ? prevSelectedId : fallbackSelectedId;
+        finalSelectedId = stillExists ? previousSelectedId : fallbackSelectedId;
 
         return finalSelectedId;
       });
 
-      // ✅ آبجکت انتخاب شده را پیدا کن و به والد بده
-      const selectedObj =
-        sorted.find((a) => a.id === finalSelectedId) ||
-        sorted.find((a) => a.id === fallbackSelectedId) ||
+      const selectedObject =
+        sorted.find((item) => item.id === finalSelectedId) ||
+        sorted.find((item) => item.id === fallbackSelectedId) ||
         null;
 
-      if (selectedObj && typeof onAddressSelect === 'function') {
-        onAddressSelect(selectedObj);
+      if (selectedObject) {
+        onAddressSelect?.(selectedObject);
       }
-    } catch (e) {
+    } catch (error) {
       setAddresses([]);
       toast.showErrorToast('خطا در ارتباط با سرور');
     } finally {
@@ -386,29 +419,32 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   };
 
   useEffect(() => {
-    if (!user) return;
-    if (!hasShopCart) return;
+    if (!user || !hasShopCart) return;
     fetchAddresses();
-  }, [user?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, hasShopCart]);
 
   const validateInputs = () => {
     const errors = {};
 
     if (!firstname.trim()) errors.firstname = 'لطفا نام خود را وارد کنید';
-    else if (firstname.length < 2)
+    else if (firstname.length < 2) {
       errors.firstname = 'نام حداقل ۲ کاراکتر باشد';
+    }
 
-    if (!lastname.trim())
+    if (!lastname.trim()) {
       errors.lastname = 'لطفا نام خانوادگی خود را وارد کنید';
-    else if (lastname.length < 3)
+    } else if (lastname.length < 3) {
       errors.lastname = 'نام خانوادگی حداقل ۳ کاراکتر باشد';
+    }
 
     if (!phone.trim()) errors.phone = 'لطفاً شماره موبایل خود را وارد کنید';
     else if (!validatePhone(phone)) errors.phone = 'شماره موبایل معتبر نیست';
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email.trim() && !emailRegex.test(email))
+    if (email.trim() && !emailRegex.test(email)) {
       errors.email = 'یک ایمیل معتبر وارد کنید';
+    }
 
     setErrorMessages(errors);
     return Object.keys(errors).length === 0;
@@ -449,7 +485,7 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
       } else {
         toast.showErrorToast(data.error || 'خطایی رخ داده است');
       }
-    } catch (err) {
+    } catch (error) {
       toast.showErrorToast('خطای غیرمنتظره رخ داد');
     } finally {
       setIsLoading(false);
@@ -457,14 +493,14 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   };
 
   const selectedAddress = useMemo(
-    () => addresses.find((a) => a.id === selectedAddressId) || null,
+    () => addresses.find((item) => item.id === selectedAddressId) || null,
     [addresses, selectedAddressId]
   );
 
   const onPickAddress = (id) => {
     setSelectedAddressId(id);
-    const addr = addresses.find((a) => a.id === id) || null;
-    if (addr && typeof onAddressSelect === 'function') onAddressSelect(addr);
+    const address = addresses.find((item) => item.id === id) || null;
+    if (address) onAddressSelect?.(address);
   };
 
   const openCreateAddress = () => {
@@ -473,17 +509,15 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
     setAddressModalOpen(true);
   };
 
-  const openEditAddress = (addr) => {
+  const openEditAddress = (address) => {
     setAddressModalMode('edit');
-    setAddressToEdit(addr);
+    setAddressToEdit(address);
     setAddressModalOpen(true);
   };
 
   const handleAddressSaved = async (saved) => {
-    // ریفرش لیست
     await fetchAddresses();
 
-    // اگر create بود، معمولا saved برمی‌گرده با id
     if (saved?.id) {
       setSelectedAddressId(saved.id);
     }
@@ -491,169 +525,261 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
 
   if (!user) {
     return (
-      <div className='rounded-xl bg-surface-light p-4 shadow dark:bg-surface-dark'>
-        <p>در حال بارگذاری اطلاعات کاربر...</p>
-      </div>
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        topLine
+        className={`flex min-h-[220px] items-center justify-center p-6 ${className || ''}`}
+      >
+        <div className='text-center'>
+          <span className='mx-auto block h-9 w-9 animate-spin rounded-full border-[3px] border-secondary/20 border-t-secondary' />
+          <p className='mt-3 text-xs text-subtext-light dark:text-subtext-dark'>
+            در حال بارگذاری اطلاعات کاربر...
+          </p>
+        </div>
+      </SiteCard>
     );
   }
 
   return (
-    <div
-      className={`flex flex-col gap-6 rounded-xl bg-surface-light p-4 shadow sm:p-6 dark:bg-surface-dark ${className}`}
+    <SiteCard
+      variant='glass'
+      padding='none'
+      radius='lg'
+      topLine
+      className={`relative overflow-hidden ${className || ''}`}
     >
-      <h2 className='text-lg font-semibold md:text-xl'>تکمیل اطلاعات</h2>
+      <div
+        aria-hidden='true'
+        className='pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-secondary/10 blur-[90px]'
+      />
 
-      {/* اطلاعات کاربر */}
-      <div className='flex w-full flex-col gap-4 xl:w-2/3'>
-        <Input
-          value={firstname}
-          onChange={setFirstname}
-          placeholder='نام'
-          label='نام'
-          maxLength={25}
-          errorMessage={errorMessages.firstname}
-        />
+      <div className='relative z-10'>
+        <div className='flex items-center gap-3 border-b border-black/5 px-5 py-5 sm:px-6 dark:border-white/10'>
+          <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+            <HiOutlineUserCircle size={23} />
+          </span>
 
-        <Input
-          value={lastname}
-          onChange={setLastname}
-          placeholder='نام خانوادگی'
-          label='نام خانوادگی'
-          maxLength={30}
-          errorMessage={errorMessages.lastname}
-        />
-
-        <Input
-          value={phone}
-          onChange={setPhone}
-          placeholder='شماره موبایل'
-          label='شماره موبایل'
-          maxLength={11}
-          errorMessage={errorMessages.phone}
-          required
-        />
-
-        <Input
-          value={email}
-          onChange={setEmail}
-          placeholder='ایمیل (اختیاری)'
-          label='ایمیل'
-          type='email'
-          maxLength={50}
-          errorMessage={errorMessages.email}
-        />
-      </div>
-
-      <Button
-        shadow
-        isLoading={isLoading}
-        onClick={handleSubmitUserInfo}
-        className='w-fit px-6 text-xs sm:text-sm'
-      >
-        ثبت اطلاعات کاربر
-      </Button>
-
-      {/* آدرس‌ها */}
-      {hasShopCart && (
-        <div className='mt-2'>
-          <div className='mb-3 flex items-center justify-between gap-3'>
-            <h3 className='text-sm font-semibold md:text-base'>آدرس ارسال</h3>
-
-            <Button
-              shadow
-              className='text-xs'
-              onClick={openCreateAddress}
-              icon={MdAddLocationAlt}
-            >
-              افزودن آدرس
-            </Button>
+          <div>
+            <p className='text-[9px] font-bold text-secondary sm:text-[10px]'>
+              اطلاعات سفارش‌دهنده
+            </p>
+            <h2 className='mt-0.5 text-base font-black text-text-light sm:text-lg dark:text-text-dark'>
+              تکمیل اطلاعات
+            </h2>
           </div>
+        </div>
 
-          {addressesLoading ? (
-            <div className='rounded-xl bg-foreground-light p-4 text-sm text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-              در حال دریافت آدرس‌ها...
+        <div className='space-y-7 p-5 sm:p-6'>
+          <section>
+            <div className='mb-4 flex items-center gap-2'>
+              <HiOutlineUser size={18} className='text-secondary' />
+              <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+                اطلاعات شخصی
+              </h3>
             </div>
-          ) : addresses.length === 0 ? (
-            <div className='rounded-xl bg-foreground-light p-4 text-sm text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-              آدرسی ثبت نشده است. لطفاً یک آدرس اضافه کنید.
+
+            <div className='grid grid-cols-1 gap-4 sm:grid-cols-2'>
+              <Input
+                value={firstname}
+                onChange={setFirstname}
+                placeholder='نام'
+                label='نام'
+                maxLength={25}
+                errorMessage={errorMessages.firstname}
+              />
+
+              <Input
+                value={lastname}
+                onChange={setLastname}
+                placeholder='نام خانوادگی'
+                label='نام خانوادگی'
+                maxLength={30}
+                errorMessage={errorMessages.lastname}
+              />
+
+              <Input
+                value={phone}
+                onChange={setPhone}
+                placeholder='شماره موبایل'
+                label='شماره موبایل'
+                maxLength={11}
+                errorMessage={errorMessages.phone}
+                required
+              />
+
+              <Input
+                value={email}
+                onChange={setEmail}
+                placeholder='ایمیل (اختیاری)'
+                label='ایمیل'
+                type='email'
+                maxLength={50}
+                errorMessage={errorMessages.email}
+              />
             </div>
-          ) : (
-            <div className='space-y-3'>
-              {addresses.map((addr) => {
-                const active = addr.id === selectedAddressId;
 
-                return (
-                  <div
-                    key={addr.id}
-                    className={`group relative cursor-pointer rounded-xl border p-4 transition ${
-                      active
-                        ? 'border-accent bg-accent/5'
-                        : 'border-gray-200 dark:border-foreground-dark'
-                    }`}
-                    onClick={() => onPickAddress(addr.id)}
-                  >
-                    {/* edit icon on hover */}
-                    <button
-                      type='button'
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openEditAddress(addr);
-                      }}
-                      className='absolute bottom-3 left-3 hidden rounded-lg p-2 text-subtext-light hover:bg-black/5 group-hover:flex dark:text-subtext-dark dark:hover:bg-white/5'
-                      title='ویرایش آدرس'
-                    >
-                      <FiEdit2 size={16} />
-                    </button>
+            <SiteButton
+              type='button'
+              variant='outline'
+              size='md'
+              onClick={handleSubmitUserInfo}
+              disabled={isLoading}
+              className='mt-4 w-full sm:w-auto'
+            >
+              {isLoading ? 'در حال ثبت...' : 'ثبت اطلاعات کاربر'}
+            </SiteButton>
+          </section>
 
-                    <div className='flex items-start justify-between gap-4'>
-                      <div className='flex flex-col gap-1'>
-                        <div className='flex flex-wrap items-center gap-2'>
-                          <span className='font-faNa text-sm font-bold'>
-                            {addr.province}، {addr.city}، {addr.address1}
+          {hasShopCart && (
+            <section className='border-t border-black/5 pt-6 dark:border-white/10'>
+              <div className='mb-4 flex flex-wrap items-center justify-between gap-3'>
+                <div className='flex items-center gap-2'>
+                  <HiOutlineMapPin size={18} className='text-secondary' />
+                  <div>
+                    <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+                      آدرس ارسال
+                    </h3>
+                    <p className='mt-0.5 text-[9px] text-subtext-light dark:text-subtext-dark'>
+                      سفارش محصولات به این آدرس ارسال می‌شود
+                    </p>
+                  </div>
+                </div>
+
+                <SiteButton
+                  type='button'
+                  variant='outline'
+                  size='sm'
+                  startIcon={HiOutlinePlus}
+                  onClick={openCreateAddress}
+                >
+                  افزودن آدرس
+                </SiteButton>
+              </div>
+
+              {addressesLoading ? (
+                <div className='rounded-2xl border border-black/5 bg-background-light/45 p-4 text-xs text-subtext-light dark:border-white/10 dark:bg-background-dark/30 dark:text-subtext-dark'>
+                  در حال دریافت آدرس‌ها...
+                </div>
+              ) : addresses.length === 0 ? (
+                <div className='rounded-2xl border border-dashed border-secondary/20 bg-secondary/[0.04] p-5 text-center'>
+                  <HiOutlineMapPin
+                    size={26}
+                    className='mx-auto text-secondary/50'
+                  />
+                  <p className='mt-2 text-xs text-subtext-light dark:text-subtext-dark'>
+                    آدرسی ثبت نشده است. لطفاً یک آدرس اضافه کنید.
+                  </p>
+                </div>
+              ) : (
+                <div className='space-y-3'>
+                  {addresses.map((address) => {
+                    const active = address.id === selectedAddressId;
+
+                    return (
+                      <div
+                        key={address.id}
+                        role='button'
+                        tabIndex={0}
+                        onClick={() => onPickAddress(address.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onPickAddress(address.id);
+                          }
+                        }}
+                        className={`group relative cursor-pointer rounded-[20px] border p-4 transition-all duration-200 ${
+                          active
+                            ? 'border-secondary bg-secondary/[0.06] shadow-[0_10px_30px_rgba(38,145,125,0.08)]'
+                            : 'border-black/5 bg-background-light/40 hover:border-secondary/20 dark:border-white/10 dark:bg-background-dark/25'
+                        }`}
+                      >
+                        <div className='flex items-start gap-3'>
+                          <span
+                            className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                              active
+                                ? 'bg-secondary text-white'
+                                : 'bg-secondary/10 text-secondary'
+                            }`}
+                          >
+                            {active ? (
+                              <HiOutlineCheck size={18} />
+                            ) : (
+                              <HiOutlineMapPin size={18} />
+                            )}
                           </span>
-                          {addr.isDefault && (
-                            <span className='rounded-full bg-emerald-100 px-2 py-0.5 text-2xs text-emerald-700'>
-                              پیش‌فرض
-                            </span>
-                          )}
-                        </div>
 
-                        <div className='font-faNa text-xs text-subtext-light dark:text-subtext-dark'>
-                          کدپستی: {addr.postalCode}
-                        </div>
-                        <div className='text-xs text-subtext-light dark:text-subtext-dark'>
-                          گیرنده:‌{addr.fullName}
-                        </div>
-                        <div className='font-faNa text-xs text-subtext-light dark:text-subtext-dark'>
-                          موبایل گیرنده: {addr.phone}
+                          <div className='min-w-0 flex-1'>
+                            <div className='flex flex-wrap items-center gap-2'>
+                              <strong className='font-faNa text-xs leading-6 text-text-light sm:text-sm dark:text-text-dark'>
+                                {address.province}، {address.city}،{' '}
+                                {address.address1}
+                              </strong>
+
+                              {address.isDefault && (
+                                <SiteBadge variant='secondary' size='sm'>
+                                  پیش‌فرض
+                                </SiteBadge>
+                              )}
+                            </div>
+
+                            <div className='mt-2 grid gap-1 text-[10px] leading-5 text-subtext-light sm:grid-cols-2 dark:text-subtext-dark'>
+                              <span className='font-faNa'>
+                                کدپستی: {address.postalCode}
+                              </span>
+                              <span>گیرنده: {address.fullName}</span>
+                              <span className='font-faNa sm:col-span-2'>
+                                موبایل گیرنده: {address.phone}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type='button'
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              openEditAddress(address);
+                            }}
+                            className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-black/5 text-subtext-light transition-all hover:bg-secondary/10 hover:text-secondary dark:bg-white/5 dark:text-subtext-dark'
+                            title='ویرایش آدرس'
+                            aria-label='ویرایش آدرس'
+                          >
+                            <HiOutlinePencilSquare size={17} />
+                          </button>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {selectedAddress && (
+                <p className='mt-3 text-[9px] font-bold text-secondary'>
+                  آدرس انتخاب‌شده برای محاسبه روش و هزینه ارسال استفاده می‌شود.
+                </p>
+              )}
+            </section>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Address Modal */}
       <AddressModal
         open={addressModalOpen}
         mode={addressModalMode}
         initialData={addressToEdit}
         onClose={() => setAddressModalOpen(false)}
         onSaved={handleAddressSaved}
-        defaultFullname={firstname + ' ' + lastname}
+        defaultFullname={`${firstname} ${lastname}`.trim()}
         defaultPhone={phone}
       />
-    </div>
+    </SiteCard>
   );
 };
 
 UserInformationCard.propTypes = {
   className: PropTypes.string,
-  onAddressSelect: PropTypes.func, // برای اینکه توی PaymentPage آدرس انتخاب‌شده رو بگیری و shipping رو حساب کنی
+  onAddressSelect: PropTypes.func,
   hasShopCart: PropTypes.bool,
 };
 

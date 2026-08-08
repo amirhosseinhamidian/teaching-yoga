@@ -1,0 +1,194 @@
+@keyframes site-orbit-animation {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes site-orbit-reverse-animation {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes site-float-animation {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+
+  50% {
+    transform: translate3d(0, -6px, 0);
+  }
+}
+
+.site-orbit {
+  animation: site-orbit-animation 42s linear infinite;
+
+  will-change: transform;
+}
+
+.site-orbit-reverse {
+  animation: site-orbit-reverse-animation 34s linear infinite;
+
+  will-change: transform;
+}
+
+.site-float {
+  animation: site-float-animation 4.5s ease-in-out infinite;
+
+  will-change: transform;
+}
+
+.site-float-delayed {
+  animation: site-float-animation 5.2s ease-in-out 0.8s infinite;
+
+  will-change: transform;
+}
+
+.site-background-grid {
+  background-image:
+    linear-gradient(rgba(100, 244, 171, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 244, 171, 0.22) 1px, transparent 1px);
+
+  background-size: 70px 70px;
+
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 10%,
+    black 90%,
+    transparent
+  );
+}
+
+@media (max-width: 767px) {
+  .site-background-grid {
+    background-size: 54px 54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-orbit,
+  .site-orbit-reverse,
+  .site-float,
+  .site-float-delayed {
+    animation: none;
+  }
+}
+
+@keyframes teachingMethodOrbit {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes teachingMethodOrbitReverse {
+  from {
+    transform: rotate(360deg);
+  }
+
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes teachingMethodFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+@keyframes teachingMethodSparkle {
+  0%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-12px) rotate(7deg);
+  }
+}
+
+@keyframes teachingMethodBreathe {
+  0%,
+  100% {
+    transform: scale(0.92);
+    opacity: 0.5;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 0.9;
+  }
+}
+
+.teaching-method-orbit {
+  animation: teachingMethodOrbit 24s linear infinite;
+}
+
+.teaching-method-orbit-reverse {
+  animation: teachingMethodOrbitReverse 18s linear infinite;
+}
+
+.teaching-method-floating-card {
+  animation: teachingMethodFloat 5s ease-in-out infinite;
+}
+
+.teaching-method-sparkle {
+  animation: teachingMethodSparkle 6s ease-in-out infinite;
+}
+
+.teaching-method-breathe {
+  animation: teachingMethodBreathe 5.5s ease-in-out infinite;
+}
+
+.teaching-method-grid {
+  background-image:
+    linear-gradient(rgba(100, 244, 171, 0.25) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 244, 171, 0.25) 1px, transparent 1px);
+
+  background-size: 64px 64px;
+
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 18%,
+    black 82%,
+    transparent
+  );
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .teaching-method-orbit,
+  .teaching-method-orbit-reverse,
+  .teaching-method-floating-card,
+  .teaching-method-sparkle,
+  .teaching-method-breathe {
+    animation: none;
+  }
+}

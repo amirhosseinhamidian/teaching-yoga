@@ -6,9 +6,8 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
 
-    // کاربر وارد نشده → cart خالی
     if (!user) {
       return NextResponse.json(
         {
@@ -25,14 +24,12 @@ export async function GET() {
       );
     }
 
-    const userId = user.id;
-
-    // تولید خروجی استاندارد سبد خرید
-    const cartResponse = await buildCartResponse(userId);
+    const cartResponse = await buildCartResponse(user.id);
 
     return NextResponse.json(cartResponse, { status: 200 });
   } catch (error) {
     console.error('Error GET CART:', error);
+
     return NextResponse.json(
       { message: 'Internal server error.' },
       { status: 500 }
@@ -42,25 +39,31 @@ export async function GET() {
 
 export async function POST(req) {
   try {
-    const user = getAuthUser();
-    if (!user)
+    const user = await getAuthUser();
+
+    if (!user) {
       return NextResponse.json(
         { message: 'ابتدا وارد شوید.' },
         { status: 401 }
       );
+    }
 
     const { courseId } = await req.json();
+    const courseIdNum = Number(courseId);
     const userId = user.id;
 
-    if (!courseId)
+    if (!courseId || Number.isNaN(courseIdNum)) {
       return NextResponse.json(
         { message: 'Course ID is required' },
         { status: 400 }
       );
+    }
 
-    // بررسی خرید قبلی
     const bought = await prismadb.userCourse.findFirst({
-      where: { userId, courseId: Number(courseId) },
+      where: {
+        userId,
+        courseId: courseIdNum,
+      },
     });
 
     if (bought) {
@@ -70,20 +73,27 @@ export async function POST(req) {
       );
     }
 
-    // دریافت یا ایجاد cart
     let cart = await prismadb.cart.findFirst({
-      where: { userId, status: 'PENDING' },
+      where: {
+        userId,
+        status: 'PENDING',
+      },
     });
 
     if (!cart) {
       cart = await prismadb.cart.create({
-        data: { userId, status: 'PENDING' },
+        data: {
+          userId,
+          status: 'PENDING',
+        },
       });
     }
 
-    // بررسی وجود دوره در cart
     const existing = await prismadb.cartCourse.findFirst({
-      where: { cartId: cart.id, courseId: Number(courseId) },
+      where: {
+        cartId: cart.id,
+        courseId: courseIdNum,
+      },
     });
 
     if (existing) {
@@ -93,23 +103,28 @@ export async function POST(req) {
       );
     }
 
-    // افزودن course به cartCourse
     await prismadb.cartCourse.create({
       data: {
         cartId: cart.id,
-        courseId: Number(courseId),
+        courseId: courseIdNum,
       },
     });
 
-    // افزودن termهای دوره
     const courseTerms = await prismadb.courseTerm.findMany({
-      where: { courseId: Number(courseId) },
-      include: { term: true },
+      where: {
+        courseId: courseIdNum,
+      },
+      include: {
+        term: true,
+      },
     });
 
     for (const ct of courseTerms) {
       const exists = await prismadb.cartTerm.findFirst({
-        where: { cartId: cart.id, termId: ct.termId },
+        where: {
+          cartId: cart.id,
+          termId: ct.termId,
+        },
       });
 
       if (!exists) {
@@ -124,11 +139,12 @@ export async function POST(req) {
       }
     }
 
-    // برگرداندن cart کامل
     const response = await buildCartResponse(userId);
+
     return NextResponse.json(response);
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
       { message: 'Internal error', error: error.message },
       { status: 500 }
@@ -138,7 +154,8 @@ export async function POST(req) {
 
 export async function DELETE(req) {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
+
     if (!user) {
       return NextResponse.json(
         { message: 'ابتدا وارد شوید.' },
@@ -158,7 +175,10 @@ export async function DELETE(req) {
     }
 
     const cart = await prismadb.cart.findFirst({
-      where: { userId, status: 'PENDING' },
+      where: {
+        userId,
+        status: 'PENDING',
+      },
       select: {
         id: true,
         discountCodeId: true,
@@ -173,80 +193,104 @@ export async function DELETE(req) {
     }
 
     const { becameEmpty } = await prismadb.$transaction(async (tx) => {
-      // 1) حذف دوره از cartCourses
       await tx.cartCourse.deleteMany({
-        where: { cartId: cart.id, courseId: courseIdNum },
+        where: {
+          cartId: cart.id,
+          courseId: courseIdNum,
+        },
       });
 
-      // 2) ترم‌های مربوط به همین course
       const removedCourseTerms = await tx.courseTerm.findMany({
-        where: { courseId: courseIdNum },
-        select: { termId: true },
+        where: {
+          courseId: courseIdNum,
+        },
+        select: {
+          termId: true,
+        },
       });
 
-      const removedTermIds = removedCourseTerms.map((x) => x.termId);
+      const removedTermIds = removedCourseTerms.map((item) => item.termId);
 
-      // 3) لیست دوره‌های باقی‌مانده داخل cart
       const remainingCartCourses = await tx.cartCourse.findMany({
-        where: { cartId: cart.id },
-        select: { courseId: true },
+        where: {
+          cartId: cart.id,
+        },
+        select: {
+          courseId: true,
+        },
       });
 
-      const remainingCourseIds = remainingCartCourses.map((x) => x.courseId);
+      const remainingCourseIds = remainingCartCourses.map(
+        (item) => item.courseId
+      );
 
-      // اگر هیچ دوره‌ای باقی نمانده → همه termهای cart حذف می‌شن
       if (remainingCourseIds.length === 0) {
-        await tx.cartTerm.deleteMany({ where: { cartId: cart.id } });
+        await tx.cartTerm.deleteMany({
+          where: {
+            cartId: cart.id,
+          },
+        });
       } else if (removedTermIds.length > 0) {
-        // 4) termهایی که توسط دوره‌های باقی‌مانده در cart استفاده می‌شوند
         const remainingCourseTerms = await tx.courseTerm.findMany({
-          where: { courseId: { in: remainingCourseIds } },
-          select: { termId: true },
+          where: {
+            courseId: {
+              in: remainingCourseIds,
+            },
+          },
+          select: {
+            termId: true,
+          },
         });
 
         const stillNeededTermIds = new Set(
-          remainingCourseTerms.map((x) => x.termId)
+          remainingCourseTerms.map((item) => item.termId)
         );
 
-        // 5) termهایی را حذف کن که مربوط به course حذف‌شده بوده و دیگر لازم نیست
         const deletableTermIds = removedTermIds.filter(
-          (tid) => !stillNeededTermIds.has(tid)
+          (termId) => !stillNeededTermIds.has(termId)
         );
 
         if (deletableTermIds.length > 0) {
           await tx.cartTerm.deleteMany({
-            where: { cartId: cart.id, termId: { in: deletableTermIds } },
+            where: {
+              cartId: cart.id,
+              termId: {
+                in: deletableTermIds,
+              },
+            },
           });
         }
       }
 
-      // 6) چک خالی شدن cart
       const remainCourses = await tx.cartCourse.count({
-        where: { cartId: cart.id },
+        where: {
+          cartId: cart.id,
+        },
       });
+
       const remainTerms = await tx.cartTerm.count({
-        where: { cartId: cart.id },
+        where: {
+          cartId: cart.id,
+        },
       });
 
       const empty = remainCourses === 0 && remainTerms === 0;
 
-      // اگر خالی شد → CANCELED + پاک کردن تخفیف
       if (empty) {
         const removedId = cart.discountCodeId ?? null;
 
         await tx.cart.update({
-          where: { id: cart.id },
+          where: {
+            id: cart.id,
+          },
           data: {
             status: 'CANCELLED',
-            // اگر در مدل cart فیلد isActive ندارید حذفش کنید
-            // isActive: false,
             discountCodeId: null,
             discountCodeAmount: 0,
             discountAppliedAt: null,
           },
         });
 
-        // اگر تخفیف داشت: userDiscount حذف شود (فقط اگر جای دیگری هنوز از همین کد استفاده نشده)
         if (removedId) {
           const stillUsedInShop = await tx.shopCart.findFirst({
             where: {
@@ -254,9 +298,13 @@ export async function DELETE(req) {
               status: 'PENDING',
               isActive: true,
               discountCodeId: removedId,
-              items: { some: {} },
+              items: {
+                some: {},
+              },
             },
-            select: { id: true },
+            select: {
+              id: true,
+            },
           });
 
           const stillUsedInCourse = await tx.cart.findFirst({
@@ -265,37 +313,42 @@ export async function DELETE(req) {
               status: 'PENDING',
               discountCodeId: removedId,
             },
-            select: { id: true },
+            select: {
+              id: true,
+            },
           });
 
           if (!stillUsedInShop && !stillUsedInCourse) {
             await tx.userDiscount.deleteMany({
-              where: { userId, discountCodeId: removedId },
+              where: {
+                userId,
+                discountCodeId: removedId,
+              },
             });
 
-            // اختیاری ولی بهتر: usageCount هم برگرده عقب
             await tx.discountCode.update({
-              where: { id: removedId },
-              data: { usageCount: { decrement: 1 } },
+              where: {
+                id: removedId,
+              },
+              data: {
+                usageCount: {
+                  decrement: 1,
+                },
+              },
             });
           }
         }
 
         return {
-          cartId: cart.id,
           becameEmpty: true,
-          removedDiscountCodeId: removedId,
         };
       }
 
       return {
-        cartId: cart.id,
         becameEmpty: false,
-        removedDiscountCodeId: null,
       };
     });
 
-    // اگر خالی شد → خروجی سبد خالی
     if (becameEmpty) {
       return NextResponse.json(
         {
@@ -312,11 +365,12 @@ export async function DELETE(req) {
       );
     }
 
-    // خروجی نهایی
     const response = await buildCartResponse(userId);
+
     return NextResponse.json(response, { status: 200 });
   } catch (error) {
     console.error('DELETE CART ERROR:', error);
+
     return NextResponse.json({ message: 'Internal error.' }, { status: 500 });
   }
 }

@@ -1,10 +1,10 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(request, { params }) {
   const { id } = params;
 
-  // بررسی معتبر بودن ID
   if (!id || isNaN(parseInt(id, 10))) {
     return NextResponse.json({ error: 'Invalid course ID' }, { status: 400 });
   }
@@ -13,15 +13,15 @@ export async function GET(request, { params }) {
     const courseId = parseInt(id, 10);
 
     const course = await prismadb.course.findUnique({
-      where: { id: courseId },
+      where: {
+        id: courseId,
+      },
       include: {
-        // NEW: برای اینکه تو فرم edit لیست پلن‌ها رو داشته باشی
         subscriptionPlanCourses: {
           select: {
             id: true,
             planId: true,
             courseId: true,
-            // اگر می‌خوای اسم/قیمت پلن رو هم برای نمایش داشته باشی:
             plan: {
               select: {
                 id: true,
@@ -41,12 +41,20 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
 
-    return NextResponse.json(course, { status: 200 });
+    return NextResponse.json(
+      {
+        ...course,
+        cover: toAbsoluteMediaUrl(course.cover),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error fetching course:', error);
 
     return NextResponse.json(
-      { error: 'An error occurred while fetching the course' },
+      {
+        error: 'An error occurred while fetching the course',
+      },
       { status: 500 }
     );
   }
@@ -86,33 +94,40 @@ export async function PUT(request, { params }) {
       pricingMode === 'SUBSCRIPTION_ONLY' || pricingMode === 'BOTH';
 
     const planIdsNormalized = Array.isArray(subscriptionPlanIds)
-      ? subscriptionPlanIds
-          .map((x) => Number(x))
-          .filter((x) => Number.isFinite(x))
+      ? subscriptionPlanIds.map(Number).filter((x) => Number.isFinite(x))
       : [];
 
     if (modeNeedsPlans && planIdsNormalized.length === 0) {
       return NextResponse.json(
-        { error: 'حداقل یک پلن اشتراک باید انتخاب شود.' },
+        {
+          error: 'حداقل یک پلن اشتراک باید انتخاب شود.',
+        },
         { status: 400 }
       );
     }
 
-    // validate پلن‌ها (اختیاری ولی بهتر)
     let validPlanIds = [];
+
     if (modeNeedsPlans) {
       const activePlans = await prismadb.subscriptionPlan.findMany({
         where: {
-          id: { in: planIdsNormalized },
+          id: {
+            in: planIdsNormalized,
+          },
           isActive: true,
         },
-        select: { id: true },
+        select: {
+          id: true,
+        },
       });
-      validPlanIds = activePlans.map((p) => p.id);
+
+      validPlanIds = activePlans.map((plan) => plan.id);
 
       if (validPlanIds.length === 0) {
         return NextResponse.json(
-          { error: 'پلن اشتراک معتبر/فعال یافت نشد.' },
+          {
+            error: 'پلن اشتراک معتبر/فعال یافت نشد.',
+          },
           { status: 400 }
         );
       }
@@ -120,7 +135,9 @@ export async function PUT(request, { params }) {
 
     const updated = await prismadb.$transaction(async (tx) => {
       const updatedCourse = await tx.course.update({
-        where: { id: courseId },
+        where: {
+          id: courseId,
+        },
         data: {
           title,
           subtitle,
@@ -141,23 +158,25 @@ export async function PUT(request, { params }) {
         },
       });
 
-      // sync پلن‌ها:
-      // اگر TERM_ONLY شد => همه روابط حذف
       if (!modeNeedsPlans) {
         await tx.subscriptionPlanCourse.deleteMany({
-          where: { courseId },
+          where: {
+            courseId,
+          },
         });
+
         return updatedCourse;
       }
 
-      // اگر SUBSCRIPTION_ONLY یا BOTH => ابتدا پاک، سپس ایجاد
       await tx.subscriptionPlanCourse.deleteMany({
-        where: { courseId },
+        where: {
+          courseId,
+        },
       });
 
       await tx.subscriptionPlanCourse.createMany({
-        data: validPlanIds.map((pid) => ({
-          planId: pid,
+        data: validPlanIds.map((planId) => ({
+          planId,
           courseId,
         })),
         skipDuplicates: true,
@@ -166,12 +185,25 @@ export async function PUT(request, { params }) {
       return updatedCourse;
     });
 
-    return NextResponse.json(updated, { status: 200 });
+    return NextResponse.json(
+      {
+        ...updated,
+        cover: toAbsoluteMediaUrl(updated.cover),
+      },
+      {
+        status: 200,
+      }
+    );
   } catch (error) {
     console.error('Error updating course:', error);
+
     return NextResponse.json(
-      { error: 'An error occurred while updating the course' },
-      { status: 500 }
+      {
+        error: 'An error occurred while updating the course',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
@@ -179,37 +211,46 @@ export async function PUT(request, { params }) {
 export async function DELETE(request, { params }) {
   const { id } = params;
 
-  // بررسی معتبر بودن ID
   if (!id || isNaN(parseInt(id, 10))) {
     return NextResponse.json({ error: 'Invalid course ID' }, { status: 400 });
   }
 
   try {
-    const courseId = parseInt(id, 10);
-
-    // حذف دوره با Prisma
     const deletedCourse = await prismadb.course.delete({
-      where: { id: courseId },
+      where: {
+        id: parseInt(id, 10),
+      },
     });
 
-    // ارسال پاسخ موفقیت
     return NextResponse.json(
-      { message: `${deletedCourse.title} با موفقیت پاک شد.` },
-      { status: 200 }
+      {
+        message: `${deletedCourse.title} با موفقیت پاک شد.`,
+      },
+      {
+        status: 200,
+      }
     );
   } catch (error) {
     console.error('Error deleting course:', error);
 
-    // بررسی اینکه آیا خطا مربوط به پیدا نشدن دوره است
     if (error.code === 'P2025') {
-      // Prisma's record not found error
-      return NextResponse.json({ error: 'دوره ای یافت نشد!' }, { status: 404 });
+      return NextResponse.json(
+        {
+          error: 'دوره ای یافت نشد!',
+        },
+        {
+          status: 404,
+        }
+      );
     }
 
-    // سایر خطاها
     return NextResponse.json(
-      { error: 'An error occurred while deleting the course' },
-      { status: 500 }
+      {
+        error: 'An error occurred while deleting the course',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

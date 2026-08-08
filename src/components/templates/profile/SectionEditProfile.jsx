@@ -1,12 +1,22 @@
 /* eslint-disable no-undef */
 'use client';
+
 import React, { useState } from 'react';
+
 import Input from '@/components/Ui/Input/Input';
-import Button from '@/components/Ui/Button/Button';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useUserActions } from '@/hooks/auth/useUserActions';
+
+import {
+  HiOutlineIdentification,
+  HiOutlinePencilSquare,
+  HiOutlineShieldCheck,
+} from 'react-icons/hi2';
 
 const SectionEditProfile = () => {
   const { isDark } = useTheme();
@@ -69,8 +79,6 @@ const SectionEditProfile = () => {
 
       if (response.ok) {
         toast.showSuccessToast('اطلاعات با موفقیت ویرایش شد');
-
-        // 🔥 بارگذاری مجدد اطلاعات جدید کاربر
         await loadUser();
       } else {
         if (data.field === 'username') {
@@ -87,44 +95,121 @@ const SectionEditProfile = () => {
   };
 
   return (
-    <div className='flex w-full flex-col gap-4'>
-      <Input
-        label='نام'
-        placeholder='نام را وارد کنید'
-        value={firstname}
-        onChange={setFirstname}
-        errorMessage={errorMessages.firstname}
-        maxLength={20}
-        className='bg-surface-light text-text-light placeholder:text-xs sm:w-2/3 placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-      />
-
-      <Input
-        label='نام خانوادگی'
-        placeholder='نام خانوادگی را وارد کنید'
-        value={lastname}
-        onChange={setLastname}
-        errorMessage={errorMessages.lastname}
-        maxLength={30}
-        className='bg-surface-light text-text-light placeholder:text-xs sm:w-2/3 placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-      />
-
-      <Input
-        label='نام کاربری'
-        placeholder='نام کاربری منحصر به فرد وارد کنید'
-        value={username}
-        onChange={setUsername}
-        errorMessage={errorMessages.username}
-        maxLength={25}
-        className='bg-surface-light text-text-light placeholder:text-xs sm:w-2/3 placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
-      />
-
-      <Button
-        onClick={handleFormSubmit}
-        className='mt-8 text-xs sm:w-1/3 sm:text-sm'
-        isLoading={isLoading}
+    <div className='grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]'>
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        topLine
+        className='p-4 sm:p-5 lg:p-6'
       >
-        ویرایش
-      </Button>
+        <div className='mb-5 flex items-center gap-3 border-b border-black/5 pb-4 dark:border-white/10'>
+          <span className='flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+            <HiOutlinePencilSquare size={22} />
+          </span>
+
+          <div>
+            <p className='text-[10px] font-bold text-secondary'>اطلاعات شخصی</p>
+            <h3 className='mt-0.5 text-sm font-black text-text-light sm:text-base dark:text-text-dark'>
+              ویرایش مشخصات حساب
+            </h3>
+          </div>
+        </div>
+
+        <div className='grid gap-4 sm:grid-cols-2'>
+          <Input
+            label='نام'
+            placeholder='نام را وارد کنید'
+            value={firstname}
+            onChange={setFirstname}
+            errorMessage={errorMessages.firstname}
+            maxLength={20}
+            className='bg-surface-light text-text-light placeholder:text-xs dark:bg-surface-dark dark:text-text-dark'
+          />
+
+          <Input
+            label='نام خانوادگی'
+            placeholder='نام خانوادگی را وارد کنید'
+            value={lastname}
+            onChange={setLastname}
+            errorMessage={errorMessages.lastname}
+            maxLength={30}
+            className='bg-surface-light text-text-light placeholder:text-xs dark:bg-surface-dark dark:text-text-dark'
+          />
+
+          <div className='sm:col-span-2'>
+            <Input
+              label='نام کاربری'
+              placeholder='نام کاربری منحصر به فرد وارد کنید'
+              value={username}
+              onChange={setUsername}
+              errorMessage={errorMessages.username}
+              maxLength={25}
+              fullWidth
+              className='bg-surface-light text-text-light placeholder:text-xs dark:bg-surface-dark dark:text-text-dark'
+            />
+          </div>
+        </div>
+
+        <div className='mt-6 flex justify-end'>
+          <SiteButton
+            type='button'
+            variant='primary'
+            size='md'
+            disabled={isLoading}
+            onClick={handleFormSubmit}
+          >
+            {isLoading ? (
+              <span className='flex items-center gap-2'>
+                <span className='h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white' />
+                در حال ذخیره...
+              </span>
+            ) : (
+              <span className='flex items-center gap-2'>
+                <HiOutlinePencilSquare size={17} />
+                ذخیره تغییرات
+              </span>
+            )}
+          </SiteButton>
+        </div>
+      </SiteCard>
+
+      <div className='space-y-3'>
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='md'
+          className='p-4'
+        >
+          <span className='flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+            <HiOutlineIdentification size={21} />
+          </span>
+          <h4 className='mt-3 text-xs font-black text-text-light dark:text-text-dark'>
+            اطلاعات حساب
+          </h4>
+          <p className='mt-1.5 text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+            نام و نام خانوادگی اختیاری هستند، اما نام کاربری برای حساب شما الزامی
+            است.
+          </p>
+        </SiteCard>
+
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='md'
+          className='p-4'
+        >
+          <span className='flex h-10 w-10 items-center justify-center rounded-2xl bg-yellow/10 text-yellow'>
+            <HiOutlineShieldCheck size={21} />
+          </span>
+          <h4 className='mt-3 text-xs font-black text-text-light dark:text-text-dark'>
+            امنیت اطلاعات
+          </h4>
+          <p className='mt-1.5 text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+            تغییرات این فرم فقط روی اطلاعات عمومی پروفایل شما اعمال می‌شود.
+          </p>
+        </SiteCard>
+      </div>
     </div>
   );
 };

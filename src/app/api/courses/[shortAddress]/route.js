@@ -94,6 +94,7 @@ export async function GET(req, { params }) {
     // اضافه کردن مقادیر محاسبه شده
     const responseData = {
       ...course,
+      cover: toAbsoluteMediaUrl(course.cover),
       price: totalPrice,
       discount: averageDiscount,
       finalPrice,

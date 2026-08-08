@@ -1,27 +1,40 @@
 'use client';
+
 import React, { useState } from 'react';
 import PropTypes from 'prop-types';
-import { formatTime } from '@/utils/dateTimeHelper';
-import { FiLock, FiCircle } from 'react-icons/fi';
-import { HiOutlinePlayCircle } from 'react-icons/hi2';
-import { AiOutlineLogin } from 'react-icons/ai';
-import Modal from '../modules/Modal/Modal';
+
 import { useRouter, usePathname } from 'next/navigation';
+
+import { formatTime } from '@/utils/dateTimeHelper';
+
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+
+import Modal from '../modules/Modal/Modal';
+
+import { FiLock, FiCircle } from 'react-icons/fi';
+
+import { HiOutlinePlayCircle } from 'react-icons/hi2';
+
+import { AiOutlineLogin } from 'react-icons/ai';
+
 import { LuLogIn, LuShoppingCart } from 'react-icons/lu';
+
 import { BsFillCheckCircleFill } from 'react-icons/bs';
 
 const SessionRow = ({
   number,
   session,
   activeSessionId,
-  className,
+  className = '',
   courseShortAddress,
-  hasSubscriptionAccess = false, // آیا این دوره در پلن‌های اشتراک هست؟
-  isSubscriptionOnly = false, // آیا فقط از طریق اشتراک قابل دسترسی است؟
+  hasSubscriptionAccess = false,
+  isSubscriptionOnly = false,
 }) => {
   const router = useRouter();
   const pathname = usePathname();
+
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+
   const [showAccessModal, setShowAccessModal] = useState(false);
 
   const getMedia = () => {
@@ -30,15 +43,17 @@ const SessionRow = ({
 
   const handleSessionClick = () => {
     const media = getMedia();
+
     if (!media) return;
 
-    // اگر کاربر به این جلسه دسترسی دارد (عمومی یا مطابق سطح دسترسی)
+    // اگر کاربر به این جلسه دسترسی دارد
     if (
       media.accessLevel === 'PUBLIC' ||
       session.access === media.accessLevel
     ) {
       router.push(`/courses/${courseShortAddress}/lesson/${session.id}`);
     }
+
     // فقط برای کاربران ثبت‌نام کرده
     else if (
       media.accessLevel === 'REGISTERED' &&
@@ -46,6 +61,7 @@ const SessionRow = ({
     ) {
       setShowRegisterModal(true);
     }
+
     // جلسات قفل شده برای خریداران/مشترکین
     else if (
       media.accessLevel === 'PURCHASED' &&
@@ -57,6 +73,7 @@ const SessionRow = ({
 
   const loginHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
+
     router.push('/login');
   };
 
@@ -72,6 +89,7 @@ const SessionRow = ({
 
   const renderIcon = () => {
     const media = getMedia();
+
     if (!media) return null;
 
     const isAccessible =
@@ -80,30 +98,33 @@ const SessionRow = ({
     if (isAccessible) {
       return (
         <HiOutlinePlayCircle
-          className={`mb-1 transition-all duration-200 ease-in md:text-2xl ${
+          size={20}
+          className={`shrink-0 transition-colors duration-200 ${
             activeSessionId === session.id
               ? 'text-secondary'
-              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              : 'text-subtext-light group-hover/session:text-secondary dark:text-subtext-dark'
           }`}
         />
       );
     } else if (media.accessLevel === 'REGISTERED') {
       return (
         <AiOutlineLogin
-          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${
+          size={18}
+          className={`shrink-0 transition-colors duration-200 ${
             activeSessionId === session.id
               ? 'text-secondary'
-              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              : 'text-subtext-light group-hover/session:text-secondary dark:text-subtext-dark'
           }`}
         />
       );
     } else {
       return (
         <FiLock
-          className={`mb-1 transition-all duration-200 ease-in md:text-xl ${
+          size={17}
+          className={`shrink-0 transition-colors duration-200 ${
             activeSessionId === session.id
               ? 'text-secondary'
-              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              : 'text-subtext-light group-hover/session:text-secondary dark:text-subtext-dark'
           }`}
         />
       );
@@ -114,36 +135,47 @@ const SessionRow = ({
     if (session.sessionProgress?.[0]) {
       return (
         <BsFillCheckCircleFill
-          className={`transition-all duration-200 ease-in md:text-xl ${
+          size={17}
+          className={`shrink-0 transition-colors duration-200 ${
             activeSessionId === session.id
               ? 'text-secondary'
-              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              : 'text-secondary/70 group-hover/session:text-secondary'
           }`}
         />
       );
     } else {
       return (
         <FiCircle
-          className={`transition-all duration-200 ease-in md:text-xl ${
+          size={17}
+          className={`shrink-0 transition-colors duration-200 ${
             activeSessionId === session.id
               ? 'text-secondary'
-              : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+              : 'text-subtext-light/65 group-hover/session:text-secondary dark:text-subtext-dark/65'
           }`}
         />
       );
     }
   };
 
-  // متن‌ها و دکمه‌های مودال دسترسی (خرید / اشتراک)
+  /*
+   * متن‌ها و اکشن‌های مودال دسترسی.
+   * منطق این بخش عمداً بدون تغییر
+   * نسبت به نسخه قبلی حفظ شده است.
+   */
   const accessModalConfig = (() => {
     // فقط از طریق اشتراک
     if (isSubscriptionOnly) {
       return {
         title: 'دسترسی از طریق اشتراک',
+
         desc: 'برای مشاهده این جلسه، لازم است یکی از پلن‌های اشتراک فعال سایت را تهیه کنید. این دوره فقط از طریق اشتراک در دسترس است.',
+
         primaryText: 'مشاهده پلن‌های اشتراک',
+
         secondaryText: 'لغو',
+
         primaryAction: goToSubscriptions,
+
         secondaryAction: () => setShowAccessModal(false),
       };
     }
@@ -152,80 +184,156 @@ const SessionRow = ({
     if (hasSubscriptionAccess) {
       return {
         title: 'خرید دوره یا فعال‌سازی اشتراک',
+
         desc: 'برای مشاهده این جلسه ابتدا دوره را تهیه کنید یا یکی از پلن‌های اشتراک را فعال نمایید. با خرید اشتراک، به مجموعه‌ای از دوره‌های انتخاب‌شده دسترسی خواهید داشت.',
+
         primaryText: 'خرید این دوره',
+
         secondaryText: 'مشاهده پلن‌های اشتراک',
+
         primaryAction: () => {
           addToCartHandler();
+
           setShowAccessModal(false);
         },
+
         secondaryAction: () => {
           setShowAccessModal(false);
+
           goToSubscriptions();
         },
       };
     }
 
-    // فقط خرید دوره (رفتار قدیمی)
+    // فقط خرید دوره
     return {
       title: 'خرید دوره',
+
       desc: 'برای مشاهده این جلسه ابتدا دوره را تهیه کنید. بعد از خرید، به تمام جلسات این دوره دسترسی کامل خواهید داشت.',
+
       primaryText: 'افزودن به سبد خرید',
+
       secondaryText: 'لغو',
+
       primaryAction: () => {
         addToCartHandler();
+
         setShowAccessModal(false);
       },
+
       secondaryAction: () => setShowAccessModal(false),
     };
   })();
 
+  const media = getMedia();
+
+  const isAccessible =
+    media &&
+    (session.access === 'PUBLIC' || session.access === media.accessLevel);
+
+  const isActive = activeSessionId === session.id;
+
   return (
     <>
       <div
-        className={`sm: group flex flex-col justify-between gap-3 border-b border-gray-200 py-4 sm:flex-row sm:items-center sm:gap-1 md:cursor-pointer dark:border-gray-700 ${className}`}
         onClick={handleSessionClick}
+        className={`group/session relative flex cursor-pointer flex-col gap-3 rounded-[16px] border px-3 py-3 transition-all duration-300 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-4 ${
+          isActive
+            ? 'border-secondary/30 bg-secondary/[0.07] shadow-[0_8px_24px_rgba(38,145,125,0.06)] dark:bg-secondary/10'
+            : 'border-black/5 bg-surface-light/55 hover:border-secondary/20 hover:bg-secondary/[0.035] dark:border-white/10 dark:bg-surface-dark/45 dark:hover:bg-secondary/[0.07]'
+        } ${className}`}
       >
-        <div className='flex items-center gap-3'>
-          <div
-            className={`flex h-5 w-5 items-center justify-center rounded border transition-all duration-200 ease-in md:h-6 md:w-6 ${
-              activeSessionId === session.id
-                ? 'border-secondary bg-secondary text-text-dark'
-                : 'border-subtext-light text-subtext-light group-hover:border-secondary group-hover:bg-secondary group-hover:text-text-dark dark:border-subtext-dark dark:text-subtext-dark'
+        {isActive && (
+          <span
+            aria-hidden='true'
+            className='absolute bottom-3 right-0 top-3 w-[3px] rounded-l-full bg-secondary'
+          />
+        )}
+
+        {/* Session title */}
+        <div className='flex min-w-0 items-center gap-3'>
+          <span
+            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border font-faNa text-[11px] font-black transition-all duration-300 ${
+              isActive
+                ? 'border-secondary bg-secondary text-white'
+                : 'border-secondary/15 bg-secondary/5 text-secondary group-hover/session:border-secondary group-hover/session:bg-secondary group-hover/session:text-white dark:bg-secondary/10'
             }`}
           >
-            <span className='pt-1 font-faNa text-xs sm:text-sm md:text-base'>
-              {number}
-            </span>
-          </div>
-          <h5
-            className={`text-xs font-medium transition-all duration-200 ease-in sm:text-sm lg:text-base ${
-              activeSessionId === session.id
-                ? 'text-secondary'
-                : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
-            }`}
-          >
-            {session.name}
-          </h5>
-        </div>
-        <div className='flex items-center justify-between gap-3 self-end'>
-          <div>{renderComplete()}</div>
-          <div className='flex items-center gap-2 md:gap-6'>
-            <span
-              className={`font-faNa text-2xs transition-all duration-200 ease-in sm:text-xs lg:text-sm ${
-                activeSessionId === session.id
+            {number}
+          </span>
+
+          <div className='min-w-0'>
+            <h5
+              className={`line-clamp-2 text-xs font-bold leading-6 transition-colors duration-200 sm:text-sm ${
+                isActive
                   ? 'text-secondary'
-                  : 'text-subtext-light group-hover:text-secondary dark:text-subtext-dark'
+                  : 'text-text-light group-hover/session:text-secondary dark:text-text-dark'
               }`}
             >
-              {formatTime(session.duration, 'mm:ss')}
-            </span>
-            {renderIcon()}
+              {session.name}
+            </h5>
+
+            <div className='mt-1 flex items-center gap-1.5 sm:hidden'>
+              {media?.accessLevel === 'PUBLIC' && (
+                <SiteBadge variant='success' size='sm'>
+                  رایگان
+                </SiteBadge>
+              )}
+
+              {media?.accessLevel === 'REGISTERED' && !isAccessible && (
+                <SiteBadge variant='neutral' size='sm'>
+                  نیاز به ورود
+                </SiteBadge>
+              )}
+
+              {media?.accessLevel === 'PURCHASED' && !isAccessible && (
+                <SiteBadge variant='neutral' size='sm'>
+                  قفل
+                </SiteBadge>
+              )}
+            </div>
           </div>
+        </div>
+
+        {/* Status */}
+        <div className='flex shrink-0 items-center justify-between gap-3 pr-11 sm:justify-end sm:pr-0'>
+          {/* Completion */}
+          <span
+            title={
+              session.sessionProgress?.[0]
+                ? 'جلسه تکمیل شده'
+                : 'جلسه تکمیل نشده'
+            }
+            className='flex h-8 w-8 items-center justify-center rounded-xl bg-background-light/70 dark:bg-background-dark/45'
+          >
+            {renderComplete()}
+          </span>
+
+          {/* Duration */}
+          <span
+            className={`min-w-[42px] text-center font-faNa text-[10px] transition-colors duration-200 sm:text-xs ${
+              isActive
+                ? 'text-secondary'
+                : 'text-subtext-light group-hover/session:text-secondary dark:text-subtext-dark'
+            }`}
+          >
+            {formatTime(session.duration, 'mm:ss')}
+          </span>
+
+          {/* Access icon */}
+          <span
+            className={`flex h-8 w-8 items-center justify-center rounded-xl border transition-all duration-300 ${
+              isActive
+                ? 'border-secondary/25 bg-secondary/10'
+                : 'border-black/5 bg-background-light/70 group-hover/session:border-secondary/20 group-hover/session:bg-secondary/5 dark:border-white/10 dark:bg-background-dark/45'
+            }`}
+          >
+            {renderIcon()}
+          </span>
         </div>
       </div>
 
-      {/* مودال ثبت‌نام / ورود برای جلسات REGISTERED */}
+      {/* REGISTERED */}
       {showRegisterModal && (
         <Modal
           title='ثبت نام یا ورود به حساب کاربری'
@@ -239,7 +347,7 @@ const SessionRow = ({
         />
       )}
 
-      {/* مودال دسترسی خرید / اشتراک برای جلسات PURCHASED */}
+      {/* PURCHASED */}
       {showAccessModal && (
         <Modal
           title={accessModalConfig.title}
@@ -258,11 +366,17 @@ const SessionRow = ({
 
 SessionRow.propTypes = {
   number: PropTypes.number.isRequired,
+
   session: PropTypes.object.isRequired,
+
   courseShortAddress: PropTypes.string.isRequired,
+
   className: PropTypes.string,
+
   activeSessionId: PropTypes.string,
+
   hasSubscriptionAccess: PropTypes.bool,
+
   isSubscriptionOnly: PropTypes.bool,
 };
 

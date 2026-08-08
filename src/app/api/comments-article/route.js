@@ -2,10 +2,29 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
-// =============================
-// GET → Fetch Article Comments
-// =============================
+const normalizeComment = (comment) => ({
+  ...comment,
+  user: comment.user
+    ? {
+        ...comment.user,
+        avatar: toAbsoluteMediaUrl(comment.user.avatar),
+      }
+    : null,
+  replies: Array.isArray(comment.replies)
+    ? comment.replies.map((reply) => ({
+        ...reply,
+        user: reply.user
+          ? {
+              ...reply.user,
+              avatar: toAbsoluteMediaUrl(reply.user.avatar),
+            }
+          : null,
+      }))
+    : [],
+});
+
 export async function GET(request) {
   try {
     const { searchParams } = request.nextUrl;
@@ -19,13 +38,12 @@ export async function GET(request) {
       );
     }
 
-    const authUser = getAuthUser();
+    const authUser = await getAuthUser();
     const userId = authUser?.id || null;
 
     const limit = 6;
     const skip = (page - 1) * limit;
 
-    // Approved comments OR the user’s own comments
     const filters = {
       articleId,
       parentId: null,
@@ -33,14 +51,16 @@ export async function GET(request) {
     };
 
     if (userId) {
-      filters.OR.push({ userId: userId });
+      filters.OR.push({ userId });
     }
 
     const comments = await prismadb.comment.findMany({
       where: filters,
       skip,
       take: limit,
-      orderBy: { createAt: 'desc' },
+      orderBy: {
+        createAt: 'desc',
+      },
       include: {
         replies: {
           include: {
@@ -56,13 +76,14 @@ export async function GET(request) {
     });
 
     return NextResponse.json({
-      comments,
+      comments: comments.map(normalizeComment),
       currentPage: page,
       totalPages: Math.ceil(totalComments / limit),
       totalComments,
     });
   } catch (err) {
     console.error('ARTICLE COMMENTS GET ERROR:', err);
+
     return NextResponse.json(
       { error: 'Error fetching comments' },
       { status: 500 }
@@ -70,12 +91,10 @@ export async function GET(request) {
   }
 }
 
-// =============================
-// POST → Create Article Comment
-// =============================
 export async function POST(request) {
   try {
-    const authUser = getAuthUser();
+    const authUser = await getAuthUser();
+
     if (!authUser) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -95,17 +114,20 @@ export async function POST(request) {
 
     const newComment = await prismadb.comment.create({
       data: {
-        articleId,
-        content,
-        parentId,
-        userId: authUser.id, // from JWT
+        articleId: Number(articleId),
+        content: content.trim(),
+        parentId: parentId ? Number(parentId) : null,
+        userId: authUser.id,
       },
-      include: { user: true },
+      include: {
+        user: true,
+      },
     });
 
-    return NextResponse.json(newComment);
+    return NextResponse.json(normalizeComment(newComment));
   } catch (err) {
     console.error('ARTICLE COMMENT POST ERROR:', err);
+
     return NextResponse.json(
       { error: 'Error creating comment' },
       { status: 500 }

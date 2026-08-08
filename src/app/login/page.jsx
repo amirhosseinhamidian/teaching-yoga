@@ -1,7 +1,10 @@
 /* eslint-disable no-undef */
-import LoginContent from '@/components/templates/login/LoginContent';
-import { headers } from 'next/headers';
+
 import React from 'react';
+
+import { headers } from 'next/headers';
+
+import LoginContent from '@/components/templates/login/LoginContent';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -9,12 +12,11 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
 
-  // اطلاعات پیش‌فرض
   const defaultSeoData = {
     title: 'ورود | سمانه یوگا',
     robots: 'noindex, nofollow',
@@ -28,16 +30,13 @@ export async function generateMetadata() {
 
   return {
     title: seoData?.siteTitle || defaultSeoData.title,
+
     robots: seoData?.robotsTag || defaultSeoData.robots,
   };
 }
 
 const Login = () => {
-  return (
-    <>
-      <LoginContent />
-    </>
-  );
+  return <LoginContent />;
 };
 
 export default Login;

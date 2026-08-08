@@ -1,6 +1,8 @@
+/* eslint-disable react/prop-types */
+
 'use client';
 
-import { useEffect, React } from 'react';
+import React, { useEffect } from 'react';
 
 import ErrorState from '@/components/templates/error-state/ErrorState';
 

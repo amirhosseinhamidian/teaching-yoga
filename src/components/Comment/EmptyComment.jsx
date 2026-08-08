@@ -1,23 +1,27 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { AiOutlineComment } from 'react-icons/ai';
 
-const EmptyComment = ({ isCourse, className }) => {
+import EmptyState from '@/components/SiteUi/EmptyState/EmptyState';
+
+import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
+
+const EmptyComment = ({ isCourse, className = '' }) => {
   return (
-    <div
-      className={`py-6 text-center text-subtext-light dark:text-subtext-dark ${className}`}
-    >
-      <AiOutlineComment size={48} className='mx-auto' />
-      <p className='text-xs md:text-sm'>
-        تا کنون نظری برای این {isCourse ? 'دوره' : 'مقاله'} ثبت نشده است.
-      </p>
-      <p className='text-xs md:text-sm'>اولین نفری باشید که نظری ثبت می کند!</p>
-    </div>
+    <EmptyState
+      icon={HiOutlineChatBubbleLeftRight}
+      eyebrow='شروع یک گفت‌وگوی تازه'
+      title='هنوز دیدگاهی ثبت نشده است'
+      description={`اولین نفری باش که تجربه یا سؤال خودت را درباره این ${
+        isCourse ? 'دوره' : 'مقاله'
+      } با دیگر کاربران به اشتراک می‌گذاری.`}
+      className={className}
+    />
   );
 };
 
 EmptyComment.propTypes = {
   isCourse: PropTypes.bool.isRequired,
+
   className: PropTypes.string,
 };
 

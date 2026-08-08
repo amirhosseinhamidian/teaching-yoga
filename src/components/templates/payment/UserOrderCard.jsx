@@ -2,28 +2,85 @@
 /* eslint-disable no-undef */
 'use client';
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import Checkbox from '@/components/Ui/Checkbox/Checkbox';
+import Image from 'next/image';
 import Link from 'next/link';
-import Button from '@/components/Ui/Button/Button';
+
+import Checkbox from '@/components/Ui/Checkbox/Checkbox';
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { reportClientError } from '@/utils/reportClientError';
-import CoursePaymentItem from './CoursePaymentItem';
-import Image from 'next/image';
 
-const isTehranAddress = (addr) => {
-  if (!addr) return false;
-  const city = String(addr.city || '').trim();
-  const province = String(addr.province || '').trim();
+import CoursePaymentItem from './CoursePaymentItem';
+
+import {
+  HiOutlineAcademicCap,
+  HiOutlineCheck,
+  HiOutlineClock,
+  HiOutlineCreditCard,
+  HiOutlineMapPin,
+  HiOutlinePhoto,
+  HiOutlineReceiptPercent,
+  HiOutlineShoppingBag,
+  HiOutlineTruck,
+} from 'react-icons/hi2';
+
+const isTehranAddress = (address) => {
+  if (!address) return false;
+
+  const city = String(address.city || '').trim();
+  const province = String(address.province || '').trim();
+
   return province.includes('تهران') || city.includes('تهران');
 };
 
-const formatToman = (n) => {
-  const v = Number(n || 0);
-  return v === 0 ? 'رایگان' : v.toLocaleString('fa-IR');
+const formatToman = (value) => {
+  const number = Number(value || 0);
+  return number === 0 ? 'رایگان' : number.toLocaleString('fa-IR');
+};
+
+const normalizeOptionsFromApi = (json) => {
+  const options = Array.isArray(json?.options) ? json.options : [];
+
+  return options.map((option) => ({
+    key: String(option.key),
+    title: String(option.title || ''),
+    amount: Math.ceil(Number(option.amount || 0) * 1.13),
+    etaText: option.etaText ? String(option.etaText) : '—',
+    logoUrl: option.logoUrl ? String(option.logoUrl) : null,
+  }));
+};
+
+function ProductPaymentImage({ src, alt }) {
+  const [imageError, setImageError] = useState(false);
+
+  return (
+    <div className='relative flex h-14 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-background-light/55 dark:border-white/10 dark:bg-background-dark/35'>
+      {src && !imageError ? (
+        <Image
+          src={src}
+          alt={alt || 'تصویر محصول'}
+          fill
+          sizes='80px'
+          className='object-cover'
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        <HiOutlinePhoto size={22} className='text-secondary/40' />
+      )}
+    </div>
+  );
+}
+
+ProductPaymentImage.propTypes = {
+  src: PropTypes.string,
+  alt: PropTypes.string,
 };
 
 export default function UserOrderCard({ data, className, addressId }) {
@@ -31,8 +88,8 @@ export default function UserOrderCard({ data, className, addressId }) {
   const toast = createToastHandler(isDark);
   const { user } = useAuthUser();
 
-  const cart = data?.cart || null; // دوره‌ها
-  const shopCart = data?.shopCart || null; // محصولات
+  const cart = data?.cart || null;
+  const shopCart = data?.shopCart || null;
 
   const courseItems = cart?.courses || [];
   const shopItems = shopCart?.items || [];
@@ -41,45 +98,71 @@ export default function UserOrderCard({ data, className, addressId }) {
   const hasShop = Array.isArray(shopItems) && shopItems.length > 0;
   const hasAny = hasCourses || hasShop;
 
+  /* --------------------------------------------------------------------------
+   * State
+   * ----------------------------------------------------------------------- */
+
   const [roleCheck, setRoleCheck] = useState(false);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // -------- Address (فقط برای تشخیص تهران) --------
   const [addressLoading, setAddressLoading] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState(null);
 
   const [leadTimeDays, setLeadTimeDays] = useState(1);
   const [leadTimeLoading, setLeadTimeLoading] = useState(false);
 
+  // IMPORTANT: shippingMethod must be initialized BEFORE any effect/memo uses it.
+  // This fixes: ReferenceError: Cannot access 'shippingMethod' before initialization
+  const [shippingMethod, setShippingMethod] = useState('POST');
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState([]);
+  const [shippingSource, setShippingSource] = useState(null);
+  const [shippingNote, setShippingNote] = useState('');
+  const [selectedShippingKey, setSelectedShippingKey] = useState(null);
+
   const addressIsTehran = useMemo(
     () => isTehranAddress(selectedAddress),
     [selectedAddress]
   );
 
-  // فقط اگر محصول داریم، با addressId یک بار آدرس را بگیر (برای تشخیص تهران)
+  /* --------------------------------------------------------------------------
+   * Keep floating chat above the mobile payment bar
+   * ----------------------------------------------------------------------- */
+
   useEffect(() => {
-    if (!hasShop) return;
+    if (!hasAny) return undefined;
+
+    document.body.classList.add('has-mobile-checkout-bar');
+
+    return () => {
+      document.body.classList.remove('has-mobile-checkout-bar');
+    };
+  }, [hasAny]);
+
+  /* --------------------------------------------------------------------------
+   * Address
+   * ----------------------------------------------------------------------- */
+
+  useEffect(() => {
+    if (!hasShop) return undefined;
 
     if (!addressId) {
       setSelectedAddress(null);
-      return;
+      return undefined;
     }
 
     let ignore = false;
-    const ctrl = new AbortController();
+    const controller = new AbortController();
 
     const loadAddress = async () => {
       try {
         setAddressLoading(true);
 
-        // اگر API تک‌آدرس داری بهتره اینو بزنی:
-        // GET /api/user/addresses/:id
-        // ولی چون ممکنه نداشته باشی، از لیست می‌گیریم:
         const res = await fetch('/api/user/addresses', {
           method: 'GET',
           credentials: 'include',
           cache: 'no-store',
-          signal: ctrl.signal,
+          signal: controller.signal,
           headers: { 'Content-Type': 'application/json' },
         });
 
@@ -95,31 +178,23 @@ export default function UserOrderCard({ data, className, addressId }) {
               : [];
 
         const found =
-          list.find((a) => Number(a?.id) === Number(addressId)) || null;
+          list.find((item) => Number(item?.id) === Number(addressId)) || null;
 
         if (!ignore) setSelectedAddress(found);
       } catch (error) {
-        if (error?.name === 'AbortError') {
-          return;
-        }
+        if (error?.name === 'AbortError') return;
 
         reportClientError(error, {
           event: 'checkout_address_load_failed',
-
           component: 'UserOrderCard',
-
           severity: 'warn',
-
           data: {
             operation: 'load_checkout_address',
-
             hasAddressId: Boolean(addressId),
           },
         });
 
-        if (!ignore) {
-          setSelectedAddress(null);
-        }
+        if (!ignore) setSelectedAddress(null);
       } finally {
         if (!ignore) setAddressLoading(false);
       }
@@ -129,48 +204,45 @@ export default function UserOrderCard({ data, className, addressId }) {
 
     return () => {
       ignore = true;
-      ctrl.abort();
+      controller.abort();
     };
-  }, [hasShop, addressId, addressIsTehran, shippingMethod]);
+  }, [hasShop, addressId]);
+
+  /* --------------------------------------------------------------------------
+   * Lead time
+   * ----------------------------------------------------------------------- */
 
   useEffect(() => {
-    if (!hasShop) return;
+    if (!hasShop) return undefined;
 
     let ignore = false;
-    const ctrl = new AbortController();
+    const controller = new AbortController();
 
     const fetchLeadTime = async () => {
       try {
         setLeadTimeLoading(true);
 
-        // پیشنهاد: از API عمومی خودت بگیر
-        // مثال: GET /api/shop/status => { shopLeadTimeDays: 2, canAccess: true, shopVisibility: "ALL" }
         const res = await fetch('/api/shop/status/lead-time', {
           method: 'GET',
           credentials: 'include',
           cache: 'no-store',
-          signal: ctrl.signal,
+          signal: controller.signal,
         });
 
         const json = await res.json().catch(() => ({}));
         if (!res.ok) return;
 
-        const n = Number(json?.shopLeadTimeDays);
-        if (!ignore && Number.isFinite(n) && n >= 0) {
-          setLeadTimeDays(Math.trunc(n));
+        const number = Number(json?.shopLeadTimeDays);
+        if (!ignore && Number.isFinite(number) && number >= 0) {
+          setLeadTimeDays(Math.trunc(number));
         }
       } catch (error) {
-        if (error?.name === 'AbortError') {
-          return;
-        }
+        if (error?.name === 'AbortError') return;
 
         reportClientError(error, {
           event: 'checkout_lead_time_load_failed',
-
           component: 'UserOrderCard',
-
           severity: 'warn',
-
           data: {
             operation: 'load_shop_lead_time',
           },
@@ -184,47 +256,27 @@ export default function UserOrderCard({ data, className, addressId }) {
 
     return () => {
       ignore = true;
-      ctrl.abort();
+      controller.abort();
     };
   }, [hasShop]);
 
-  // -------- Shipping (Quote) --------
-  const [shippingLoading, setShippingLoading] = useState(false);
-  const [shippingOptions, setShippingOptions] = useState([]); // [{key,title,amount,logoUrl,etaText}]
-  const [shippingSource, setShippingSource] = useState(null); // POSTEX | FALLBACK
-  const [shippingNote, setShippingNote] = useState('');
-  const [selectedShippingKey, setSelectedShippingKey] = useState(null);
+  /* --------------------------------------------------------------------------
+   * Shipping
+   * ----------------------------------------------------------------------- */
 
-  // POST | COURIER
-  const [shippingMethod, setShippingMethod] = useState('POST');
-
-  // ✅ با API جدید: options آماده می‌آیند
-  const normalizeOptionsFromApi = (json) => {
-    const options = Array.isArray(json?.options) ? json.options : [];
-    return options.map((o) => ({
-      key: String(o.key),
-      title: String(o.title || ''),
-      amount: Math.ceil(Number(o.amount || 0) * 1.13),
-      etaText: o.etaText ? String(o.etaText) : '—',
-      logoUrl: o.logoUrl ? String(o.logoUrl) : null,
-    }));
-  };
-
-  // اگر آدرس تهران نیست، COURIER را به POST برگردان
   useEffect(() => {
     if (!hasShop) return;
+
     if (shippingMethod === 'COURIER_COD' && !addressIsTehran) {
       setShippingMethod('POST');
     }
   }, [hasShop, shippingMethod, addressIsTehran]);
 
-  // Quote گرفتن وقتی addressId عوض شد
   useEffect(() => {
-    if (!hasShop) return;
-    if (!addressId) return;
+    if (!hasShop || !addressId) return undefined;
 
     let ignore = false;
-    const ctrl = new AbortController();
+    const controller = new AbortController();
 
     const fetchQuote = async () => {
       try {
@@ -236,7 +288,7 @@ export default function UserOrderCard({ data, className, addressId }) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
-          signal: ctrl.signal,
+          signal: controller.signal,
           body: JSON.stringify({ addressId: Number(addressId) }),
         });
 
@@ -250,44 +302,34 @@ export default function UserOrderCard({ data, className, addressId }) {
         const options = normalizeOptionsFromApi(json);
         setShippingOptions(options);
 
-        const src = String(json?.source || '').toUpperCase() || null;
-        setShippingSource(src);
+        const source = String(json?.source || '').toUpperCase() || null;
+        setShippingSource(source);
         setShippingNote(String(json?.note || '') || '');
 
-        // انتخاب پیش‌فرض:
-        setSelectedShippingKey((prev) => {
+        setSelectedShippingKey((previousKey) => {
           if (!options.length) return null;
-          if (prev && options.some((o) => o.key === prev)) return prev;
+          if (
+            previousKey &&
+            options.some((option) => option.key === previousKey)
+          ) {
+            return previousKey;
+          }
           return options[0]?.key ?? null;
         });
-
-        // اگر آدرس تهران نیست، مطمئن شو courier فعال نمی‌مونه
-        if (!addressIsTehran && shippingMethod === 'COURIER_COD') {
-          setShippingMethod('POST');
-        }
       } catch (error) {
-        if (error?.name === 'AbortError') {
-          return;
-        }
+        if (error?.name === 'AbortError') return;
 
         reportClientError(error, {
           event: 'checkout_shipping_quote_failed',
-
           component: 'UserOrderCard',
-
           severity: 'warn',
-
           data: {
             operation: 'load_shipping_quote',
-
             hasAddressId: Boolean(addressId),
-
-            shippingMethod,
           },
         });
 
         if (!ignore) {
-          // UI-safe fallback (صرفاً برای اینکه UI خالی نشه)
           const fallback = [
             {
               key: 'FALLBACK_POST_FAST',
@@ -297,15 +339,13 @@ export default function UserOrderCard({ data, className, addressId }) {
               etaText: 'از ۴ تا ۷ روز کاری',
             },
           ];
+
           setShippingOptions(fallback);
           setShippingSource('FALLBACK');
           setShippingNote(
             'به علت عدم برقراری ارتباط با سامانه پست، هزینه ارسال متعاقبا محاسبه می شود و به اطلاع شما خواهد رسید.'
           );
           setSelectedShippingKey('FALLBACK_POST_FAST');
-          if (shippingMethod === 'COURIER_COD' && !addressIsTehran) {
-            setShippingMethod('POST');
-          }
         }
       } finally {
         if (!ignore) setShippingLoading(false);
@@ -316,34 +356,39 @@ export default function UserOrderCard({ data, className, addressId }) {
 
     return () => {
       ignore = true;
-      ctrl.abort();
+      controller.abort();
     };
   }, [hasShop, addressId]);
 
   const selectedShipping = useMemo(() => {
     if (!selectedShippingKey) return null;
-    return shippingOptions.find((x) => x.key === selectedShippingKey) || null;
+
+    return (
+      shippingOptions.find((item) => item.key === selectedShippingKey) || null
+    );
   }, [shippingOptions, selectedShippingKey]);
 
   const shippingCost = useMemo(() => {
     if (!hasShop) return 0;
-    if (shippingMethod === 'COURIER_COD') return 0; // هزینه پیک در محل
-    return Number(selectedShipping?.amount || 0); // تومان
+    if (shippingMethod === 'COURIER_COD') return 0;
+
+    return Number(selectedShipping?.amount || 0);
   }, [hasShop, shippingMethod, selectedShipping]);
 
-  // -------- Amounts --------
-  const coursePayable = Number(cart?.totalPrice || 0); // تومان
-  const shopPayable = Number(shopCart?.payable ?? shopCart?.subtotal ?? 0); // تومان
+  /* --------------------------------------------------------------------------
+   * Amounts
+   * ----------------------------------------------------------------------- */
+
+  const coursePayable = Number(cart?.totalPrice || 0);
+  const shopPayable = Number(shopCart?.payable ?? shopCart?.subtotal ?? 0);
 
   const onlinePayable = useMemo(() => {
     if (!hasAny) return 0;
 
-    // پیک: هزینه ارسال در محل، آنلاین فقط دوره+محصول
     if (hasShop && shippingMethod === 'COURIER_COD') {
       return coursePayable + shopPayable;
     }
 
-    // پست: دوره+محصول+هزینه ارسال
     return (
       coursePayable +
       shopPayable +
@@ -358,39 +403,29 @@ export default function UserOrderCard({ data, className, addressId }) {
     shippingCost,
   ]);
 
-  if (!hasAny) {
-    return (
-      <div
-        className={`rounded-xl bg-surface-light p-4 dark:bg-surface-dark ${className}`}
-      >
-        <h2 className='my-6 text-center text-lg'>سبد خرید شما خالی است.</h2>
-      </div>
-    );
-  }
+  /* --------------------------------------------------------------------------
+   * Payment
+   * ----------------------------------------------------------------------- */
 
   const handlePayment = async () => {
     if (!user?.firstname || !user?.lastname) {
       toast.showErrorToast('لطفا نام و نام خانوادگی خود را ثبت کنید.');
-
       return;
     }
 
     if (hasShop) {
       if (!addressId) {
         toast.showErrorToast('لطفاً ابتدا یک آدرس برای ارسال انتخاب کنید.');
-
         return;
       }
 
       if (shippingMethod === 'POST' && !selectedShippingKey) {
         toast.showErrorToast('لطفاً سرویس ارسال با پست را انتخاب کنید.');
-
         return;
       }
 
       if (shippingMethod === 'COURIER_COD' && !addressIsTehran) {
         toast.showErrorToast('ارسال با پیک فقط برای تهران فعال است.');
-
         return;
       }
     }
@@ -399,17 +434,14 @@ export default function UserOrderCard({ data, className, addressId }) {
       toast.showErrorToast(
         'برای پرداخت لازم است قوانین و مقررات را تایید کنید.'
       );
-
       return;
     }
 
     try {
       setPaymentLoading(true);
 
-      /*
-       * رزرو منقضی‌شده تخفیف پیش از محاسبه نهایی پاک می‌شود.
-       */
       let discountResponse;
+
       try {
         discountResponse = await fetch('/api/apply-discount-code', {
           method: 'PATCH',
@@ -429,7 +461,6 @@ export default function UserOrderCard({ data, className, addressId }) {
         });
 
         toast.showErrorToast('بررسی تخفیف با مشکل مواجه شد.');
-
         return;
       }
 
@@ -439,9 +470,7 @@ export default function UserOrderCard({ data, className, addressId }) {
         if (discountResponse.status >= 500) {
           reportClientError(new Error('Discount reservation refresh failed'), {
             event: 'checkout_discount_refresh_failed',
-
             component: 'UserOrderCard',
-
             data: {
               status: discountResponse.status,
             },
@@ -451,27 +480,16 @@ export default function UserOrderCard({ data, className, addressId }) {
         toast.showErrorToast(
           discountData?.message || 'بررسی کد تخفیف ناموفق بود.'
         );
-
         return;
       }
 
-      /*
-       * مبلغ و هزینه ارسال اعلام‌شده توسط Client
-       * مبنای Checkout نیستند.
-       *
-       * سرور مبلغ و Quote را مجدداً محاسبه می‌کند.
-       */
       const payload = {
         cartId: cart?.id || null,
-
         shopCartId: shopCart?.id || null,
-
         addressId: hasShop ? Number(addressId) : null,
-
         shipping: hasShop
           ? {
               method: shippingMethod,
-
               postOptionKey:
                 shippingMethod === 'POST' ? selectedShippingKey : null,
             }
@@ -480,50 +498,42 @@ export default function UserOrderCard({ data, className, addressId }) {
 
       const response = await fetch('/api/checkout', {
         method: 'POST',
-
         credentials: 'include',
-
         cache: 'no-store',
-
         headers: {
           'Content-Type': 'application/json',
-
           Accept: 'application/json',
         },
-
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json().catch(() => null);
+      const responseData = await response.json().catch(() => null);
 
-      if (!response.ok || !data?.success) {
+      if (!response.ok || !responseData?.success) {
         if (response.status >= 500) {
           reportClientError(new Error('Checkout API returned a server error'), {
             event: 'checkout_api_failed',
-
             component: 'UserOrderCard',
-
             data: {
               status: response.status,
-
               hasCourses,
               hasShop,
-
               shippingMethod: hasShop ? shippingMethod : null,
             },
           });
         }
 
         toast.showErrorToast(
-          data?.error || data?.message || 'خطا در ایجاد پرداخت'
+          responseData?.error || responseData?.message || 'خطا در ایجاد پرداخت'
         );
-
         return;
       }
 
-      if (typeof data.redirectUrl === 'string' && data.redirectUrl) {
-        window.location.assign(data.redirectUrl);
-
+      if (
+        typeof responseData.redirectUrl === 'string' &&
+        responseData.redirectUrl
+      ) {
+        window.location.assign(responseData.redirectUrl);
         return;
       }
 
@@ -531,11 +541,9 @@ export default function UserOrderCard({ data, className, addressId }) {
         new Error('Checkout response did not contain redirectUrl'),
         {
           event: 'checkout_response_invalid',
-
           component: 'UserOrderCard',
-
           data: {
-            hasPaymentId: Number.isInteger(data?.paymentId),
+            hasPaymentId: Number.isInteger(responseData?.paymentId),
           },
         }
       );
@@ -544,12 +552,9 @@ export default function UserOrderCard({ data, className, addressId }) {
     } catch (error) {
       reportClientError(error, {
         event: 'checkout_network_failed',
-
         component: 'UserOrderCard',
-
         data: {
           operation: 'initialize_checkout',
-
           hasCourses,
           hasShop,
         },
@@ -561,304 +566,548 @@ export default function UserOrderCard({ data, className, addressId }) {
     }
   };
 
+  if (!hasAny) {
+    return (
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        topLine
+        className={`p-6 text-center ${className || ''}`}
+      >
+        <HiOutlineShoppingBag size={30} className='mx-auto text-secondary/40' />
+        <h2 className='mt-3 text-sm font-black text-text-light dark:text-text-dark'>
+          سبد خرید شما خالی است
+        </h2>
+      </SiteCard>
+    );
+  }
+
+  const paymentButtonText = onlinePayable === 0 ? 'ثبت سفارش' : 'ادامه پرداخت';
+
   return (
-    <div
-      className={`rounded-xl bg-surface-light p-4 shadow sm:p-6 dark:bg-surface-dark ${className}`}
-    >
-      <h2 className='mb-6 text-lg font-semibold md:text-xl'>سفارش شما</h2>
+    <>
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        topLine
+        className={`relative overflow-hidden ${className || ''}`}
+      >
+        <div
+          aria-hidden='true'
+          className='pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-secondary/10 blur-[90px]'
+        />
 
-      {/* دوره‌ها */}
-      {hasCourses && (
-        <>
-          <h3 className='mb-3 text-sm font-semibold'>دوره‌ها</h3>
-          {courseItems.map((course) => (
-            <div key={course.courseId} className='mb-2'>
-              <CoursePaymentItem data={course} />
+        <div className='relative z-10'>
+          <div className='flex items-center gap-3 border-b border-black/5 px-5 py-5 sm:px-6 dark:border-white/10'>
+            <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+              <HiOutlineReceiptPercent size={23} />
+            </span>
+
+            <div>
+              <p className='text-[9px] font-bold text-secondary sm:text-[10px]'>
+                مرور نهایی
+              </p>
+              <h2 className='mt-0.5 text-base font-black text-text-light sm:text-lg dark:text-text-dark'>
+                سفارش شما
+              </h2>
             </div>
-          ))}
-          <hr className='my-4 border-t border-gray-300 dark:border-gray-700' />
-        </>
-      )}
+          </div>
 
-      {/* محصولات */}
-      {hasShop && (
-        <>
-          <h3 className='mb-3 text-sm font-semibold'>محصولات</h3>
-
-          {shopItems.map((it) => (
-            <div
-              key={it.id}
-              className='mb-3 flex items-center justify-between gap-2'
-            >
-              <div className='flex items-center gap-2'>
-                <Image
-                  src={it.coverImage}
-                  alt={it.productTitle}
-                  width={280}
-                  height={160}
-                  className='h-9 w-14 rounded-lg object-cover sm:h-14 sm:w-20'
-                />
-                <div className='flex flex-col'>
-                  <span className='text-sm md:text-base'>
-                    {it.productTitle}
-                  </span>
-                  <span className='text-2xs text-subtext-light md:text-xs dark:text-subtext-dark'>
-                    تعداد: {Number(it.qty || 0).toLocaleString('fa-IR')}
-                    {it.color?.name ? ` | رنگ: ${it.color.name}` : ''}
-                    {it.size?.name ? ` | سایز: ${it.size.name}` : ''}
-                  </span>
-                </div>
-              </div>
-
-              <div className='flex items-baseline gap-1'>
-                <span className='font-faNa text-sm font-semibold sm:text-base'>
-                  {formatToman(Number(it.unitPrice || 0) * Number(it.qty || 0))}
-                </span>
-                {Number(it.unitPrice || 0) !== 0 && (
-                  <span className='text-2xs'>تومان</span>
-                )}
-              </div>
-            </div>
-          ))}
-
-          <hr className='my-4 border-t border-gray-300 dark:border-gray-700' />
-
-          {/* روش ارسال (بدون نمایش آدرس) */}
-          <div className='mb-4 rounded-xl border border-foreground-light p-4 dark:border-foreground-dark'>
-            <h4 className='mb-3 text-sm font-semibold'>روش ارسال</h4>
-
-            {!addressId ? (
-              <div className='text-xs text-red'>
-                برای محاسبه هزینه ارسال، ابتدا یک آدرس برای ارسال انتخاب کنید.
-              </div>
-            ) : addressLoading ? (
-              <div className='text-xs text-subtext-light dark:text-subtext-dark'>
-                در حال بررسی آدرس...
-              </div>
-            ) : (
-              <>
-                {/* انتخاب کلی: POST / COURIER */}
-                {addressIsTehran && (
-                  <div className='mb-3 flex flex-col gap-2 text-xs'>
-                    <label className='flex cursor-pointer items-center gap-2'>
-                      <input
-                        type='radio'
-                        name='shipping'
-                        checked={shippingMethod === 'POST'}
-                        onChange={() => setShippingMethod('POST')}
-                        className='peer hidden'
-                      />
-
-                      <span className='flex h-4 w-4 items-center justify-center rounded-full border-2 border-secondary'>
-                        <span
-                          className={`h-2 w-2 rounded-full bg-secondary transition duration-150 ${
-                            shippingMethod === 'POST'
-                              ? 'opacity-100'
-                              : 'opacity-0'
-                          }`}
-                        />
-                      </span>
-                      <span>ارسال با پست (تهران و شهرستان)</span>
-                    </label>
-                    {/* پیک فقط تهران */}
-                    <label className='flex cursor-pointer items-center gap-2'>
-                      <input
-                        type='radio'
-                        name='shipping'
-                        checked={shippingMethod === 'COURIER_COD'}
-                        onChange={() => setShippingMethod('COURIER_COD')}
-                        className='peer hidden'
-                      />
-
-                      <span className='flex h-4 w-4 items-center justify-center rounded-full border-2 border-secondary'>
-                        <span
-                          className={`h-2 w-2 rounded-full bg-secondary transition duration-150 ${
-                            shippingMethod === 'COURIER_COD'
-                              ? 'opacity-100'
-                              : 'opacity-0'
-                          }`}
-                        />
-                      </span>
-                      <span>پیک تهران (هزینه ارسال در محل پرداخت می‌شود)</span>
-                    </label>
-
-                    <hr className='my-3 border-t border-gray-300 dark:border-gray-700' />
+          <div className='space-y-6 p-5 sm:p-6'>
+            {hasCourses && (
+              <section>
+                <div className='mb-1 flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-2'>
+                    <HiOutlineAcademicCap
+                      size={18}
+                      className='text-secondary'
+                    />
+                    <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+                      دوره‌ها
+                    </h3>
                   </div>
-                )}
 
-                <div className='mb-2 rounded-lg bg-black/5 p-2 text-xs text-subtext-light dark:bg-white/5 dark:text-subtext-dark'>
-                  {leadTimeLoading ? (
-                    <span>در حال دریافت زمان آماده‌سازی سفارش...</span>
-                  ) : (
-                    <span>
-                      زمان آماده‌سازی سفارش:{' '}
-                      <span className='font-faNa'>
-                        {leadTimeDays.toLocaleString('fa-IR')}
-                      </span>{' '}
-                      روز کاری
-                    </span>
-                  )}
+                  <SiteBadge variant='secondary' size='sm'>
+                    {courseItems.length.toLocaleString('fa-IR')} دوره
+                  </SiteBadge>
                 </div>
 
-                {/* اگر POST انتخاب شد، گزینه‌های postex/fallback را نشان بده */}
-                {shippingMethod === 'POST' && (
-                  <>
-                    {shippingLoading ? (
-                      <div className='text-xs text-subtext-light dark:text-subtext-dark'>
-                        در حال استعلام هزینه ارسال...
-                      </div>
-                    ) : (
-                      <>
-                        {!!shippingNote && (
-                          <div className='mb-2 rounded-lg bg-black/5 p-2 text-2xs text-subtext-light dark:bg-white/5 dark:text-subtext-dark'>
-                            {shippingNote}
-                          </div>
-                        )}
+                <div className='divide-y divide-black/5 dark:divide-white/10'>
+                  {courseItems.map((course) => (
+                    <CoursePaymentItem key={course.courseId} data={course} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-                        {shippingOptions.length === 0 ? (
-                          <div className='text-xs text-red'>
-                            گزینه‌ای برای ارسال یافت نشد. لطفاً دوباره تلاش
-                            کنید.
+            {hasShop && (
+              <section
+                className={
+                  hasCourses
+                    ? 'border-t border-black/5 pt-6 dark:border-white/10'
+                    : ''
+                }
+              >
+                <div className='mb-2 flex items-center justify-between gap-3'>
+                  <div className='flex items-center gap-2'>
+                    <HiOutlineShoppingBag
+                      size={18}
+                      className='text-secondary'
+                    />
+                    <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+                      محصولات
+                    </h3>
+                  </div>
+
+                  <SiteBadge variant='secondary' size='sm'>
+                    {shopItems
+                      .reduce((sum, item) => sum + Number(item.qty || 0), 0)
+                      .toLocaleString('fa-IR')}{' '}
+                    محصول
+                  </SiteBadge>
+                </div>
+
+                <div className='divide-y divide-black/5 dark:divide-white/10'>
+                  {shopItems.map((item) => {
+                    const lineTotal =
+                      Number(item.unitPrice || 0) * Number(item.qty || 0);
+
+                    return (
+                      <article
+                        key={item.id}
+                        className='flex items-center justify-between gap-3 py-3.5'
+                      >
+                        <div className='flex min-w-0 items-center gap-3'>
+                          <ProductPaymentImage
+                            src={item.coverImage}
+                            alt={item.productTitle}
+                          />
+
+                          <div className='min-w-0'>
+                            <h4 className='line-clamp-2 text-xs font-black leading-6 text-text-light sm:text-sm dark:text-text-dark'>
+                              {item.productTitle}
+                            </h4>
+
+                            <div className='mt-1.5 flex flex-wrap gap-1'>
+                              <span className='rounded-lg bg-secondary/5 px-2 py-1 font-faNa text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                تعداد:{' '}
+                                {Number(item.qty || 0).toLocaleString('fa-IR')}
+                              </span>
+
+                              {item.color?.name && (
+                                <span className='flex items-center gap-1 rounded-lg bg-secondary/5 px-2 py-1 text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                  {item.color.hex && (
+                                    <span
+                                      className='h-2.5 w-2.5 rounded-full border border-black/10 dark:border-white/20'
+                                      style={{
+                                        backgroundColor: item.color.hex,
+                                      }}
+                                    />
+                                  )}
+                                  {item.color.name}
+                                </span>
+                              )}
+
+                              {item.size?.name && (
+                                <span className='rounded-lg bg-secondary/5 px-2 py-1 font-faNa text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                  سایز: {item.size.name}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className='shrink-0 text-left'>
+                          <strong className='font-faNa text-sm font-black sm:text-base'>
+                            {formatToman(lineTotal)}
+                          </strong>
+                          {lineTotal !== 0 && (
+                            <span className='mr-1 text-[8px] text-subtext-light dark:text-subtext-dark'>
+                              تومان
+                            </span>
+                          )}
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+
+            {hasShop && (
+              <section className='border-t border-black/5 pt-6 dark:border-white/10'>
+                <div className='mb-4 flex items-center gap-2'>
+                  <HiOutlineTruck size={19} className='text-secondary' />
+                  <div>
+                    <h3 className='text-sm font-black text-text-light dark:text-text-dark'>
+                      روش ارسال
+                    </h3>
+                    <p className='mt-0.5 text-[9px] text-subtext-light dark:text-subtext-dark'>
+                      روش مناسب ارسال سفارش را انتخاب کنید
+                    </p>
+                  </div>
+                </div>
+
+                {!addressId ? (
+                  <div className='flex items-start gap-2 rounded-2xl border border-red/15 bg-red/5 p-3 text-[10px] leading-6 text-red'>
+                    <HiOutlineMapPin size={17} className='mt-0.5 shrink-0' />
+                    برای محاسبه هزینه ارسال، ابتدا یک آدرس برای ارسال انتخاب
+                    کنید.
+                  </div>
+                ) : addressLoading ? (
+                  <div className='rounded-2xl bg-background-light/45 p-4 text-xs text-subtext-light dark:bg-background-dark/30 dark:text-subtext-dark'>
+                    در حال بررسی آدرس...
+                  </div>
+                ) : (
+                  <div className='space-y-3'>
+                    {addressIsTehran && (
+                      <div className='grid gap-2'>
+                        <button
+                          type='button'
+                          onClick={() => setShippingMethod('POST')}
+                          className={`flex items-start gap-3 rounded-[18px] border p-3 text-right transition-all ${
+                            shippingMethod === 'POST'
+                              ? 'border-secondary bg-secondary/[0.06]'
+                              : 'border-black/5 bg-background-light/35 hover:border-secondary/20 dark:border-white/10 dark:bg-background-dark/25'
+                          }`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                              shippingMethod === 'POST'
+                                ? 'border-secondary bg-secondary'
+                                : 'border-black/15 dark:border-white/20'
+                            }`}
+                          >
+                            {shippingMethod === 'POST' && (
+                              <HiOutlineCheck
+                                size={12}
+                                className='text-white'
+                              />
+                            )}
+                          </span>
+
+                          <span>
+                            <strong className='block text-xs font-black text-text-light dark:text-text-dark'>
+                              ارسال با پست
+                            </strong>
+                            <span className='mt-0.5 block text-[9px] leading-5 text-subtext-light dark:text-subtext-dark'>
+                              مناسب تهران و شهرستان
+                            </span>
+                          </span>
+                        </button>
+
+                        <button
+                          type='button'
+                          onClick={() => setShippingMethod('COURIER_COD')}
+                          className={`flex items-start gap-3 rounded-[18px] border p-3 text-right transition-all ${
+                            shippingMethod === 'COURIER_COD'
+                              ? 'border-secondary bg-secondary/[0.06]'
+                              : 'border-black/5 bg-background-light/35 hover:border-secondary/20 dark:border-white/10 dark:bg-background-dark/25'
+                          }`}
+                        >
+                          <span
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                              shippingMethod === 'COURIER_COD'
+                                ? 'border-secondary bg-secondary'
+                                : 'border-black/15 dark:border-white/20'
+                            }`}
+                          >
+                            {shippingMethod === 'COURIER_COD' && (
+                              <HiOutlineCheck
+                                size={12}
+                                className='text-white'
+                              />
+                            )}
+                          </span>
+
+                          <span>
+                            <strong className='block text-xs font-black text-text-light dark:text-text-dark'>
+                              پیک تهران
+                            </strong>
+                            <span className='mt-0.5 block text-[9px] leading-5 text-subtext-light dark:text-subtext-dark'>
+                              هزینه ارسال هنگام دریافت پرداخت می‌شود
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    )}
+
+                    <div className='flex items-center gap-2 rounded-2xl bg-background-light/45 p-3 text-[10px] text-subtext-light dark:bg-background-dark/30 dark:text-subtext-dark'>
+                      <HiOutlineClock
+                        size={17}
+                        className='shrink-0 text-secondary'
+                      />
+                      {leadTimeLoading ? (
+                        <span>در حال دریافت زمان آماده‌سازی سفارش...</span>
+                      ) : (
+                        <span>
+                          زمان آماده‌سازی سفارش:{' '}
+                          <strong className='font-faNa text-text-light dark:text-text-dark'>
+                            {leadTimeDays.toLocaleString('fa-IR')}
+                          </strong>{' '}
+                          روز کاری
+                        </span>
+                      )}
+                    </div>
+
+                    {shippingMethod === 'POST' && (
+                      <>
+                        {shippingLoading ? (
+                          <div className='rounded-2xl bg-background-light/45 p-4 text-xs text-subtext-light dark:bg-background-dark/30 dark:text-subtext-dark'>
+                            در حال استعلام هزینه ارسال...
                           </div>
                         ) : (
-                          <div className='flex flex-col gap-2'>
-                            {shippingOptions.map((opt) => (
-                              <div
-                                key={opt.key}
-                                onClick={() => setSelectedShippingKey(opt.key)}
-                                className={`flex cursor-pointer items-center justify-between gap-3 rounded-xl border p-3 text-xs transition duration-200 ${
-                                  opt.key === selectedShippingKey
-                                    ? 'border-accent bg-accent/5'
-                                    : 'border-gray-200 dark:border-foreground-dark'
-                                }`}
-                              >
-                                <div className='flex items-center gap-2'>
-                                  <Image
-                                    src={opt?.logoUrl || '/images/post.jpeg'}
-                                    alt={opt.title}
-                                    width={32}
-                                    height={32}
-                                    className='h-8 w-8 rounded-md bg-white object-contain'
-                                  />
-
-                                  <div className='flex flex-col'>
-                                    <span className='font-semibold'>
-                                      {opt.title}
-                                    </span>
-                                    <span className='font-faNa text-2xs text-subtext-light dark:text-subtext-dark'>
-                                      {opt.etaText || '—'}
-                                    </span>
-                                  </div>
-                                </div>
-
-                                <div className='flex items-baseline gap-1'>
-                                  <span className='font-faNa text-xs font-bold sm:text-sm'>
-                                    {opt.amount < 0
-                                      ? 'بعداً محاسبه می‌شود'
-                                      : formatToman(opt.amount)}
-                                  </span>
-                                  {Number(opt.amount || 0) > 0 && (
-                                    <span className='text-2xs'>تومان</span>
+                          <>
+                            {shippingNote && (
+                              <div className='border-yellow/15 bg-yellow/5 rounded-2xl border p-3 text-[9px] leading-5 text-subtext-light dark:text-subtext-dark'>
+                                <div className='mb-1 flex items-center gap-2'>
+                                  {shippingSource === 'FALLBACK' && (
+                                    <SiteBadge variant='yellow' size='sm'>
+                                      هزینه موقت
+                                    </SiteBadge>
                                   )}
                                 </div>
+                                {shippingNote}
                               </div>
-                            ))}
-                          </div>
+                            )}
+
+                            {shippingOptions.length === 0 ? (
+                              <div className='rounded-2xl border border-red/15 bg-red/5 p-3 text-[10px] text-red'>
+                                گزینه‌ای برای ارسال یافت نشد. لطفاً دوباره تلاش
+                                کنید.
+                              </div>
+                            ) : (
+                              <div className='space-y-2'>
+                                {shippingOptions.map((option) => {
+                                  const active =
+                                    option.key === selectedShippingKey;
+
+                                  return (
+                                    <button
+                                      key={option.key}
+                                      type='button'
+                                      onClick={() =>
+                                        setSelectedShippingKey(option.key)
+                                      }
+                                      className={`flex w-full items-center justify-between gap-3 rounded-[18px] border p-3 text-right transition-all ${
+                                        active
+                                          ? 'border-secondary bg-secondary/[0.06]'
+                                          : 'border-black/5 bg-background-light/35 hover:border-secondary/20 dark:border-white/10 dark:bg-background-dark/25'
+                                      }`}
+                                    >
+                                      <div className='flex min-w-0 items-center gap-3'>
+                                        <span
+                                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
+                                            active
+                                              ? 'border-secondary bg-secondary'
+                                              : 'border-black/15 dark:border-white/20'
+                                          }`}
+                                        >
+                                          {active && (
+                                            <HiOutlineCheck
+                                              size={12}
+                                              className='text-white'
+                                            />
+                                          )}
+                                        </span>
+
+                                        <Image
+                                          src={'/images/post.jpeg'}
+                                          alt={option.title}
+                                          width={36}
+                                          height={36}
+                                          className='h-9 w-9 shrink-0 rounded-xl bg-white object-contain p-1'
+                                        />
+
+                                        <div className='min-w-0'>
+                                          <strong className='block truncate text-xs font-black text-text-light dark:text-text-dark'>
+                                            {option.title}
+                                          </strong>
+                                          <span className='mt-0.5 block font-faNa text-[9px] text-subtext-light dark:text-subtext-dark'>
+                                            {option.etaText || '—'}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div className='shrink-0 text-left'>
+                                        <strong className='font-faNa text-xs font-black'>
+                                          {option.amount < 0
+                                            ? 'بعداً محاسبه می‌شود'
+                                            : formatToman(option.amount)}
+                                        </strong>
+                                        {Number(option.amount || 0) > 0 && (
+                                          <span className='mr-1 text-[8px] text-subtext-light dark:text-subtext-dark'>
+                                            تومان
+                                          </span>
+                                        )}
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </>
                         )}
                       </>
                     )}
-                  </>
-                )}
-                {/* اگر COURIER انتخاب شد */}
-                {shippingMethod === 'COURIER_COD' && (
-                  <div className='mt-2 rounded-lg bg-black/5 p-3 text-2xs text-subtext-light dark:bg-white/5 dark:text-subtext-dark'>
-                    هزینه ارسال توسط پیک در محل دریافت می‌شود.
+
+                    {shippingMethod === 'COURIER_COD' && (
+                      <div className='rounded-2xl border border-secondary/10 bg-secondary/5 p-3 text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+                        هزینه ارسال توسط پیک در محل دریافت می‌شود و در مبلغ
+                        پرداخت آنلاین لحاظ نخواهد شد.
+                      </div>
+                    )}
                   </div>
                 )}
-              </>
+              </section>
             )}
-          </div>
-        </>
-      )}
 
-      {/* جمع‌بندی */}
-      <div className='rounded-xl border border-foreground-light p-4 dark:border-foreground-dark'>
-        {hasCourses && (
-          <div className='mb-2 flex justify-between text-sm'>
-            <span>مبلغ دوره‌ها</span>
-            <span className='font-faNa text-xs sm:text-sm'>
-              {formatToman(coursePayable)} {coursePayable !== 0 && 'تومان'}
-            </span>
-          </div>
-        )}
+            <section className='border-t border-black/5 pt-6 dark:border-white/10'>
+              <div className='relative overflow-hidden rounded-[22px] border border-secondary/15 bg-secondary/[0.055] p-4 dark:bg-secondary/[0.08]'>
+                <HiOutlineCreditCard
+                  size={86}
+                  className='pointer-events-none absolute -bottom-5 -left-4 text-secondary/[0.05]'
+                />
 
-        {hasShop && (
-          <>
-            <div className='mb-2 flex justify-between text-sm'>
-              <span>مبلغ محصولات</span>
-              <span className='font-faNa text-xs sm:text-sm'>
-                {formatToman(shopPayable)} {shopPayable !== 0 && 'تومان'}
-              </span>
+                <div className='relative z-10 space-y-3'>
+                  {hasCourses && (
+                    <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                      <span>مبلغ دوره‌ها</span>
+                      <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                        {formatToman(coursePayable)}{' '}
+                        {coursePayable !== 0 && 'تومان'}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasShop && (
+                    <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                      <span>مبلغ محصولات</span>
+                      <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                        {formatToman(shopPayable)}{' '}
+                        {shopPayable !== 0 && 'تومان'}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasShop && shippingMethod === 'POST' && addressId && (
+                    <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                      <span>هزینه ارسال</span>
+                      <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                        {shippingCost < 0
+                          ? 'بعداً محاسبه می‌شود'
+                          : `${formatToman(shippingCost)}${shippingCost > 0 ? ' تومان' : ''}`}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasShop && shippingMethod === 'COURIER_COD' && (
+                    <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                      <span>هزینه ارسال</span>
+                      <span className='font-bold text-text-light dark:text-text-dark'>
+                        پرداخت در محل
+                      </span>
+                    </div>
+                  )}
+
+                  <div className='h-px bg-secondary/15' />
+
+                  <div className='flex items-end justify-between gap-3'>
+                    <span className='text-xs font-black text-text-light dark:text-text-dark'>
+                      مبلغ قابل پرداخت
+                    </span>
+                    <div className='flex items-baseline gap-1'>
+                      <strong className='font-faNa text-lg font-black'>
+                        {formatToman(onlinePayable)}
+                      </strong>
+                      {onlinePayable !== 0 && (
+                        <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                          تومان
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <div className='rounded-2xl border border-black/5 bg-background-light/40 p-3 dark:border-white/10 dark:bg-background-dark/25'>
+              <Checkbox
+                label={
+                  <span className='text-[9px] leading-6 text-subtext-light sm:text-[10px] dark:text-subtext-dark'>
+                    من{' '}
+                    <Link
+                      href='/rules'
+                      className='font-bold text-secondary hover:underline'
+                    >
+                      شرایط و مقررات
+                    </Link>{' '}
+                    سایت را خوانده‌ام و آن را می‌پذیرم.
+                  </span>
+                }
+                checked={roleCheck}
+                onChange={setRoleCheck}
+                color='secondary'
+                size='small'
+              />
             </div>
 
-            {shippingMethod === 'POST' && !!addressId && (
-              <div className='mb-2 flex justify-between text-sm'>
-                <span>هزینه ارسال</span>
-                <span className='font-faNa text-xs sm:text-sm'>
-                  {shippingCost < 0
-                    ? 'بعداً محاسبه می‌شود'
-                    : `${formatToman(shippingCost)}${shippingCost > 0 ? ' تومان' : ''}`}
-                </span>
+            <SiteButton
+              type='button'
+              variant='primary'
+              size='lg'
+              disabled={addressLoading || paymentLoading}
+              onClick={handlePayment}
+              className='hidden w-full lg:flex'
+            >
+              {paymentLoading ? 'در حال انتقال...' : paymentButtonText}
+            </SiteButton>
+          </div>
+        </div>
+      </SiteCard>
+
+      {/* Mobile fixed payment bar */}
+      <div
+        dir='rtl'
+        data-mobile-checkout-bar='true'
+        className='fixed inset-x-0 bottom-0 z-40 lg:hidden'
+      >
+        <div className='pointer-events-none absolute inset-x-0 -top-8 h-8 bg-gradient-to-t from-background-light/75 to-transparent dark:from-background-dark/75' />
+
+        <div className='bg-surface-light/92 dark:bg-surface-dark/92 border-t border-black/5 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 shadow-[0_-16px_45px_rgba(15,23,42,0.12)] backdrop-blur-2xl dark:border-white/10 dark:shadow-[0_-16px_50px_rgba(0,0,0,0.32)]'>
+          <div className='mx-auto flex max-w-screen-md items-center gap-3'>
+            <div className='min-w-0 flex-1'>
+              <span className='text-[9px] font-bold text-subtext-light dark:text-subtext-dark'>
+                مبلغ قابل پرداخت
+              </span>
+              <div className='mt-1 flex items-baseline gap-1'>
+                <strong className='font-faNa text-lg font-black leading-none text-secondary sm:text-xl'>
+                  {formatToman(onlinePayable)}
+                </strong>
+                {onlinePayable !== 0 && (
+                  <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                    تومان
+                  </span>
+                )}
               </div>
-            )}
+            </div>
 
-            {shippingMethod === 'COURIER_COD' && (
-              <div className='mb-2 flex justify-between text-sm'>
-                <span>هزینه ارسال (پرداخت در محل)</span>
-                <span className='font-faNa text-xs sm:text-sm'>در محل</span>
-              </div>
-            )}
-          </>
-        )}
-
-        <hr className='my-3 border-gray-300 dark:border-gray-700' />
-
-        <div className='flex justify-between gap-3 text-base font-bold text-green-light sm:text-lg md:text-base xl:text-lg dark:text-green-dark'>
-          <span>مبلغ قابل پرداخت</span>
-          <span className='font-faNa'>
-            {formatToman(onlinePayable)} {onlinePayable !== 0 && 'تومان'}
-          </span>
+            <SiteButton
+              type='button'
+              variant='primary'
+              size='md'
+              disabled={addressLoading || paymentLoading}
+              onClick={handlePayment}
+              className='min-w-[165px] shrink-0 sm:min-w-[210px]'
+            >
+              {paymentLoading ? 'در حال انتقال...' : paymentButtonText}
+            </SiteButton>
+          </div>
         </div>
       </div>
-
-      <Checkbox
-        label={
-          <span className='text-[8px] text-subtext-light md:text-2xs dark:text-subtext-dark'>
-            من{' '}
-            <Link href='/rules' className='text-blue'>
-              شرایط و مقررات
-            </Link>{' '}
-            سایت را خوانده‌ام و آن را می‌پذیرم.
-          </span>
-        }
-        checked={roleCheck}
-        onChange={setRoleCheck}
-        color='secondary'
-        size='small'
-      />
-
-      <div className='flex w-full justify-center'>
-        <Button
-          shadow
-          isLoading={paymentLoading}
-          disable={addressLoading}
-          onClick={handlePayment}
-          className='mt-6 w-full sm:w-2/3 lg:w-1/2'
-        >
-          {onlinePayable === 0 ? 'ثبت سفارش' : 'پرداخت'}
-        </Button>
-      </div>
-    </div>
+    </>
   );
 }
 
@@ -868,7 +1117,5 @@ UserOrderCard.propTypes = {
     shopCart: PropTypes.any,
   }),
   className: PropTypes.string,
-
-  // ✅ فقط آیدی آدرس منتخب از والد
   addressId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
 };

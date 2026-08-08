@@ -42,11 +42,32 @@ const buildInternalOrigins = () => {
     'https://localhost:3000',
   ]);
 
+  /*
+   * Originهای فعلی پروژه
+   */
   addOrigin(origins, process.env.NEXT_PUBLIC_API_BASE_URL);
 
   addOrigin(origins, process.env.MEDIA_PUBLIC_BASE_URL);
 
   addOrigin(origins, process.env.VIDEO_PUBLIC_BASE_URL);
+
+  /*
+   * Originهای قدیمی Storage.
+   *
+   * مثال:
+   *
+   * LEGACY_MEDIA_ORIGINS=
+   * https://beta.samaneyoga.ir,
+   * https://old-media.example.com
+   */
+  const legacyOrigins = String(process.env.LEGACY_MEDIA_ORIGINS || '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  for (const legacyOrigin of legacyOrigins) {
+    addOrigin(origins, legacyOrigin);
+  }
 
   return origins;
 };

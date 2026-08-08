@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(request) {
   try {
@@ -55,9 +56,19 @@ export async function GET(request) {
       },
     });
 
+    const formattedTickets = tickets.map((ticket) => ({
+      ...ticket,
+      user: ticket.user
+        ? {
+            ...ticket.user,
+            avatar: normalizeMediaUrl(ticket.user.avatar),
+          }
+        : null,
+    }));
+
     // بازگشت داده‌ها به همراه اطلاعات pagination
     return NextResponse.json({
-      tickets,
+      tickets: formattedTickets,
       pagination: {
         total: totalTickets,
         page,

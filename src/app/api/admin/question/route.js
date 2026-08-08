@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(request) {
   try {
@@ -60,6 +61,16 @@ export async function GET(request) {
       },
     });
 
+    const formattedQuestions = questions.map((question) => ({
+      ...question,
+      user: question.user
+        ? {
+            ...question.user,
+            avatar: normalizeMediaUrl(question.user.avatar),
+          }
+        : null,
+    }));
+
     // دریافت تعداد کل سوالات برای pagination
     const totalQuestions = await prismadb.question.count({
       where: whereClause,
@@ -68,7 +79,7 @@ export async function GET(request) {
     return NextResponse.json({
       success: true,
       data: {
-        questions,
+        questions: formattedQuestions,
         pagination: {
           total: totalQuestions,
           page: parseInt(page, 10),

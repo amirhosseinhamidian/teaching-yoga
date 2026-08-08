@@ -2,10 +2,19 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { AiOutlineLoading3Quarters } from 'react-icons/ai';
-import Table from '@/components/Ui/Table/Table';
+
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
 import { getShamsiDate } from '@/utils/dateTimeHelper';
-import clsx from 'clsx';
+
+import {
+  HiOutlineBanknotes,
+  HiOutlineCalendarDays,
+  HiOutlineCreditCard,
+  HiOutlineReceiptPercent,
+  HiOutlineShoppingBag,
+} from 'react-icons/hi2';
+import { AiOutlineLoading3Quarters } from 'react-icons/ai';
 
 async function fetchUserPayment() {
   try {
@@ -28,28 +37,53 @@ async function fetchUserPayment() {
 const purchaseTypeMap = {
   COURSE: {
     label: 'دوره',
-    bg: 'bg-indigo-500',
-    text: 'text-indigo-600 whitespace-nowrap',
+    cls: 'border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300',
   },
   SUBSCRIPTION: {
     label: 'اشتراک',
-    bg: 'bg-emerald-500',
-    text: 'text-emerald-600 whitespace-nowrap',
+    cls: 'border-secondary/20 bg-secondary/10 text-secondary',
   },
   SHOP: {
     label: 'فروشگاه',
-    bg: 'bg-sky-500',
-    text: 'text-sky-600 whitespace-nowrap',
+    cls: 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300',
   },
   MIXED: {
     label: 'ترکیبی',
-    bg: 'bg-purple-500',
-    text: 'text-purple-600 whitespace-nowrap',
+    cls: 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-300',
   },
   UNKNOWN: {
     label: 'نامشخص',
-    bg: 'bg-gray-500',
-    text: 'text-gray-600 whitespace-nowrap',
+    cls: 'border-black/10 bg-black/5 text-subtext-light dark:border-white/10 dark:bg-white/5 dark:text-subtext-dark',
+  },
+};
+
+const paymentStatusMap = {
+  PENDING: {
+    label: 'در انتظار تکمیل',
+    cls: 'border-yellow/20 bg-yellow/10 text-yellow',
+  },
+  SUCCESSFUL: {
+    label: 'تکمیل‌شده',
+    cls: 'border-secondary/20 bg-secondary/10 text-secondary',
+  },
+  FAILED: {
+    label: 'ناموفق',
+    cls: 'border-red/20 bg-red/10 text-red',
+  },
+};
+
+const paymentMethodMap = {
+  CREDIT_CARD: {
+    label: 'کارت به کارت',
+    cls: 'border-blue/20 bg-blue/10 text-blue',
+  },
+  FREE: {
+    label: 'بدون پرداخت',
+    cls: 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-300',
+  },
+  ONLINE: {
+    label: 'آنلاین',
+    cls: 'border-orange-500/20 bg-orange-500/10 text-orange-600 dark:text-orange-300',
   },
 };
 
@@ -113,155 +147,160 @@ const SectionPaymentOrder = () => {
     getUserPayment();
   }, []);
 
-  const columns = [
-    {
-      key: 'transactionId',
-      label: 'شماره تراکنش',
-      render: (transactionId) => (transactionId === '0' ? '-' : transactionId),
-    },
-    {
-      key: 'purchaseType',
-      label: 'نوع خرید',
-      minWidth: '120px',
-      render: (purchaseType) => {
-        const s = purchaseTypeMap[purchaseType] || purchaseTypeMap.UNKNOWN;
-        return (
-          <span
-            className={clsx(
-              'rounded-full bg-opacity-10 px-3 py-1',
-              s.bg,
-              s.text
-            )}
-          >
-            {s.label}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'items',
-      label: 'آیتم‌ها',
-      minWidth: '220px',
-      render: (items) => renderItems(items),
-    },
-    {
-      key: 'updatedAt',
-      label: 'تاریخ',
-      render: (date) => getShamsiDate(date),
-    },
-    {
-      key: 'status',
-      label: 'وضعیت',
-      render: (status) => {
-        const statusMap = {
-          PENDING: {
-            label: 'در انتظار تکمیل',
-            bg: 'bg-secondary',
-            text: 'text-secondary whitespace-nowrap',
-          },
-          SUCCESSFUL: {
-            label: 'تکمیل‌شده',
-            bg: 'bg-green-light',
-            text: 'text-accent text-green-light dark:text-green-dark dark:text-accent whitespace-nowrap',
-          },
-          FAILED: {
-            label: 'ناموفق',
-            bg: 'bg-red',
-            text: 'text-red whitespace-nowrap',
-          },
-        };
-        const s = statusMap[status] || {
-          label: 'نامشخص',
-          bg: 'bg-gray-100',
-          text: 'text-gray-600 whitespace-nowrap',
-        };
-        return (
-          <span
-            className={clsx(
-              'rounded-full bg-opacity-10 px-3 py-1',
-              s.bg,
-              s.text
-            )}
-          >
-            {s.label}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'method',
-      label: 'روش پرداخت',
-      render: (method) => {
-        const methodMap = {
-          CREDIT_CARD: {
-            label: 'کارت به کارت',
-            bg: 'bg-blue',
-            text: 'text-blue whitespace-nowrap',
-          },
-          FREE: {
-            label: 'بدون پرداخت',
-            bg: 'bg-purple-600',
-            text: 'text-purple-600 whitespace-nowrap',
-          },
-          ONLINE: {
-            label: 'آنلاین',
-            bg: 'bg-orange-600',
-            text: 'text-orange-600 whitespace-nowrap',
-          },
-        };
-        const s = methodMap[method] || {
-          label: 'نامشخص',
-          bg: 'bg-gray-600',
-          text: 'text-gray-600 whitespace-nowrap',
-        };
-        return (
-          <span
-            className={clsx(
-              'rounded-full bg-opacity-10 px-3 py-1',
-              s.bg,
-              s.text
-            )}
-          >
-            {s.label}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'amountToman',
-      label: 'مبلغ (تومان)',
-      render: (amountToman) => {
-        const n = Number(amountToman || 0);
-        return n === 0 ? 'رایگان' : n.toLocaleString('fa-IR');
-      },
-    },
-  ];
+  if (isLoading) {
+    return (
+      <div className='flex min-h-[360px] w-full flex-col items-center justify-center gap-3'>
+        <AiOutlineLoading3Quarters
+          size={34}
+          className='animate-spin text-secondary'
+        />
+        <span className='text-xs text-subtext-light dark:text-subtext-dark'>
+          در حال دریافت سوابق پرداخت...
+        </span>
+      </div>
+    );
+  }
+
+  if (payments.length === 0) {
+    return (
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='lg'
+        className='px-5 py-14 text-center'
+      >
+        <span className='mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-secondary/10 text-secondary'>
+          <HiOutlineReceiptPercent size={30} />
+        </span>
+        <h3 className='mt-4 text-sm font-black text-text-light dark:text-text-dark'>
+          هنوز پرداختی ثبت نشده است
+        </h3>
+        <p className='mx-auto mt-2 max-w-sm text-[10px] leading-6 text-subtext-light sm:text-xs dark:text-subtext-dark'>
+          سوابق پرداخت دوره‌ها، اشتراک‌ها و خریدهای فروشگاه در این بخش نمایش
+          داده می‌شود.
+        </p>
+      </SiteCard>
+    );
+  }
 
   return (
-    <>
-      {isLoading ? (
-        <div className='flex h-full w-full items-center justify-center'>
-          <AiOutlineLoading3Quarters
-            size={46}
-            className='animate-spin text-secondary'
-          />
-        </div>
-      ) : (
-        <div>
-          {payments.length > 0 ? (
-            <Table
-              columns={columns}
-              data={payments}
-              className='my-6 overflow-x-auto sm:my-10 sm:max-w-[375px] md:max-w-[500px] lg:max-w-[800px] xl:max-w-[1200px]'
+    <div className='space-y-3'>
+      {payments.map((payment, index) => {
+        const purchaseType =
+          purchaseTypeMap[payment.purchaseType] || purchaseTypeMap.UNKNOWN;
+
+        const status = paymentStatusMap[payment.status] || {
+          label: 'نامشخص',
+          cls: 'border-black/10 bg-black/5 text-subtext-light dark:border-white/10 dark:bg-white/5 dark:text-subtext-dark',
+        };
+
+        const method = paymentMethodMap[payment.method] || {
+          label: 'نامشخص',
+          cls: 'border-black/10 bg-black/5 text-subtext-light dark:border-white/10 dark:bg-white/5 dark:text-subtext-dark',
+        };
+
+        const amount = Number(payment.amountToman || 0);
+
+        return (
+          <SiteCard
+            key={payment.id || `${payment.transactionId}-${index}`}
+            variant='glass'
+            padding='none'
+            radius='md'
+            className='relative overflow-hidden p-4 sm:p-5'
+          >
+            <div
+              aria-hidden='true'
+              className='absolute -left-20 -top-20 h-40 w-40 rounded-full bg-secondary/[0.06] blur-[65px]'
             />
-          ) : (
-            <div className='text-center text-gray-500'>
-              هیچ پرداختی یافت نشد.
+
+            <div className='relative z-10'>
+              <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+                <div className='min-w-0'>
+                  <div className='flex flex-wrap items-center gap-2'>
+                    <span
+                      className={`rounded-xl border px-2.5 py-1.5 text-[9px] font-black ${purchaseType.cls}`}
+                    >
+                      {purchaseType.label}
+                    </span>
+
+                    <span
+                      className={`rounded-xl border px-2.5 py-1.5 text-[9px] font-black ${status.cls}`}
+                    >
+                      {status.label}
+                    </span>
+
+                    <span
+                      className={`rounded-xl border px-2.5 py-1.5 text-[9px] font-black ${method.cls}`}
+                    >
+                      {method.label}
+                    </span>
+                  </div>
+
+                  <div className='mt-3 flex items-center gap-2 text-[10px] text-subtext-light dark:text-subtext-dark'>
+                    <HiOutlineCalendarDays
+                      size={15}
+                      className='text-secondary'
+                    />
+                    <span className='font-faNa'>
+                      {getShamsiDate(payment.updatedAt)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className='shrink-0 rounded-2xl border border-black/5 bg-background-light/45 px-4 py-3 text-left dark:border-white/10 dark:bg-background-dark/30'>
+                  <p className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                    مبلغ پرداخت
+                  </p>
+                  <p className='mt-1 font-faNa text-base font-black text-secondary'>
+                    {amount === 0 ? 'رایگان' : amount.toLocaleString('fa-IR')}
+                  </p>
+                  {amount > 0 && (
+                    <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                      تومان
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className='mt-4 grid gap-3 border-t border-black/5 pt-4 sm:grid-cols-[minmax(0,1fr)_auto] dark:border-white/10'>
+                <div className='flex items-start gap-3'>
+                  <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary'>
+                    <HiOutlineShoppingBag size={18} />
+                  </span>
+
+                  <div className='min-w-0 text-[10px] leading-6 text-text-light sm:text-xs dark:text-text-dark'>
+                    {renderItems(payment.items)}
+                  </div>
+                </div>
+
+                <div className='flex items-center gap-2 sm:justify-end'>
+                  <HiOutlineCreditCard size={16} className='text-secondary' />
+                  <span className='text-[10px] text-subtext-light dark:text-subtext-dark'>
+                    شماره تراکنش:
+                  </span>
+                  <span className='font-faNa text-[10px] font-black text-text-light dark:text-text-dark'>
+                    {payment.transactionId === '0'
+                      ? '-'
+                      : payment.transactionId}
+                  </span>
+                </div>
+              </div>
             </div>
-          )}
-        </div>
-      )}
-    </>
+          </SiteCard>
+        );
+      })}
+
+      <div className='flex items-start gap-2 rounded-2xl bg-background-light/35 px-3 py-2.5 text-[9px] leading-5 text-subtext-light dark:bg-background-dark/25 dark:text-subtext-dark'>
+        <HiOutlineBanknotes
+          size={15}
+          className='mt-0.5 shrink-0 text-secondary'
+        />
+        <span>
+          این بخش سوابق پرداخت ثبت‌شده در حساب کاربری شما را نمایش می‌دهد.
+        </span>
+      </div>
+    </div>
   );
 };
 

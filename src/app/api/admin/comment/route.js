@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(request) {
   try {
@@ -60,6 +61,8 @@ export async function GET(request) {
         userId: true,
         courseId: true,
         articleId: true,
+        showOnHome: true,
+        homeOrder: true,
         status: true,
         createAt: true,
         updatedAt: true,
@@ -99,11 +102,21 @@ export async function GET(request) {
       },
     });
 
+    const formattedComments = comments.map((comment) => ({
+      ...comment,
+      user: comment.user
+        ? {
+            ...comment.user,
+            avatar: normalizeMediaUrl(comment.user.avatar),
+          }
+        : null,
+    }));
+
     // محاسبه تعداد صفحات
     const totalPages = Math.ceil(totalComments / perPage);
 
     return NextResponse.json({
-      comments,
+      comments: formattedComments,
       pagination: {
         totalComments,
         totalPages,

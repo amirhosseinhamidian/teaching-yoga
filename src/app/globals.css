@@ -133,3 +133,13 @@
     background: rgba(0, 0, 0, 0.4);
   }
 }
+
+:root {
+  --floating-chat-bottom: 20px;
+}
+
+@media (max-width: 1023px) {
+  body.has-mobile-checkout-bar {
+    --floating-chat-bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+}

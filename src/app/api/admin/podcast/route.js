@@ -1,27 +1,45 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET() {
   try {
     const podcast = await prismadb.podcast.findFirst();
 
     if (!podcast) {
-      return NextResponse.json({ error: 'Podcast not found' }, { status: 404 });
+      return NextResponse.json(
+        {
+          error: 'Podcast not found',
+        },
+        {
+          status: 404,
+        }
+      );
     }
 
-    return NextResponse.json(podcast);
+    return NextResponse.json({
+      ...podcast,
+
+      logoUrl: toAbsoluteMediaUrl(podcast.logoUrl),
+
+      bannerUrl: toAbsoluteMediaUrl(podcast.bannerUrl),
+    });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch podcast' },
-      { status: 500 }
+      {
+        error: 'Failed to fetch podcast',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
 
 export async function PUT(request) {
   try {
-    // دریافت داده‌های درخواست
     const body = await request.json();
 
     const {
@@ -48,9 +66,11 @@ export async function PUT(request) {
       keywords,
     } = body;
 
-    // ویرایش پادکست با استفاده از شناسه (id)
     const updatedPodcast = await prismadb.podcast.update({
-      where: { id },
+      where: {
+        id,
+      },
+
       data: {
         title,
         slug,
@@ -75,13 +95,23 @@ export async function PUT(request) {
       },
     });
 
-    // پاسخ با پادکست به‌روزرسانی شده
-    return NextResponse.json(updatedPodcast);
+    return NextResponse.json({
+      ...updatedPodcast,
+
+      logoUrl: toAbsoluteMediaUrl(updatedPodcast.logoUrl),
+
+      bannerUrl: toAbsoluteMediaUrl(updatedPodcast.bannerUrl),
+    });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: 'Failed to update podcast' },
-      { status: 500 }
+      {
+        error: 'Failed to update podcast',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

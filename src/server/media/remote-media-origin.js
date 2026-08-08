@@ -1,3 +1,5 @@
+/* eslint-disable no-undef */
+
 import 'server-only';
 
 import { normalizeStorageKey } from '@/server/storage';
@@ -30,6 +32,59 @@ const getPositiveInteger = (value, fallback, name) => {
   return parsedValue;
 };
 
+/*
+ * Delivery Driver از Storage Driver جداست.
+ *
+ * Storage Driver:
+ * برای Upload / Video Worker
+ *
+ * Delivery Driver:
+ * برای خواندن فایل‌های منتشرشده
+ */
+const getDeliveryDriver = () => {
+  const configuredDriver = String(process.env.MEDIA_DELIVERY_DRIVER || '')
+    .trim()
+    .toLowerCase();
+
+  if (configuredDriver) {
+    if (configuredDriver !== 'local' && configuredDriver !== 'remote') {
+      throw new Error(
+        'MEDIA_DELIVERY_DRIVER must be either "local" or "remote".'
+      );
+    }
+
+    return configuredDriver;
+  }
+
+  /*
+   * Backward compatibility
+   *
+   * نسخه قبلی Remote Delivery را
+   * با MEDIA_STORAGE_DRIVER=ftps
+   * فعال می‌کرد.
+   */
+  const legacyDriver = String(
+    process.env.MEDIA_STORAGE_DRIVER || process.env.VIDEO_STORAGE_DRIVER || ''
+  )
+    .trim()
+    .toLowerCase();
+
+  if (legacyDriver === 'ftps') {
+    return 'remote';
+  }
+
+  /*
+   * اگر Origin تعریف شده باشد ولی
+   * Driver جدید هنوز تنظیم نشده باشد،
+   * Remote Delivery را فعال می‌کنیم.
+   */
+  const hasRemoteOrigin = Boolean(
+    String(process.env.MEDIA_ORIGIN_BASE_URL || '').trim()
+  );
+
+  return hasRemoteOrigin ? 'remote' : 'local';
+};
+
 const getOriginConfiguration = () => {
   const rawBaseUrl = getRequiredEnvironmentValue('MEDIA_ORIGIN_BASE_URL');
 
@@ -45,18 +100,15 @@ const getOriginConfiguration = () => {
     throw new Error('MEDIA_ORIGIN_BASE_URL must use HTTPS.');
   }
 
-  if (
-    baseUrl.username ||
-    baseUrl.password ||
-    baseUrl.search ||
-    baseUrl.hash
-  ) {
+  if (baseUrl.username || baseUrl.password || baseUrl.search || baseUrl.hash) {
     throw new Error('MEDIA_ORIGIN_BASE_URL contains unsupported components.');
   }
 
   const timeoutMs = getPositiveInteger(
     process.env.MEDIA_ORIGIN_TIMEOUT_MS,
+
     DEFAULT_ORIGIN_TIMEOUT_MS,
+
     'MEDIA_ORIGIN_TIMEOUT_MS'
   );
 
@@ -86,7 +138,6 @@ const createOriginUrl = ({ baseUrl, storageKey }) => {
   originUrl.pathname = `${normalizedBasePath}/${encodedKey}`;
 
   originUrl.search = '';
-
   originUrl.hash = '';
 
   return originUrl;
@@ -132,16 +183,12 @@ const createAbortContext = ({ requestSignal, timeoutMs }) => {
   };
 };
 
+/*
+ * این تابع دیگر MEDIA_STORAGE_DRIVER
+ * را Driver اصلی Delivery نمی‌داند.
+ */
 export const usesRemoteMediaOrigin = () => {
-  const driver = String(
-    process.env.MEDIA_STORAGE_DRIVER ||
-      process.env.VIDEO_STORAGE_DRIVER ||
-      'local'
-  )
-    .trim()
-    .toLowerCase();
-
-  return driver === 'ftps';
+  return getDeliveryDriver() === 'remote';
 };
 
 export async function fetchRemoteMediaOrigin({
@@ -150,16 +197,15 @@ export async function fetchRemoteMediaOrigin({
   range = null,
   requestSignal = null,
 }) {
-  const normalizedMethod = String(method || 'GET').toUpperCase();
+  const normalizedMethod = String(method || 'GET')
+    .trim()
+    .toUpperCase();
 
   if (normalizedMethod !== 'GET' && normalizedMethod !== 'HEAD') {
     throw new Error('Remote media origin only supports GET and HEAD.');
   }
 
-  if (
-    range !== null &&
-    !/^bytes=\d*-\d*$/i.test(String(range).trim())
-  ) {
+  if (range !== null && !/^bytes=\d*-\d*$/i.test(String(range).trim())) {
     throw new Error('Invalid remote media byte range.');
   }
 
@@ -167,11 +213,17 @@ export async function fetchRemoteMediaOrigin({
 
   const originUrl = createOriginUrl({
     baseUrl: configuration.baseUrl,
+
     storageKey,
   });
 
   const headers = new Headers();
 
+  /*
+   * این Header بعداً می‌تواند
+   * روی هاست دانلود برای جلوگیری
+   * از دسترسی مستقیم بررسی شود.
+   */
   headers.set(ORIGIN_AUTH_HEADER, configuration.secret);
 
   if (range) {
@@ -180,12 +232,14 @@ export async function fetchRemoteMediaOrigin({
 
   const abortContext = createAbortContext({
     requestSignal,
+
     timeoutMs: configuration.timeoutMs,
   });
 
   try {
     const response = await fetch(originUrl, {
       method: normalizedMethod,
+
       headers,
 
       cache: 'no-store',

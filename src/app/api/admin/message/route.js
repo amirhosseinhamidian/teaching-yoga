@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(req) {
   try {
@@ -136,7 +137,7 @@ export async function GET(req) {
           sessionId: s.id,
           userId: s.user?.id || null,
           username: s.user?.username || null,
-          avatar: s.user?.avatar || null,
+          avatar: normalizeMediaUrl(s.user?.avatar),
           anonymousId: s.anonymousId,
           lastMessage: lastUserMsg?.content || null,
           isSeen: lastUserMsg?.isSeen ?? false,

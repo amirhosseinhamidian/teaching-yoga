@@ -1,8 +1,11 @@
 'use client';
+
 import React from 'react';
+
 import { FaWalking } from 'react-icons/fa';
 import { RiUserHeartLine } from 'react-icons/ri';
 import { LuBrain } from 'react-icons/lu';
+
 import BenefitsCard from './BenefitsCard';
 
 const BenefitsSection = () => {
@@ -11,37 +14,38 @@ const BenefitsSection = () => {
       id: 1,
       title: 'انعطاف‌پذیری',
       description:
-        'یوگا با حرکات کششی منظم، به تقویت عضلات و افزایش انعطاف‌پذیری بدن کمک می‌کند.',
+        'با تمرین‌های منظم یوگا، بدن قوی‌تر، منعطف‌تر و هماهنگ‌تر می‌شود.',
       icon: (
         <FaWalking
-          size={46}
-          className='text-accent transition-colors duration-300 ease-in group-hover:text-background-light group-hover:dark:text-text-light'
+          size={42}
+          className='text-secondary transition-all duration-500 group-hover:text-white'
         />
       ),
       animation: 'fade-right',
     },
+
     {
       id: 2,
-      title: 'سلامت روان',
+      title: 'آرامش ذهن',
       description:
-        'مدیتیشن و تمرینات تنفسی، استرس و اضطراب را کاهش داده و به بهبود تمرکز و تعادل روانی کمک می‌کند.',
+        'مدیتیشن و تمرین تنفس به کاهش استرس و افزایش تمرکز کمک می‌کند.',
       icon: (
         <LuBrain
-          size={46}
-          className='text-accent transition-colors duration-300 ease-in group-hover:text-background-light group-hover:dark:text-text-light'
+          size={42}
+          className='text-secondary transition-all duration-500 group-hover:text-white'
         />
       ),
       animation: 'fade-up',
     },
+
     {
       id: 3,
-      title: 'آرامش خاطر',
-      description:
-        'با تمرکز بر حرکات آرام و تنفس عمیق، یوگا و مدیتیشن به شما کمک می‌کنند که ذهن خود را از نگرانی‌های روزمره آزاد کنید.',
+      title: 'تعادل زندگی',
+      description: 'مسیر رشد شخصی برای هماهنگی بیشتر جسم، ذهن و احساس.',
       icon: (
         <RiUserHeartLine
-          size={46}
-          className='text-accent transition-colors duration-300 ease-in group-hover:text-background-light group-hover:dark:text-text-light'
+          size={42}
+          className='text-secondary transition-all duration-500 group-hover:text-white'
         />
       ),
       animation: 'fade-left',
@@ -49,27 +53,47 @@ const BenefitsSection = () => {
   ];
 
   return (
-    <div className='flex flex-col items-center justify-center gap-8 py-6 md:gap-12 md:py-12'>
-      <h2
-        className='text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl'
-        data-aos='fade-up'
-        data-aos-delay='200'
-        data-aos-duration='1000'
-      >
-        چرا یوگا و مدیتیشن
-      </h2>
-      <div className='container grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 md:grid-cols-3 md:gap-8 lg:gap-12 xl:px-32'>
-        {benefits.map((benefit) => (
-          <div
-            key={benefit.id}
-            data-aos={benefit.animation}
-            data-aos-duration='1000'
-          >
-            <BenefitsCard benefit={benefit} className='h-full' />
-          </div>
-        ))}
+    <section className='relative overflow-hidden py-6 md:py-10'>
+      <div className='container flex flex-col items-center'>
+        <h2 className='mb-4 text-center text-3xl font-black leading-[1.6] text-text-light sm:text-4xl lg:text-5xl dark:text-text-dark'>
+          چرا
+          <span className='relative mx-2 inline-block text-secondary'>
+            یوگا و مدیتیشن
+            <svg
+              aria-hidden='true'
+              viewBox='0 0 170 18'
+              preserveAspectRatio='none'
+              className='text-yellow pointer-events-none absolute -bottom-1 right-0 h-3 w-full'
+            >
+              <path
+                d='M4 12C36 4 68 16 101 9C126 4 147 5 166 9'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='4'
+                strokeLinecap='round'
+                opacity='0.75'
+              />
+            </svg>
+          </span>
+        </h2>
+
+        <p className='mb-12 max-w-2xl text-center text-gray-500 dark:text-gray-400'>
+          مسیری برای آرامش ذهن، سلامت بدن و تجربه یک زندگی متعادل‌تر
+        </p>
+
+        <div className='grid w-full grid-cols-1 gap-6 md:grid-cols-3'>
+          {benefits.map((benefit) => (
+            <div
+              key={benefit.id}
+              data-aos={benefit.animation}
+              data-aos-duration='1000'
+            >
+              <BenefitsCard benefit={benefit} className='h-full' />
+            </div>
+          ))}
+        </div>
       </div>
-    </div>
+    </section>
   );
 };
 

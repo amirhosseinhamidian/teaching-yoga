@@ -1,13 +1,14 @@
-// app/api/shop/products/[slug]/route.js
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getShopEnabled } from '@/utils/server/shopGuard';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(_req, { params }) {
   try {
     const enabled = await getShopEnabled();
+
     if (!enabled) {
       return NextResponse.json(
         { error: 'فروشگاه در حال حاضر غیرفعال است.' },
@@ -17,12 +18,16 @@ export async function GET(_req, { params }) {
 
     const raw = String(params?.slug || '');
     const slug = decodeURIComponent(raw).trim();
+
     if (!slug) {
       return NextResponse.json({ error: 'اسلاگ معتبر نیست.' }, { status: 400 });
     }
 
     const product = await prismadb.product.findFirst({
-      where: { slug, isActive: true },
+      where: {
+        slug,
+        isActive: true,
+      },
       select: {
         id: true,
         title: true,
@@ -36,15 +41,33 @@ export async function GET(_req, { params }) {
         compareAt: true,
         weightGram: true,
         isActive: true,
-        category: { select: { id: true, title: true, slug: true } },
+        category: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+          },
+        },
         colors: {
           select: {
-            color: { select: { id: true, name: true, hex: true } },
+            color: {
+              select: {
+                id: true,
+                name: true,
+                hex: true,
+              },
+            },
           },
         },
         sizes: {
           select: {
-            size: { select: { id: true, name: true, slug: true } },
+            size: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
           },
         },
       },
@@ -57,12 +80,20 @@ export async function GET(_req, { params }) {
       );
     }
 
-    const colors = (product.colors || []).map((x) => x.color);
-    const sizes = (product.sizes || []).map((x) => x.size);
+    const normalizedProduct = {
+      ...product,
+      coverImage: toAbsoluteMediaUrl(product.coverImage),
+      images: Array.isArray(product.images)
+        ? product.images.map((image) => toAbsoluteMediaUrl(image))
+        : [],
+      colors: (product.colors || []).map((item) => item.color),
+      sizes: (product.sizes || []).map((item) => item.size),
+    };
 
-    return NextResponse.json({ ...product, colors, sizes }, { status: 200 });
+    return NextResponse.json(normalizedProduct, { status: 200 });
   } catch (error) {
     console.error('[SHOP_PRODUCT_GET]', error);
+
     return NextResponse.json({ error: 'خطای داخلی سرور' }, { status: 500 });
   }
 }

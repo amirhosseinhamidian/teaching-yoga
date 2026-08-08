@@ -1,42 +1,74 @@
 'use client';
-import React, { useState } from 'react';
-import { FaChevronDown, FaChevronUp } from 'react-icons/fa';
+
+import React, { useMemo, useState } from 'react';
+
 import PropTypes from 'prop-types';
 
-const CourseDescriptionCard = ({ description, className }) => {
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SectionHeader from '@/components/SiteUi/SectionHeader/SectionHeader';
+
+import { HiOutlineBookOpen } from 'react-icons/hi2';
+
+const CourseDescriptionCard = ({ description, className = '' }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-  };
+  const normalized = typeof description === 'string' ? description.trim() : '';
+
+  const canExpand = useMemo(() => normalized.length > 420, [normalized]);
+
+  if (!normalized) {
+    return null;
+  }
 
   return (
-    <div
-      className={`rounded-xl bg-surface-light p-6 pb-1 shadow dark:bg-surface-dark ${className}`}
+    <SiteCard
+      as='section'
+      variant='glass'
+      padding='md'
+      radius='md'
+      topLine
+      className={className}
     >
-      <h3 className='mb-4 font-semibold md:text-lg'>توضیحات دوره</h3>
+      <SectionHeader
+        eyebrow='آشنایی بیشتر'
+        title='درباره این دوره'
+        icon={HiOutlineBookOpen}
+      />
+
       <div
-        className={`transition-max-height relative overflow-hidden duration-300 ease-in-out ${isExpanded ? 'max-h-[2000px]' : 'max-h-36 md:max-h-32'}`}
+        className={`relative mt-4 overflow-hidden transition-[max-height] duration-500 ${
+          isExpanded ? 'max-h-[5000px]' : canExpand ? 'max-h-44' : 'max-h-none'
+        }`}
       >
-        <p className='text-xs leading-6 text-subtext-light md:text-sm dark:text-subtext-dark'>
-          {description}
+        <p className='whitespace-pre-line text-xs leading-8 text-subtext-light sm:text-sm sm:leading-9 dark:text-subtext-dark'>
+          {normalized}
         </p>
-        {!isExpanded && (
-          <div className='absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-surface-light to-transparent dark:from-surface-dark'></div>
+
+        {!isExpanded && canExpand && (
+          <div className='pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-surface-light via-surface-light/95 to-transparent dark:from-surface-dark dark:via-surface-dark/95' />
         )}
       </div>
-      <button
-        onClick={toggleExpand}
-        className='mx-auto mb-2 mt-4 flex items-center rounded-full border-2 border-primary p-2 text-primary transition-all duration-300 ease-in hover:bg-primary hover:text-text-dark md:p-4 dark:hover:text-text-light'
-      >
-        {isExpanded ? <FaChevronUp /> : <FaChevronDown />}
-      </button>
-    </div>
+
+      {canExpand && (
+        <div className='mt-4 flex justify-center border-t border-black/5 pt-4 dark:border-white/10'>
+          <SiteButton
+            type='button'
+            variant='secondary'
+            size='sm'
+            onClick={() => setIsExpanded((value) => !value)}
+          >
+            {isExpanded ? 'بستن توضیحات' : 'مشاهده توضیحات کامل'}
+          </SiteButton>
+        </div>
+      )}
+    </SiteCard>
   );
 };
 
 CourseDescriptionCard.propTypes = {
   description: PropTypes.string.isRequired,
+
   className: PropTypes.string,
 };
 

@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { notifyReply } from '@/libs/notifyReply';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(req, { params }) {
   try {
@@ -97,11 +98,16 @@ export async function GET(req, { params }) {
       replyToContent: m.replyTo ? m.replyTo.content : null,
     }));
 
-    const userData = sessionRow.user || {
-      username: 'مهمان',
-      avatar: '/images/default-profile.png',
-      phone: 'ناشناخته',
-    };
+    const userData = sessionRow.user
+      ? {
+          ...sessionRow.user,
+          avatar: normalizeMediaUrl(sessionRow.user.avatar),
+        }
+      : {
+          username: 'مهمان',
+          avatar: normalizeMediaUrl('/images/default-profile.png'),
+          phone: 'ناشناخته',
+        };
 
     return NextResponse.json({
       success: true,

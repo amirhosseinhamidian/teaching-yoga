@@ -1,34 +1,44 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function DELETE(request, { params }) {
   try {
     const { id } = params;
 
-    // بررسی اینکه مقاله با این ID وجود دارد یا نه
     const existingArticle = await prismadb.article.findUnique({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+      },
     });
 
     if (!existingArticle) {
       return NextResponse.json(
-        { message: 'مقاله موردنظر یافت نشد' },
+        {
+          message: 'مقاله موردنظر یافت نشد',
+        },
         { status: 404 }
       );
     }
 
-    // حذف مقاله
     await prismadb.article.delete({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+      },
     });
 
     return NextResponse.json(
-      { message: 'مقاله با موفقیت حذف شد' },
+      {
+        message: 'مقاله با موفقیت حذف شد',
+      },
       { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
-      { message: 'خطایی در حذف مقاله رخ داده است', error },
+      {
+        message: 'خطایی در حذف مقاله رخ داده است',
+        error,
+      },
       { status: 500 }
     );
   }
@@ -39,21 +49,25 @@ export async function PUT(request, { params }) {
     const { id } = params;
     const body = await request.json();
 
-    // بررسی اینکه مقاله با این ID وجود دارد یا نه
     const existingArticle = await prismadb.article.findUnique({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+      },
     });
 
     if (!existingArticle) {
       return NextResponse.json(
-        { message: 'مقاله موردنظر یافت نشد' },
+        {
+          message: 'مقاله موردنظر یافت نشد',
+        },
         { status: 404 }
       );
     }
 
-    // بروزرسانی مقاله
     const updatedArticle = await prismadb.article.update({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+      },
       data: {
         title: body.title || existingArticle.title,
         content: body.content || existingArticle.content,
@@ -65,12 +79,21 @@ export async function PUT(request, { params }) {
     });
 
     return NextResponse.json(
-      { message: 'مقاله با موفقیت بروزرسانی شد', data: updatedArticle },
+      {
+        message: 'مقاله با موفقیت بروزرسانی شد',
+        data: {
+          ...updatedArticle,
+          cover: toAbsoluteMediaUrl(updatedArticle.cover),
+        },
+      },
       { status: 200 }
     );
   } catch (error) {
     return NextResponse.json(
-      { message: 'خطایی در بروزرسانی مقاله رخ داده است', error },
+      {
+        message: 'خطایی در بروزرسانی مقاله رخ داده است',
+        error,
+      },
       { status: 500 }
     );
   }
@@ -80,22 +103,36 @@ export async function GET(request, { params }) {
   try {
     const { id } = params;
 
-    // بررسی اینکه مقاله با این ID وجود دارد یا نه
     const article = await prismadb.article.findUnique({
-      where: { id: parseInt(id) },
+      where: {
+        id: parseInt(id),
+      },
     });
 
     if (!article) {
       return NextResponse.json(
-        { message: 'مقاله موردنظر یافت نشد' },
+        {
+          message: 'مقاله موردنظر یافت نشد',
+        },
         { status: 400 }
       );
     }
 
-    return NextResponse.json({ data: article }, { status: 200 });
+    return NextResponse.json(
+      {
+        data: {
+          ...article,
+          cover: toAbsoluteMediaUrl(article.cover),
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
     return NextResponse.json(
-      { message: 'خطایی در بروزرسانی مقاله رخ داده است', error },
+      {
+        message: 'خطایی رخ داده است',
+        error,
+      },
       { status: 500 }
     );
   }

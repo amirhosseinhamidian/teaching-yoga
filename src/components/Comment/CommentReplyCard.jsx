@@ -1,44 +1,142 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { getShamsiDate } from '@/utils/dateTimeHelper';
 import Image from 'next/image';
 
-const CommentReplyCard = ({ className, reply }) => {
-  const avatar = reply?.user?.avatar || '/images/default-profile.png';
-  const username = reply?.user?.username || 'کاربر';
-  const date = reply?.createAt ? getShamsiDate(reply.createAt) : '';
-  const content = reply?.content || '';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+
+import { getShamsiDate } from '@/utils/dateTimeHelper';
+
+import { HiOutlineChatBubbleLeftRight } from 'react-icons/hi2';
+
+const DEFAULT_AVATAR = '/images/default-profile.png';
+
+const getSafeImageSrc = (src) => {
+  if (typeof src !== 'string') {
+    return DEFAULT_AVATAR;
+  }
+
+  const value = src.trim();
+
+  if (!value || value.startsWith('blob:') || value.startsWith('data:')) {
+    return DEFAULT_AVATAR;
+  }
+
+  if (value.startsWith('/')) {
+    return value;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (url.protocol === 'http:' || url.protocol === 'https:') {
+      return value;
+    }
+  } catch {
+    return DEFAULT_AVATAR;
+  }
+
+  return DEFAULT_AVATAR;
+};
+
+const getUserDisplayName = (user) => {
+  if (user?.username) {
+    return user.username;
+  }
+
+  const firstName = user?.firstname || user?.firstName || '';
+
+  const lastName = user?.lastname || user?.lastName || '';
+
+  return `${firstName} ${lastName}`.trim() || 'کاربر';
+};
+
+const CommentReplyCard = ({ className = '', reply }) => {
+  const user = reply?.user ?? {};
+
+  const username = getUserDisplayName(user);
+
+  const avatarSrc = getSafeImageSrc(user?.avatar);
+
+  const replyDate = reply?.createdAt || reply?.createAt;
 
   return (
-    <div
-      className={`rounded-xl bg-foreground-light p-2 sm:p-4 dark:bg-foreground-dark ${className}`}
+    <SiteCard
+      as='article'
+      variant='secondary'
+      padding='sm'
+      radius='sm'
+      className={`group transition-all duration-300 hover:border-secondary/25 ${className}`}
     >
-      <div className='border-b border-gray-300 pb-3 sm:pb-4 dark:border-gray-600'>
-        <div className='mr-3 flex items-center gap-1'>
-          <Image
-            src={avatar}
-            alt='user profile picture'
-            width={240}
-            height={240}
-            className='h-8 w-8 rounded-full object-cover sm:h-12 sm:w-12'
-          />
-          <div className='flex flex-col gap-0 sm:gap-1'>
-            <h5 className='text-sm font-medium sm:text-base'>{username}</h5>
-            <span className='font-faNa text-xs font-thin text-subtext-light sm:text-sm dark:text-subtext-dark'>
-              {date}
-            </span>
-          </div>
-        </div>
-      </div>
+      <div
+        aria-hidden='true'
+        className='absolute -left-16 -top-16 h-36 w-36 rounded-full bg-secondary/10 blur-[55px]'
+      />
 
-      <p className='m-2 text-xs font-light sm:m-4 sm:text-base'>{content}</p>
-    </div>
+      <div className='relative z-10'>
+        <header className='flex items-center gap-3'>
+          <Image
+            src={avatarSrc}
+            alt={`تصویر پروفایل ${username}`}
+            width={80}
+            height={80}
+            className='h-10 w-10 shrink-0 rounded-[14px] border border-secondary/15 object-cover shadow-sm'
+          />
+
+          <div className='min-w-0 flex-1'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <h4 className='truncate text-xs font-black text-text-light sm:text-sm dark:text-text-dark'>
+                {username}
+              </h4>
+
+              <SiteBadge
+                icon={HiOutlineChatBubbleLeftRight}
+                variant='secondary'
+                size='sm'
+              >
+                پاسخ
+              </SiteBadge>
+            </div>
+
+            {replyDate && (
+              <time
+                dateTime={String(replyDate)}
+                className='mt-1 block font-faNa text-[9px] text-subtext-light sm:text-[10px] dark:text-subtext-dark'
+              >
+                {getShamsiDate(replyDate)}
+              </time>
+            )}
+          </div>
+        </header>
+
+        <p className='mt-4 whitespace-pre-line break-words text-xs leading-7 text-subtext-light sm:text-sm sm:leading-8 dark:text-subtext-dark'>
+          {reply?.content || ''}
+        </p>
+      </div>
+    </SiteCard>
   );
 };
 
 CommentReplyCard.propTypes = {
   className: PropTypes.string,
-  reply: PropTypes.object.isRequired,
+
+  reply: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+
+    content: PropTypes.string,
+
+    createdAt: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
+
+    createAt: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date),
+    ]),
+
+    user: PropTypes.object,
+  }).isRequired,
 };
 
 export default CommentReplyCard;

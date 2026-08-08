@@ -17,6 +17,38 @@ const createDeniedResult = ({ status, code, message }) => ({
   message,
 });
 
+const STORAGE_ROOT_ALIASES = {
+  audio: new Set(['audio', 'audios']),
+
+  videos: new Set(['videos', 'video']),
+};
+
+const decodePathSafely = (value) => {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+};
+
+const getMediaPathValue = (rawValue) => {
+  if (!HTTP_URL_PATTERN.test(rawValue)) {
+    return rawValue.split(/[?#]/, 1)[0];
+  }
+
+  try {
+    const parsedUrl = new URL(rawValue);
+
+    if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+      return null;
+    }
+
+    return parsedUrl.pathname;
+  } catch {
+    return null;
+  }
+};
+
 const normalizeLocalMediaKey = (value, expectedRoot) => {
   const rawValue = typeof value === 'string' ? value.trim() : '';
 
@@ -24,29 +56,131 @@ const normalizeLocalMediaKey = (value, expectedRoot) => {
     return null;
   }
 
-  /*
-   * این Route فقط فایل‌های Storage محلی را تحویل می‌دهد.
-   * URLهای خارجی باید پیش از Production مهاجرت شوند.
-   */
-  if (HTTP_URL_PATTERN.test(rawValue)) {
+  const aliases = STORAGE_ROOT_ALIASES[expectedRoot];
+
+  if (!aliases) {
     return null;
   }
 
-  let cleanValue = rawValue.replace(/^\/+/, '').replace(/^local-videos\/+/, '');
+  let cleanValue = getMediaPathValue(rawValue);
+
+  if (!cleanValue) {
+    return null;
+  }
+
+  cleanValue = decodePathSafely(cleanValue)
+    .replace(/\\/g, '/')
+    .replace(/\/{2,}/g, '/')
+    .replace(/^\/+/, '');
+
+  /*
+   * مسیر عمومی قدیمی ویدئو در نسخه Local:
+   *
+   * /local-videos/<path>
+   *
+   * اگر بعد از Prefix
+   * root استاندارد وجود نداشته باشد،
+   * آن را به videos/... تبدیل می‌کنیم.
+   */
+  if (expectedRoot === 'videos' && cleanValue.startsWith('local-videos/')) {
+    const withoutPrefix = cleanValue.slice('local-videos/'.length);
+
+    if (
+      !withoutPrefix.startsWith('videos/') &&
+      !withoutPrefix.startsWith('video/')
+    ) {
+      cleanValue = `videos/${withoutPrefix}`;
+    } else {
+      cleanValue = withoutPrefix;
+    }
+  }
+
+  /*
+   * سازگاری با مسیرهای
+   * قدیمی Audio
+   */
+  if (expectedRoot === 'audio') {
+    for (const prefix of ['local-audio/', 'local-audios/']) {
+      if (cleanValue.startsWith(prefix)) {
+        cleanValue = `audio/${cleanValue.slice(prefix.length)}`;
+
+        break;
+      }
+    }
+  }
+
+  let normalizedValue;
 
   try {
-    cleanValue = normalizeStorageKey(cleanValue);
+    normalizedValue = normalizeStorageKey(cleanValue);
   } catch {
     return null;
   }
 
-  const root = cleanValue.split('/')[0];
+  let segments = normalizedValue.split('/').filter(Boolean);
+
+  if (!segments.length) {
+    return null;
+  }
+
+  const firstSegment = segments[0].toLowerCase();
+
+  /*
+   * حالت استاندارد:
+   *
+   * audio/...
+   * videos/...
+   *
+   * و Aliasهای قدیمی:
+   *
+   * audios/...
+   * video/...
+   */
+  if (aliases.has(firstSegment)) {
+    segments[0] = expectedRoot;
+  } else {
+    /*
+     * URLهای قدیمی S3/Liara
+     * ممکن است Prefix داشته باشند:
+     *
+     * https://.../bucket/audio/.../file.mp3
+     *
+     * از root رسانه به بعد
+     * استخراج می‌کنیم.
+     */
+    const rootIndex = segments.findIndex((segment) =>
+      aliases.has(segment.toLowerCase())
+    );
+
+    if (rootIndex >= 0) {
+      segments = segments.slice(rootIndex);
+
+      segments[0] = expectedRoot;
+    } else if (segments.length === 1) {
+      /*
+       * سازگاری محدود با
+       * داده‌های خیلی قدیمی
+       * که فقط نام فایل بوده.
+       */
+      segments = [expectedRoot, segments[0]];
+    } else {
+      return null;
+    }
+  }
+
+  try {
+    normalizedValue = normalizeStorageKey(segments.join('/'));
+  } catch {
+    return null;
+  }
+
+  const root = normalizedValue.split('/')[0];
 
   if (root !== expectedRoot) {
     return null;
   }
 
-  return cleanValue;
+  return normalizedValue;
 };
 
 const getAuthenticatedDatabaseUser = async () => {
@@ -105,8 +239,8 @@ const collectSessionTermData = (session) => {
   }
 
   /*
-   * سازگاری با داده‌های قدیمی که هنوز
-   * از Session.termId استفاده می‌کنند.
+   * سازگاری با داده‌های قدیمی
+   * Session.termId
    */
   if (session.term?.id) {
     termsById.set(session.term.id, session.term);
@@ -135,8 +269,11 @@ const selectSessionMedia = (session) => {
   if (session.type === 'AUDIO' && session.audio?.audioKey) {
     return {
       mediaType: 'AUDIO',
+
       media: session.audio,
+
       rawStorageKey: session.audio.audioKey,
+
       expectedRoot: 'audio',
     };
   }
@@ -144,21 +281,28 @@ const selectSessionMedia = (session) => {
   if (session.type === 'VIDEO' && session.video?.videoKey) {
     return {
       mediaType: 'VIDEO',
+
       media: session.video,
+
       rawStorageKey: session.video.videoKey,
+
       expectedRoot: 'videos',
     };
   }
 
   /*
-   * Fallback برای داده‌های قدیمی که ممکن است
-   * مقدار Session.type با رسانه ثبت‌شده هماهنگ نباشد.
+   * Fallback برای داده‌های قدیمی
+   * که Session.type با رسانه
+   * ثبت‌شده هماهنگ نیست.
    */
   if (session.video?.videoKey) {
     return {
       mediaType: 'VIDEO',
+
       media: session.video,
+
       rawStorageKey: session.video.videoKey,
+
       expectedRoot: 'videos',
     };
   }
@@ -166,8 +310,11 @@ const selectSessionMedia = (session) => {
   if (session.audio?.audioKey) {
     return {
       mediaType: 'AUDIO',
+
       media: session.audio,
+
       rawStorageKey: session.audio.audioKey,
+
       expectedRoot: 'audio',
     };
   }
@@ -219,6 +366,7 @@ const checkPurchasedAccess = async ({ userId, termIds, courseIds }) => {
       ? prismadb.userSubscription.findFirst({
           where: {
             userId,
+
             status: 'ACTIVE',
 
             startDate: {
@@ -283,7 +431,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!normalizedSessionId) {
     return createDeniedResult({
       status: 400,
+
       code: 'INVALID_SESSION_ID',
+
       message: 'شناسه جلسه معتبر نیست.',
     });
   }
@@ -357,7 +507,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!session) {
     return createDeniedResult({
       status: 404,
+
       code: 'SESSION_NOT_FOUND',
+
       message: 'جلسه پیدا نشد.',
     });
   }
@@ -367,7 +519,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!selectedMedia) {
     return createDeniedResult({
       status: 404,
+
       code: 'MEDIA_NOT_FOUND',
+
       message: 'رسانه‌ای برای این جلسه ثبت نشده است.',
     });
   }
@@ -378,7 +532,9 @@ export async function authorizeSessionMedia(sessionId) {
   ) {
     return createDeniedResult({
       status: 404,
+
       code: 'MEDIA_UNAVAILABLE',
+
       message: 'رسانه این جلسه در دسترس نیست.',
     });
   }
@@ -391,7 +547,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!storageKey) {
     return createDeniedResult({
       status: 409,
+
       code: 'MEDIA_NOT_LOCAL',
+
       message: 'رسانه این جلسه هنوز به Storage جدید منتقل نشده است.',
     });
   }
@@ -403,8 +561,11 @@ export async function authorizeSessionMedia(sessionId) {
   const { terms, termIds, courseIds } = collectSessionTermData(session);
 
   /*
-   * برای رسانه عمومی فعال نیازی به خواندن کاربر نیست.
-   * اما جلسه غیرفعال فقط باید برای مدیر قابل Preview باشد.
+   * برای رسانه عمومی فعال
+   * نیازی به خواندن کاربر نیست.
+   *
+   * جلسه غیرفعال فقط برای
+   * مدیر قابل Preview است.
    */
   const shouldReadUser = !session.isActive || accessLevel !== 'PUBLIC';
 
@@ -419,7 +580,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!session.isActive && !isAdministrator) {
     return createDeniedResult({
       status: 404,
+
       code: 'SESSION_NOT_AVAILABLE',
+
       message: 'این جلسه در دسترس نیست.',
     });
   }
@@ -448,6 +611,7 @@ export async function authorizeSessionMedia(sessionId) {
       mediaId: selectedMedia.media.id,
 
       storageKey,
+
       accessLevel,
     };
   }
@@ -455,7 +619,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!user) {
     return createDeniedResult({
       status: 401,
+
       code: 'AUTHENTICATION_REQUIRED',
+
       message: 'برای مشاهده این جلسه باید وارد حساب کاربری شوید.',
     });
   }
@@ -482,6 +648,7 @@ export async function authorizeSessionMedia(sessionId) {
       mediaId: selectedMedia.media.id,
 
       storageKey,
+
       accessLevel,
     };
   }
@@ -508,6 +675,7 @@ export async function authorizeSessionMedia(sessionId) {
       mediaId: selectedMedia.media.id,
 
       storageKey,
+
       accessLevel,
     };
   }
@@ -515,7 +683,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (accessLevel !== 'PURCHASED') {
     return createDeniedResult({
       status: 403,
+
       code: 'INVALID_ACCESS_LEVEL',
+
       message: 'سطح دسترسی رسانه معتبر نیست.',
     });
   }
@@ -529,7 +699,9 @@ export async function authorizeSessionMedia(sessionId) {
   if (!purchasedAccess.allowed) {
     return createDeniedResult({
       status: 403,
+
       code: 'PURCHASE_REQUIRED',
+
       message: 'برای مشاهده این جلسه باید دوره یا ترم مربوطه را تهیه کنید.',
     });
   }
@@ -555,6 +727,7 @@ export async function authorizeSessionMedia(sessionId) {
     mediaId: selectedMedia.media.id,
 
     storageKey,
+
     accessLevel,
   };
 }

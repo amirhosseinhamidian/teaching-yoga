@@ -1,9 +1,9 @@
 /* eslint-disable no-undef */
-// /app/api/shop/cart/route.js
 
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 function emptyCart() {
   return {
@@ -22,18 +22,23 @@ function emptyCart() {
 
 export async function GET() {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
 
-    // کاربر لاگین نیست → سبد خالی
     if (!user?.id) {
       return NextResponse.json(emptyCart(), { status: 200 });
     }
 
     const cart = await prismadb.shopCart.findFirst({
-      where: { userId: user.id, status: 'PENDING', isActive: true },
+      where: {
+        userId: user.id,
+        status: 'PENDING',
+        isActive: true,
+      },
       include: {
         items: {
-          orderBy: { id: 'desc' },
+          orderBy: {
+            id: 'desc',
+          },
           include: {
             product: {
               select: {
@@ -47,8 +52,20 @@ export async function GET() {
                 isActive: true,
               },
             },
-            color: { select: { id: true, name: true, hex: true } },
-            size: { select: { id: true, name: true, slug: true } },
+            color: {
+              select: {
+                id: true,
+                name: true,
+                hex: true,
+              },
+            },
+            size: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
           },
         },
         discountCode: {
@@ -71,44 +88,46 @@ export async function GET() {
     }
 
     const items = (cart.items || [])
-      .filter((it) => it.product && it.product.isActive) // اختیاری
-      .map((it) => ({
-        id: it.id,
-        cartId: it.cartId,
-        productId: it.productId,
-        qty: it.qty,
-        unitPrice: it.unitPrice,
+      .filter((item) => item.product && item.product.isActive)
+      .map((item) => ({
+        id: item.id,
+        cartId: item.cartId,
+        productId: item.productId,
+        qty: item.qty,
+        unitPrice: item.unitPrice,
 
-        // snapshot از محصول
-        productTitle: it.product.title,
-        productSlug: it.product.slug,
-        coverImage: it.product.coverImage,
-        stock: it.product.stock,
+        productTitle: item.product.title,
+        productSlug: item.product.slug,
+        coverImage: toAbsoluteMediaUrl(item.product.coverImage),
+        stock: item.product.stock,
+        compareAt: item.product.compareAt,
 
-        // برای totalWithoutDiscount
-        compareAt: it.product.compareAt,
-
-        colorId: it.colorId,
-        sizeId: it.sizeId,
-        color: it.color || null,
-        size: it.size || null,
+        colorId: item.colorId,
+        sizeId: item.sizeId,
+        color: item.color || null,
+        size: item.size || null,
       }));
 
     const subtotal = items.reduce(
-      (sum, it) => sum + Number(it.unitPrice || 0) * Number(it.qty || 0),
+      (sum, item) => sum + Number(item.unitPrice || 0) * Number(item.qty || 0),
       0
     );
 
-    const totalWithoutDiscount = items.reduce((sum, it) => {
-      const qty = Number(it.qty || 0);
+    const totalWithoutDiscount = items.reduce((sum, item) => {
+      const qty = Number(item.qty || 0);
+
       const compareAt =
-        it.compareAt != null && Number(it.compareAt) > 0
-          ? Number(it.compareAt)
-          : Number(it.unitPrice || 0);
+        item.compareAt != null && Number(item.compareAt) > 0
+          ? Number(item.compareAt)
+          : Number(item.unitPrice || 0);
+
       return sum + compareAt * qty;
     }, 0);
 
-    const totalQty = items.reduce((sum, it) => sum + Number(it.qty || 0), 0);
+    const totalQty = items.reduce(
+      (sum, item) => sum + Number(item.qty || 0),
+      0
+    );
 
     const discountAmount = Number(cart.discountCodeAmount || 0);
     const payable = Math.max(0, subtotal - discountAmount);
@@ -124,7 +143,10 @@ export async function GET() {
           payable,
           totalQty,
           discount: cart.discountCode
-            ? { ...cart.discountCode, appliedAt: cart.discountAppliedAt }
+            ? {
+                ...cart.discountCode,
+                appliedAt: cart.discountAppliedAt,
+              }
             : null,
         },
       },
@@ -132,6 +154,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error('GET SHOP CART ERROR:', error);
+
     return NextResponse.json({ message: 'خطای داخلی سرور.' }, { status: 500 });
   }
 }

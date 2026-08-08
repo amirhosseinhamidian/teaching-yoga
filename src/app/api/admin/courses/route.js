@@ -1,5 +1,6 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET() {
   try {
@@ -24,34 +25,44 @@ export async function GET() {
       },
     });
 
-    // محاسبه تعداد ترم‌ها، مجموع قیمت، مجموع تخفیف و میانگین درصد تخفیف
     const coursesWithDetails = courses.map((course) => {
-      const termCount = course.courseTerms.length; // تعداد ترم‌ها
-      const totalPrice = course.courseTerms.reduce((sum, courseTerm) => {
-        return sum + courseTerm.term.price;
-      }, 0);
+      const termCount = course.courseTerms.length;
 
-      const totalDiscount = course.courseTerms.reduce((sum, courseTerm) => {
-        return sum + (courseTerm.term.discount || 0);
-      }, 0);
+      const totalPrice = course.courseTerms.reduce(
+        (sum, courseTerm) => sum + courseTerm.term.price,
+        0
+      );
+
+      const totalDiscount = course.courseTerms.reduce(
+        (sum, courseTerm) => sum + (courseTerm.term.discount || 0),
+        0
+      );
 
       const averageDiscount =
-        termCount > 0 ? Math.ceil(totalDiscount / termCount) : 0; // میانگین درصد تخفیف
+        termCount > 0 ? Math.ceil(totalDiscount / termCount) : 0;
 
       return {
         ...course,
+        cover: toAbsoluteMediaUrl(course.cover),
         termCount,
-        totalPrice, // مجموع قیمت دوره
-        averageDiscount, // میانگین درصد تخفیف
+        totalPrice,
+        averageDiscount,
       };
     });
 
-    return NextResponse.json(coursesWithDetails, { status: 200 });
+    return NextResponse.json(coursesWithDetails, {
+      status: 200,
+    });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { error: 'Something went wrong' },
-      { status: 500 }
+      {
+        error: 'Something went wrong',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

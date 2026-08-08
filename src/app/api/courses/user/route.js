@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,6 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // دریافت دوره‌های کاربر همراه با ترم‌ها و جلسات
     const userCourses = await prismadb.userCourse.findMany({
       where: { userId },
       select: {
@@ -34,7 +34,9 @@ export async function GET() {
                             id: true,
                             sessionProgress: {
                               where: { userId },
-                              select: { isCompleted: true },
+                              select: {
+                                isCompleted: true,
+                              },
                             },
                           },
                         },
@@ -53,7 +55,6 @@ export async function GET() {
       return NextResponse.json([], { status: 200 });
     }
 
-    // پردازش پیشرفت هر دوره
     const courseProgress = userCourses.map((userCourse) => {
       const course = userCourse.course;
 
@@ -68,6 +69,7 @@ export async function GET() {
 
         sessions.forEach((session) => {
           totalSessions += 1;
+
           if (session.sessionProgress?.[0]?.isCompleted) {
             completedSessions += 1;
           }
@@ -82,18 +84,28 @@ export async function GET() {
       return {
         courseId: course.id,
         courseTitle: course.title,
-        courseCover: course.cover,
+
+        // فقط زمان خروجی URL کامل ساخته می‌شود
+        courseCover: toAbsoluteMediaUrl(course.cover),
+
         shortAddress: course.shortAddress,
         progress,
       };
     });
 
-    return NextResponse.json(courseProgress, { status: 200 });
+    return NextResponse.json(courseProgress, {
+      status: 200,
+    });
   } catch (error) {
     console.error('Course progress error:', error);
+
     return NextResponse.json(
-      { error: 'Failed to fetch course progress.' },
-      { status: 500 }
+      {
+        error: 'Failed to fetch course progress.',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

@@ -1,7 +1,37 @@
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
+
+const normalizeCommentMedia = (comment) => {
+  if (!comment) {
+    return comment;
+  }
+
+  return {
+    ...comment,
+
+    user: comment.user
+      ? {
+          ...comment.user,
+          avatar: toAbsoluteMediaUrl(comment.user.avatar),
+        }
+      : null,
+
+    replies: Array.isArray(comment.replies)
+      ? comment.replies.map((reply) => ({
+          ...reply,
+
+          user: reply.user
+            ? {
+                ...reply.user,
+                avatar: toAbsoluteMediaUrl(reply.user.avatar),
+              }
+            : null,
+        }))
+      : [],
+  };
+};
 
 async function getCourseComments(courseId, userId = null, page = 1, limit = 6) {
-  // Calculate the number of items to skip based on the page number
   const skip = (page - 1) * limit;
 
   const filters = {
@@ -10,15 +40,15 @@ async function getCourseComments(courseId, userId = null, page = 1, limit = 6) {
     OR: [{ status: 'APPROVED' }],
   };
 
-  // Add userId to filters if it exists
   if (userId) {
-    filters.OR.push({ userId: userId });
+    filters.OR.push({
+      userId,
+    });
   }
 
-  // Fetch main comments (where parentId is null)
   const comments = await prismadb.comment.findMany({
     where: filters,
-    skip: skip,
+    skip,
     take: limit,
     orderBy: {
       createAt: 'desc',
@@ -37,9 +67,8 @@ async function getCourseComments(courseId, userId = null, page = 1, limit = 6) {
     where: filters,
   });
 
-  // Return the fetched comments and pagination information
   return {
-    comments,
+    comments: comments.map(normalizeCommentMedia),
     currentPage: page,
     totalPages: Math.ceil(totalComments / limit),
     totalComments,

@@ -43,8 +43,20 @@ function SettingContent() {
   const [usefulLinkTitle, setUsefulLinkTitle] = useState('');
   const [usefulLink, setUsefulLink] = useState('');
   const [usefulLinksSelected, setUsefulLinksSelected] = useState([]);
-  const [heroImageUrl, setHeroImageUrl] = useState('');
-  const [imageUploadLoading, setImageUploadLoading] = useState(false);
+  const [heroImage, setHeroImage] = useState('');
+  const [heroImagePreview, setHeroImagePreview] = useState('');
+  const [teachingMethodImage, setTeachingMethodImage] = useState('');
+  const [teachingMethodImagePreview, setTeachingMethodImagePreview] =
+    useState('');
+  const [heroImageUploadLoading, setHeroImageUploadLoading] = useState(false);
+  const [
+    teachingMethodImageUploadLoading,
+    setTeachingMethodImageUploadLoading,
+  ] = useState(false);
+  const heroFileInputRef = useRef(null);
+  const teachingMethodFileInputRef = useRef(null);
+  const heroPreviewObjectUrlRef = useRef(null);
+  const teachingMethodPreviewObjectUrlRef = useRef(null);
   const [errorMessages, setErrorMessages] = useState({
     descriptionFooter: '',
     rules: '',
@@ -54,12 +66,11 @@ function SettingContent() {
     telegramLink: '',
     youtubeLink: '',
   });
-  const fileInputRef = useRef(null);
 
   const fetchInfosData = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info`
       );
       if (!response.ok) throw new Error('Failed to fetch site infos');
       const data = await response.json();
@@ -76,7 +87,10 @@ function SettingContent() {
       setCoursesFooterSelected(data?.coursesLinks || []);
       setArticlesFooterSelected(data?.articlesLinks || []);
       setUsefulLinksSelected(data?.usefulLinks || []);
-      setHeroImageUrl(data?.heroImage || '');
+      setHeroImage(data?.heroImage || '');
+      setHeroImagePreview(data?.heroImageUrl || '');
+      setTeachingMethodImage(data?.teachingMethodImage || '');
+      setTeachingMethodImagePreview(data?.teachingMethodImageUrl || '');
     } catch (error) {
       console.error(error);
     }
@@ -85,7 +99,7 @@ function SettingContent() {
   const fetchFooterInfosData = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info/footer-info`,
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/site-info/footer-info`
       );
       if (!response.ok) throw new Error('Failed to fetch site footer infos');
       const data = await response.json();
@@ -101,15 +115,27 @@ function SettingContent() {
     fetchFooterInfosData();
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (heroPreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(heroPreviewObjectUrlRef.current);
+      }
+
+      if (teachingMethodPreviewObjectUrlRef.current) {
+        URL.revokeObjectURL(teachingMethodPreviewObjectUrlRef.current);
+      }
+    };
+  }, []);
+
   const handleSubmitCourseFooter = () => {
     if (courseFooterSelected.length === 3) {
       toast.showErrorToast(
-        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.',
+        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.'
       );
       return;
     }
     const courseSelected = courseOptions.find(
-      (cpt) => cpt.value === courseFooter,
+      (cpt) => cpt.value === courseFooter
     );
     if (courseSelected) {
       setCoursesFooterSelected((prev) => {
@@ -125,12 +151,12 @@ function SettingContent() {
   const handleSubmitArticleFooter = () => {
     if (articlesFooterSelected.length === 3) {
       toast.showErrorToast(
-        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.',
+        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.'
       );
       return;
     }
     const articleSelected = articleOptions.find(
-      (cpt) => cpt.value === articleFooter,
+      (cpt) => cpt.value === articleFooter
     );
     if (articleSelected) {
       setArticlesFooterSelected((prev) => {
@@ -146,7 +172,7 @@ function SettingContent() {
   const handleSubmitUsefulLink = () => {
     if (usefulLinksSelected.length === 3) {
       toast.showErrorToast(
-        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.',
+        'حداکثر ۳ مورد را می توانید اضافه کنید. ابتدا یک گزینه را حذف کنید.'
       );
       return;
     }
@@ -166,66 +192,171 @@ function SettingContent() {
 
   const handleDeleteCourse = (shortAddress) => {
     setCoursesFooterSelected((prev) =>
-      prev.filter((item) => item.value !== shortAddress),
+      prev.filter((item) => item.value !== shortAddress)
     );
   };
 
   const handleDeleteArticle = (itemId) => {
     setArticlesFooterSelected((prev) =>
-      prev.filter((item) => item.value !== itemId),
+      prev.filter((item) => item.value !== itemId)
     );
   };
 
   const handleDeleteUsefulLink = (itemLink) => {
     setUsefulLinksSelected((prev) =>
-      prev.filter((item) => item.value !== itemLink),
+      prev.filter((item) => item.value !== itemLink)
     );
   };
 
-  const getImageSrcWithCacheBypass = () => {
-    if (!heroImageUrl) return '';
-    return `${heroImageUrl}?timestamp=${new Date().getTime()}`;
-  };
-
-  const handleImageClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const setLocalImagePreview = ({ file, objectUrlRef, setPreview }) => {
+    if (!file) {
+      return;
     }
+
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+    }
+
+    const objectUrl = URL.createObjectURL(file);
+
+    objectUrlRef.current = objectUrl;
+
+    setPreview(objectUrl);
   };
-  const handleImageChange = async (event) => {
-    setImageUploadLoading(true);
-    const file = event.target.files[0];
-    if (file) {
-      // شروع فرآیند آپلود
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('folderPath', 'images/home');
-      formData.append('fileName', 'hero');
 
-      try {
-        // آپلود فایل (جایگزین کنید با API خودتان)
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/image`,
-          {
-            method: 'POST',
-            body: formData,
-          },
-        );
+  const uploadSiteImage = async ({
+    file,
+    fileName,
+    setStorageKey,
+    setLoading,
+  }) => {
+    if (!file) {
+      return;
+    }
 
-        if (response.ok) {
-          const imageUrl = await response.json();
-          setHeroImageUrl(imageUrl.fileUrl);
-          toast.showSuccessToast('تصویر با موفقیت آپلود شد');
-        } else {
-          toast.showErrorToast.error('خطا در آپلود تصویر');
+    setLoading(true);
+
+    const formData = new FormData();
+
+    formData.append('file', file);
+
+    formData.append('folderPath', 'images/home');
+
+    formData.append('fileName', fileName);
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/image`,
+        {
+          method: 'POST',
+          body: formData,
         }
-      } catch (error) {
-        toast.showErrorToast('خطا در آپلود:', error);
-        console.error('avatar upload error: ', error);
-      } finally {
-        setImageUploadLoading(false);
+      );
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Image upload failed');
       }
+
+      /*
+       * فقط storage key را نگه می‌داریم.
+       *
+       * مثال:
+       * images/home/teaching-method.jpg
+       */
+      const fileKey = String(data?.fileKey || '').trim();
+
+      if (!fileKey) {
+        throw new Error('Storage key was not returned');
+      }
+
+      setStorageKey(fileKey);
+
+      /*
+       * اینجا دیگر Preview را از absoluteUrl
+       * یا fileUrl نمی‌سازیم.
+       *
+       * Preview قبلاً با URL.createObjectURL
+       * ساخته شده است.
+       */
+
+      toast.showSuccessToast('تصویر با موفقیت آپلود شد');
+    } catch (error) {
+      console.error('[SITE_SETTING_IMAGE_UPLOAD_ERROR]', error);
+
+      toast.showErrorToast('خطا در آپلود تصویر');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleHeroImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    /*
+     * Preview فوری از خود فایل
+     */
+    setLocalImagePreview({
+      file,
+
+      objectUrlRef: heroPreviewObjectUrlRef,
+
+      setPreview: setHeroImagePreview,
+    });
+
+    /*
+     * آپلود واقعی
+     */
+    uploadSiteImage({
+      file,
+
+      fileName: 'hero',
+
+      setStorageKey: setHeroImage,
+
+      setLoading: setHeroImageUploadLoading,
+    });
+
+    event.target.value = '';
+  };
+
+  const handleTeachingMethodImageChange = (event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    /*
+     * Preview فوری
+     */
+    setLocalImagePreview({
+      file,
+
+      objectUrlRef: teachingMethodPreviewObjectUrlRef,
+
+      setPreview: setTeachingMethodImagePreview,
+    });
+
+    /*
+     * آپلود
+     */
+    uploadSiteImage({
+      file,
+
+      fileName: 'teaching-method',
+
+      setStorageKey: setTeachingMethodImage,
+
+      setLoading: setTeachingMethodImageUploadLoading,
+    });
+
+    event.target.value = '';
   };
 
   const validateInputs = () => {
@@ -251,8 +382,8 @@ function SettingContent() {
       errors.descriptionAboutUs = 'قوانین نمی‌تواند خالی باشد.';
     }
 
-    if (!heroImageUrl.trim()) {
-      errors.heroImageUrl = 'تصویری برای قسمت هیرو انتخاب کنید.';
+    if (!heroImage.trim()) {
+      errors.heroImage = 'تصویری برای قسمت هیرو انتخاب کنید.';
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -322,7 +453,8 @@ function SettingContent() {
         coursesLinks: courseFooterSelected,
         articlesLinks: articlesFooterSelected,
         usefulLinks: usefulLinksSelected,
-        heroImage: heroImageUrl,
+        heroImage,
+        teachingMethodImage,
         rules,
       };
       const response = await fetch(
@@ -333,7 +465,7 @@ function SettingContent() {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(payload),
-        },
+        }
       );
       if (!response.ok) {
         throw new Error('Error To submit infos form!');
@@ -360,70 +492,120 @@ function SettingContent() {
           ثبت تغییرات
         </Button>
       </div>
-      <div className='mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2'>
-        <div className='flex gap-2 self-start'>
-          <div>
-            <input
-              type='file'
-              ref={fileInputRef}
-              className='hidden'
-              accept='image/*'
-              onChange={handleImageChange}
-            />
-            <label className='mb-2 mr-4 block text-sm font-medium text-text-light dark:text-text-dark'>
-              تصویر هیرو
-            </label>
-            {heroImageUrl ? (
-              <div onClick={handleImageClick} className='relative'>
-                <Image
-                  src={getImageSrcWithCacheBypass()}
-                  alt='تصویر هیرو سکشن'
-                  width={800}
-                  height={600}
-                  className={`h-28 w-44 rounded-xl object-cover xs:h-40 xs:w-72 md:cursor-pointer lg:h-56 lg:w-96 ${errorMessages.heroImageUrl ? 'border border-red' : ''}`}
-                />
-                <div
-                  className={`absolute left-2 top-2 flex rounded-xl bg-black bg-opacity-50 p-2 md:cursor-pointer ${imageUploadLoading ? 'hidden' : ''}`}
-                >
-                  <FiEdit2 className='text-white' />
-                </div>
-                {imageUploadLoading && (
-                  <div className='absolute bottom-0 left-0 right-0 top-0 flex h-full w-full items-center justify-center rounded-xl bg-black bg-opacity-25'>
-                    <AiOutlineLoading3Quarters
-                      size={34}
-                      className='animate-spin text-secondary'
-                    />
-                  </div>
-                )}
-              </div>
+      <div className='mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2'>
+        {/* Hero */}
+        <div>
+          <input
+            type='file'
+            ref={heroFileInputRef}
+            className='hidden'
+            accept='image/*'
+            onChange={handleHeroImageChange}
+          />
+
+          <label className='mb-2 mr-4 block text-sm font-medium text-text-light dark:text-text-dark'>
+            تصویر هیرو
+          </label>
+
+          <div
+            className={`relative flex aspect-[16/10] w-full max-w-xl cursor-pointer items-center justify-center overflow-hidden rounded-2xl border bg-surface-light dark:bg-surface-dark ${
+              errorMessages.heroImage
+                ? 'border-red'
+                : 'border-black/5 dark:border-white/10'
+            }`}
+            onClick={() => heroFileInputRef.current?.click()}
+          >
+            {heroImagePreview ? (
+              <Image
+                src={heroImagePreview}
+                alt='تصویر هیرو'
+                fill
+                sizes='600px'
+                className='object-cover'
+              />
             ) : (
-              <div
-                className={`flex h-28 w-44 items-center justify-center rounded-xl bg-surface-light xs:h-40 xs:w-72 lg:h-56 lg:w-96 dark:bg-surface-dark ${errorMessages.heroImageUrl ? 'border border-red' : ''}`}
-              >
-                {imageUploadLoading ? (
-                  <AiOutlineLoading3Quarters
-                    size={34}
-                    className='animate-spin text-secondary'
-                  />
-                ) : (
-                  <div
-                    className='flex h-full w-full items-center justify-center gap-2 px-4 md:cursor-pointer'
-                    onClick={handleImageClick}
-                  >
-                    <MdOutlineAddAPhoto size={34} />
-                    <p className='text-xs md:text-sm'>
-                      برای افزودن تصویر کلیک کنید
-                    </p>
-                  </div>
-                )}
+              <div className='flex flex-col items-center gap-2 text-subtext-light dark:text-subtext-dark'>
+                <MdOutlineAddAPhoto size={34} />
+
+                <span className='text-xs'>افزودن تصویر هیرو</span>
               </div>
             )}
-            {errorMessages.heroImageUrl && (
-              <p className={`mt-1 text-xs text-red`}>
-                *{errorMessages.heroImageUrl}
-              </p>
+
+            {heroImagePreview && !heroImageUploadLoading && (
+              <div className='absolute left-3 top-3 flex rounded-xl bg-black/55 p-2 text-white backdrop-blur-md'>
+                <FiEdit2 />
+              </div>
+            )}
+
+            {heroImageUploadLoading && (
+              <div className='absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[2px]'>
+                <AiOutlineLoading3Quarters
+                  size={34}
+                  className='animate-spin text-white'
+                />
+              </div>
             )}
           </div>
+
+          {errorMessages.heroImage && (
+            <p className='mt-1 text-xs text-red'>*{errorMessages.heroImage}</p>
+          )}
+        </div>
+
+        {/* Teaching Method */}
+        <div>
+          <input
+            type='file'
+            ref={teachingMethodFileInputRef}
+            className='hidden'
+            accept='image/*'
+            onChange={handleTeachingMethodImageChange}
+          />
+
+          <label className='mb-2 mr-4 block text-sm font-medium text-text-light dark:text-text-dark'>
+            تصویر بخش روش آموزش
+          </label>
+
+          <div
+            className='relative flex aspect-[16/10] w-full max-w-xl cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-surface-light dark:border-white/10 dark:bg-surface-dark'
+            onClick={() => teachingMethodFileInputRef.current?.click()}
+          >
+            {teachingMethodImagePreview ? (
+              <Image
+                src={teachingMethodImagePreview}
+                alt='تصویر بخش روش آموزش'
+                fill
+                sizes='600px'
+                className='object-cover'
+              />
+            ) : (
+              <div className='flex flex-col items-center gap-2 text-subtext-light dark:text-subtext-dark'>
+                <MdOutlineAddAPhoto size={34} />
+
+                <span className='text-xs'>افزودن تصویر روش آموزش</span>
+              </div>
+            )}
+
+            {teachingMethodImagePreview &&
+              !teachingMethodImageUploadLoading && (
+                <div className='absolute left-3 top-3 flex rounded-xl bg-black/55 p-2 text-white backdrop-blur-md'>
+                  <FiEdit2 />
+                </div>
+              )}
+
+            {teachingMethodImageUploadLoading && (
+              <div className='absolute inset-0 flex items-center justify-center bg-black/25 backdrop-blur-[2px]'>
+                <AiOutlineLoading3Quarters
+                  size={34}
+                  className='animate-spin text-white'
+                />
+              </div>
+            )}
+          </div>
+
+          <p className='mt-2 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+            این تصویر در بخش «روش آموزش سمانه» صفحه اصلی نمایش داده می‌شود.
+          </p>
         </div>
       </div>
       <div className='mt-8'>

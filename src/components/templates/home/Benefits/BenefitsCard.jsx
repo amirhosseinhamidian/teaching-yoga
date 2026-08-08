@@ -1,21 +1,29 @@
 'use client';
+
 import React from 'react';
 import PropTypes from 'prop-types';
 
 const BenefitsCard = ({ benefit, className }) => {
   return (
     <div
-      className={`group flex flex-col items-center gap-4 rounded-xl bg-surface-light p-4 transition-all duration-300 ease-in hover:bg-accent hover:text-text-light sm:p-5 md:p-6 lg:p-8 dark:bg-surface-dark ${className}`}
+      className={`group relative overflow-hidden rounded-3xl border border-black/5 bg-white/70 p-6 backdrop-blur-xl transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_20px_60px_rgba(30,191,110,0.15)] dark:border-white/10 dark:bg-surface-dark/70 ${className} `}
     >
-      <div className='flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent bg-background-light p-4 transition-all duration-300 ease-in group-hover:scale-110 group-hover:border-none group-hover:bg-gradient-to-tr group-hover:from-[#1EBF6E] group-hover:to-[#64F4AB] xs:h-20 xs:w-20 sm:h-16 sm:w-16 md:h-20 md:w-20 md:p-0 lg:h-24 lg:w-24 dark:bg-background-dark'>
-        {benefit.icon}
+      {/* glow */}
+      <div className='absolute -right-10 -top-10 h-32 w-32 rounded-full bg-secondary/20 blur-3xl transition-all duration-500 group-hover:bg-secondary/40' />
+
+      <div className='relative flex flex-col items-center text-center'>
+        <div className='mb-6 flex h-20 w-20 items-center justify-center rounded-3xl bg-secondary/10 transition-all duration-500 group-hover:scale-110 group-hover:bg-secondary'>
+          {benefit.icon}
+        </div>
+
+        <h3 className='mb-3 text-xl font-black text-text-light dark:text-text-dark'>
+          {benefit.title}
+        </h3>
+
+        <p className='text-sm leading-8 text-gray-500 dark:text-gray-400'>
+          {benefit.description}
+        </p>
       </div>
-      <h3 className='text-base font-bold sm:text-lg md:text-xl lg:text-2xl'>
-        {benefit.title}
-      </h3>
-      <p className='my-3 text-center text-xs xs:text-sm lg:text-base'>
-        {benefit.description}
-      </p>
     </div>
   );
 };
