@@ -9,6 +9,7 @@ import { logError } from '@/server/logger';
 import { getRequestLogger } from '@/server/logger/request-context';
 
 import { withApiLogging } from '@/server/logger/with-api-logging';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export const runtime = 'nodejs';
 
@@ -52,12 +53,43 @@ const normalizePaymentId = (value) => {
 };
 
 const createPaymentDetailsDto = (payment) => {
+  const cart = payment.cart
+    ? {
+        ...payment.cart,
+
+        cartCourses:
+          payment.cart.cartCourses?.map((item) => ({
+            ...item,
+
+            course: item.course
+              ? {
+                  ...item.course,
+
+                  cover: toAbsoluteMediaUrl(item.course.cover),
+                }
+              : null,
+          })) || [],
+
+        cartSubscriptions: payment.cart.cartSubscriptions || [],
+      }
+    : null;
+
+  const shopOrder = payment.shopOrder
+    ? {
+        ...payment.shopOrder,
+
+        items:
+          payment.shopOrder.items?.map((item) => ({
+            ...item,
+
+            coverImage: toAbsoluteMediaUrl(item.coverImage),
+          })) || [],
+      }
+    : null;
+
   return {
     id: payment.id,
 
-    /*
-     * BigInt مستقیماً JSON-serializable نیست.
-     */
     transactionId:
       payment.transactionId === null || payment.transactionId === undefined
         ? null
@@ -75,13 +107,9 @@ const createPaymentDetailsDto = (payment) => {
 
     updatedAt: payment.updatedAt,
 
-    /*
-     * ساختار این دو بخش برای سازگاری با
-     * PaymentSuccessfully حفظ شده است.
-     */
-    cart: payment.cart,
+    cart,
 
-    shopOrder: payment.shopOrder,
+    shopOrder,
   };
 };
 

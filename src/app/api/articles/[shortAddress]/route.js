@@ -1,11 +1,11 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(req, { params }) {
   try {
     const { shortAddress } = params;
 
-    // Fetch course details from the database
     const article = await prismadb.article.findUnique({
       where: {
         shortAddress,
@@ -20,9 +20,15 @@ export async function GET(req, { params }) {
       );
     }
 
-    return NextResponse.json(article, { status: 200 });
+    const normalizedArticle = {
+      ...article,
+      cover: toAbsoluteMediaUrl(article.cover),
+    };
+
+    return NextResponse.json(normalizedArticle, { status: 200 });
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
       { message: 'Internal Server Error' },
       { status: 500 }

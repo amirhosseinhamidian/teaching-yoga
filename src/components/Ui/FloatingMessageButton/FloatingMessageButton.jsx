@@ -286,7 +286,7 @@ export default function FloatingMessageButton() {
       {/* FAB Button */}
       <button
         onClick={toggleMessage}
-        className='fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-light shadow-lg transition-transform duration-300 hover:scale-110 sm:h-14 sm:w-14'
+        className='fixed bottom-6 left-6 z-50 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-text-light shadow-lg transition-all duration-300 hover:scale-110 sm:h-14 sm:w-14 [.has-mobile-checkout-bar_&]:bottom-[calc(80px+env(safe-area-inset-bottom))] lg:[.has-mobile-checkout-bar_&]:bottom-6'
         aria-label={open ? 'بستن چت' : 'باز کردن چت'}
       >
         {open ? <IoClose size={28} /> : <MdMessage size={28} />}
@@ -294,7 +294,7 @@ export default function FloatingMessageButton() {
 
       {/* Chat Box */}
       {open && (
-        <div className='fixed bottom-[82px] left-6 z-50 flex max-h-[78vh] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_20px_60px_rgba(0,0,0,.15)] backdrop-blur-md md:bottom-[88px] dark:bg-[#0b0f14]'>
+        <div className='fixed bottom-[82px] left-6 z-50 flex max-h-[78vh] w-[92vw] max-w-[380px] flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-[0_20px_60px_rgba(0,0,0,.15)] backdrop-blur-md transition-[bottom] duration-300 md:bottom-[88px] dark:bg-[#0b0f14] [.has-mobile-checkout-bar_&]:bottom-[calc(140px+env(safe-area-inset-bottom))] lg:[.has-mobile-checkout-bar_&]:bottom-[88px]'>
           {/* Header */}
           <div className='relative flex items-center justify-between border-b border-black/5 p-3.5 dark:border-white/10'>
             <div className='absolute inset-0 -z-10 bg-gradient-to-r from-primary/10 via-transparent to-primary/10' />

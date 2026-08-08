@@ -1,7 +1,9 @@
 /* eslint-disable no-undef */
+
 import React from 'react';
-import ConfirmCodeContent from '@/components/templates/confirm-code/ConfirmCodeContent';
 import { headers } from 'next/headers';
+
+import ConfirmCodeContent from '@/components/templates/confirm-code/ConfirmCodeContent';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -9,14 +11,13 @@ export async function generateMetadata() {
     {
       method: 'GET',
       headers: headers(),
-    },
+    }
   );
 
   const result = await res.json();
 
-  // اطلاعات پیش‌فرض
   const defaultSeoData = {
-    title: 'کد تایید',
+    title: 'کد تایید | سمانه یوگا',
     robots: 'noindex, nofollow',
   };
 
@@ -28,16 +29,13 @@ export async function generateMetadata() {
 
   return {
     title: seoData?.siteTitle || defaultSeoData.title,
+
     robots: seoData?.robotsTag || defaultSeoData.robots,
   };
 }
 
 const ConfirmCodePage = () => {
-  return (
-    <>
-      <ConfirmCodeContent />
-    </>
-  );
+  return <ConfirmCodeContent />;
 };
 
 export default ConfirmCodePage;

@@ -71,13 +71,13 @@ export default function NavbarMobileMenu({
           <>
             {/* Overlay */}
             <div
-              className='fixed inset-0 bg-black opacity-50'
+              className='fixed inset-0 z-40 bg-black opacity-50'
               onClick={() => toggleOpen()}
             ></div>
 
             {/* Menu */}
             <div
-              className={`fixed right-0 top-0 flex h-full w-60 flex-col justify-between gap-y-4 bg-surface-light p-5 transition-transform duration-300 dark:bg-surface-dark ${
+              className={`fixed right-0 top-0 z-50 flex h-full w-60 flex-col justify-between gap-y-4 bg-surface-light p-5 transition-transform duration-300 dark:bg-surface-dark ${
                 isOpen ? 'translate-x-0' : 'translate-x-full'
               }`}
             >

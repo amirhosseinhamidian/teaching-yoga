@@ -1,42 +1,52 @@
-// app/api/shop/products/route.js
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getShopEnabled } from '@/utils/server/shopGuard';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
-function toInt(v) {
-  const n = Number(v);
-  return Number.isFinite(n) ? Math.trunc(n) : null;
+function toInt(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.trunc(number) : null;
 }
 
 function parseIdsCSV(raw) {
-  const s = String(raw || '').trim();
-  if (!s) return [];
-  return s
+  const value = String(raw || '').trim();
+
+  if (!value) {
+    return [];
+  }
+
+  return value
     .split(',')
-    .map((x) => toInt(x))
-    .filter((x) => Number.isFinite(x) && x > 0);
+    .map((item) => toInt(item))
+    .filter((item) => Number.isFinite(item) && item > 0);
 }
 
-/**
- * ✅ گرفتن id کتگوری + تمام زیرشاخه‌ها (فرزند، نوه، ...)
- * بدون N+1: یکبار کل کتگوری‌ها رو می‌گیریم و در حافظه traversal می‌کنیم
- */
 async function getCategoryAndDescendantsIds(rootId) {
   const id = toInt(rootId);
-  if (!id || id <= 0) return null;
+
+  if (!id || id <= 0) {
+    return null;
+  }
 
   const all = await prismadb.productCategory.findMany({
-    select: { id: true, parentId: true },
+    select: {
+      id: true,
+      parentId: true,
+    },
   });
 
-  // parentId -> [childId...]
   const childrenMap = new Map();
-  for (const c of all) {
-    const p = c.parentId ?? null;
-    if (!childrenMap.has(p)) childrenMap.set(p, []);
-    childrenMap.get(p).push(c.id);
+
+  for (const category of all) {
+    const parentId = category.parentId ?? null;
+
+    if (!childrenMap.has(parentId)) {
+      childrenMap.set(parentId, []);
+    }
+
+    childrenMap.get(parentId).push(category.id);
   }
 
   const result = [];
@@ -44,23 +54,31 @@ async function getCategoryAndDescendantsIds(rootId) {
   const seen = new Set();
 
   while (queue.length) {
-    const cur = queue.shift();
-    if (!cur || seen.has(cur)) continue;
-    seen.add(cur);
-    result.push(cur);
+    const current = queue.shift();
 
-    const kids = childrenMap.get(cur) || [];
-    for (const k of kids) queue.push(k);
+    if (!current || seen.has(current)) {
+      continue;
+    }
+
+    seen.add(current);
+    result.push(current);
+
+    const children = childrenMap.get(current) || [];
+
+    for (const child of children) {
+      queue.push(child);
+    }
   }
 
-  // ✅ فقط عددهای معتبر
-  const cleaned = result.filter((x) => Number.isFinite(x) && x > 0);
+  const cleaned = result.filter((item) => Number.isFinite(item) && item > 0);
+
   return cleaned.length ? cleaned : null;
 }
 
 export async function GET(req) {
   try {
     const enabled = await getShopEnabled();
+
     if (!enabled) {
       return NextResponse.json(
         { error: 'فروشگاه در حال حاضر غیرفعال است.' },
@@ -71,31 +89,31 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
 
     const page = Math.max(1, toInt(searchParams.get('page')) || 1);
+
     const pageSize = Math.min(
       100,
       Math.max(1, toInt(searchParams.get('pageSize')) || 20)
     );
+
     const sort = String(searchParams.get('sort') || 'newest');
-
     const search = String(searchParams.get('search') || '').trim();
-
-    const categoryIdRaw = searchParams.get('categoryId');
-    const categoryId = toInt(categoryIdRaw);
-
+    const categoryId = toInt(searchParams.get('categoryId'));
     const colorIds = parseIdsCSV(searchParams.get('colorIds'));
 
     const minPriceRaw = String(searchParams.get('minPrice') || '').trim();
+
     const maxPriceRaw = String(searchParams.get('maxPrice') || '').trim();
+
     const minPrice = minPriceRaw
       ? Number(minPriceRaw.replaceAll(',', ''))
       : null;
+
     const maxPrice = maxPriceRaw
       ? Number(maxPriceRaw.replaceAll(',', ''))
       : null;
 
     const inStock = String(searchParams.get('inStock') || '') === 'true';
 
-    // ✅ categoryId + descendants
     const categoryIdsForFilter = categoryId
       ? await getCategoryAndDescendantsIds(categoryId)
       : null;
@@ -106,17 +124,37 @@ export async function GET(req) {
       ...(search
         ? {
             OR: [
-              { title: { contains: search, mode: 'insensitive' } },
-              { description: { contains: search, mode: 'insensitive' } },
+              {
+                title: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                description: {
+                  contains: search,
+                  mode: 'insensitive',
+                },
+              },
             ],
           }
         : {}),
 
       ...(categoryIdsForFilter
-        ? { categoryId: { in: categoryIdsForFilter } }
+        ? {
+            categoryId: {
+              in: categoryIdsForFilter,
+            },
+          }
         : {}),
 
-      ...(inStock ? { stock: { gt: 0 } } : {}),
+      ...(inStock
+        ? {
+            stock: {
+              gt: 0,
+            },
+          }
+        : {}),
 
       ...(minPrice != null || maxPrice != null
         ? {
@@ -131,7 +169,9 @@ export async function GET(req) {
         ? {
             colors: {
               some: {
-                colorId: { in: colorIds },
+                colorId: {
+                  in: colorIds,
+                },
               },
             },
           }
@@ -158,10 +198,21 @@ export async function GET(req) {
           compareAt: true,
           stock: true,
           isActive: true,
-          category: { select: { id: true, title: true } },
+          category: {
+            select: {
+              id: true,
+              title: true,
+            },
+          },
           colors: {
             select: {
-              color: { select: { id: true, name: true, hex: true } },
+              color: {
+                select: {
+                  id: true,
+                  name: true,
+                  hex: true,
+                },
+              },
             },
           },
         },
@@ -169,12 +220,19 @@ export async function GET(req) {
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),
-      prismadb.product.count({ where }),
+
+      prismadb.product.count({
+        where,
+      }),
     ]);
 
-    const normalizedItems = items.map((p) => ({
-      ...p,
-      colors: (p.colors || []).map((x) => x.color),
+    const normalizedItems = items.map((product) => ({
+      ...product,
+      coverImage: toAbsoluteMediaUrl(product.coverImage),
+      images: Array.isArray(product.images)
+        ? product.images.map((image) => toAbsoluteMediaUrl(image))
+        : [],
+      colors: (product.colors || []).map((item) => item.color),
     }));
 
     const totalPages = Math.max(1, Math.ceil((total || 0) / (pageSize || 20)));
@@ -187,13 +245,14 @@ export async function GET(req) {
         totalPages,
         pageSize,
         meta: {
-          categoryIdsUsed: categoryIdsForFilter || null, // اختیاری برای دیباگ
+          categoryIdsUsed: categoryIdsForFilter || null,
         },
       },
       { status: 200 }
     );
-  } catch (e) {
-    console.error('[SHOP_PRODUCTS_GET]', e);
+  } catch (error) {
+    console.error('[SHOP_PRODUCTS_GET]', error);
+
     return NextResponse.json({ error: 'خطای داخلی سرور' }, { status: 500 });
   }
 }

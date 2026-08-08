@@ -1,130 +1,151 @@
 /* eslint-disable no-undef */
+
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import Button from '../Ui/Button/Button';
-import IconButton from '../Ui/ButtonIcon/ButtonIcon';
-import { BiCartAdd } from 'react-icons/bi';
 import PropTypes from 'prop-types';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
-import Modal from '../modules/Modal/Modal';
-import { LuLogIn } from 'react-icons/lu';
+
 import { usePathname, useRouter } from 'next/navigation';
 
-// Redux
+import Modal from '../modules/Modal/Modal';
+
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteIconButton from '@/components/SiteUi/Button/SiteIconButton';
+
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { useCartActions } from '@/hooks/cart/useCartActions';
+
+import { LuLogIn } from 'react-icons/lu';
 import { PiCrownSimple } from 'react-icons/pi';
 
-export default function CardActions({
+import {
+  HiOutlineArrowLeft,
+  HiOutlineBookOpen,
+  HiOutlineShoppingBag,
+} from 'react-icons/hi2';
+
+const CardActions = ({
   mainBtnClick,
   courseId,
-  className,
-  subscriptionMode, // TERM_ONLY | SUBSCRIPTION_ONLY | BOTH
-}) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginReason, setLoginReason] = useState('cart'); // 'cart' | 'subscription'
-
-  const pathname = usePathname();
+  className = '',
+  subscriptionMode = 'TERM_ONLY',
+}) => {
   const router = useRouter();
+  const pathname = usePathname();
 
   const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
+
+  const toast = useMemo(() => createToastHandler(isDark), [isDark]);
 
   const { user } = useAuthUser();
+
   const { addToCart } = useCartActions();
 
-  const { showCartButton, showSubscribeButton } = useMemo(() => {
-    const mode = subscriptionMode || 'TERM_ONLY';
+  const [isLoading, setIsLoading] = useState(false);
 
-    const canBuy = mode === 'TERM_ONLY' || mode === 'BOTH';
-    const canSubscribe = mode === 'SUBSCRIPTION_ONLY' || mode === 'BOTH';
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
-    return {
-      showCartButton: canBuy,
-      showSubscribeButton: canSubscribe,
-    };
-  }, [subscriptionMode]);
+  const canBuy =
+    subscriptionMode === 'TERM_ONLY' || subscriptionMode === 'BOTH';
+
+  const canSubscribe =
+    subscriptionMode === 'SUBSCRIPTION_ONLY' || subscriptionMode === 'BOTH';
 
   const handleAddToCart = async () => {
     if (!user) {
-      setLoginReason('cart');
       setShowLoginModal(true);
       return;
     }
 
     try {
       setIsLoading(true);
+
       const response = await addToCart(courseId);
-      toast.showSuccessToast(response?.message || 'به سبد اضافه شد');
-    } catch (err) {
-      toast.showErrorToast(err || 'خطا در افزودن به سبد');
+
+      toast.showSuccessToast(response?.message || 'دوره به سبد خرید اضافه شد');
+    } catch (error) {
+      const errorMessage = typeof error === 'string' ? error : error?.message;
+
+      toast.showErrorToast(errorMessage || 'خطا در افزودن دوره به سبد خرید');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoSubscriptions = () => {
-    router.push('/subscriptions');
-  };
-
-  const loginHandler = () => {
+  const handleLogin = () => {
     sessionStorage.setItem('previousPage', pathname);
+
     router.push('/login');
   };
 
   return (
-    <div className={`flex items-center gap-3 ${className}`}>
-      <Button
-        onClick={mainBtnClick}
-        shadow
-        className='w-full text-xs sm:text-sm md:text-base'
-      >
-        مشاهده جزییات
-      </Button>
+    <>
+      <div className={`flex w-full items-center gap-2 ${className}`}>
+        <SiteButton
+          type='button'
+          size='md'
+          variant='primary'
+          startIcon={HiOutlineBookOpen}
+          endIcon={HiOutlineArrowLeft}
+          onClick={mainBtnClick}
+          className='min-w-0 flex-1'
+        >
+          مشاهده جزئیات
+        </SiteButton>
 
-      {/* ✅ دکمه اشتراک */}
-      {showSubscribeButton && (
-        <IconButton
-          icon={PiCrownSimple}
-          onClick={handleGoSubscriptions}
-          size={28}
-        />
-      )}
+        {canSubscribe && (
+          <SiteIconButton
+            type='button'
+            size='md'
+            variant='yellow'
+            icon={PiCrownSimple}
+            ariaLabel='مشاهده پلن‌های اشتراک'
+            title='مشاهده پلن‌های اشتراک'
+            onClick={() => router.push('/subscriptions')}
+          />
+        )}
 
-      {/* ✅ دکمه سبد خرید */}
-      {showCartButton &&
-        (isLoading ? (
-          <IconButton loading />
-        ) : (
-          <IconButton icon={BiCartAdd} onClick={handleAddToCart} size={28} />
-        ))}
+        {canBuy && (
+          <SiteIconButton
+            type='button'
+            size='md'
+            variant='secondary'
+            icon={HiOutlineShoppingBag}
+            ariaLabel='افزودن دوره به سبد خرید'
+            title='افزودن به سبد خرید'
+            loading={isLoading}
+            disabled={isLoading}
+            onClick={handleAddToCart}
+          />
+        )}
+      </div>
 
       {showLoginModal && (
         <Modal
-          title='ثبت نام یا ورود به حساب کاربری'
-          desc={
-            loginReason === 'subscription'
-              ? 'برای خرید اشتراک ابتدا وارد شوید.'
-              : 'برای تهیه دوره ابتدا وارد شوید.'
-          }
+          title='ورود یا ساخت حساب کاربری'
+          desc='برای افزودن دوره به سبد خرید، ابتدا وارد حساب کاربری خود شوید یا یک حساب جدید بسازید.'
           icon={LuLogIn}
           iconSize={36}
-          primaryButtonClick={loginHandler}
+          primaryButtonClick={handleLogin}
           secondaryButtonClick={() => setShowLoginModal(false)}
-          primaryButtonText='ورود | ثبت نام'
+          primaryButtonText='ورود | ثبت‌نام'
           secondaryButtonText='لغو'
         />
       )}
-    </div>
+    </>
   );
-}
+};
 
 CardActions.propTypes = {
-  mainBtnClick: PropTypes.func,
+  mainBtnClick: PropTypes.func.isRequired,
+
   className: PropTypes.string,
+
   courseId: PropTypes.number.isRequired,
+
   subscriptionMode: PropTypes.oneOf(['TERM_ONLY', 'SUBSCRIPTION_ONLY', 'BOTH']),
 };
+
+export default CardActions;

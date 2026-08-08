@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { notifyAdminsNewMessage } from '@/libs/notifyAdmins';
 import { getAuthUser } from '@/utils/getAuthUser';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function POST(request) {
   try {
@@ -118,7 +119,9 @@ export async function GET() {
         updatedAt: q.updatedAt,
         courseTitle: q.course.title,
         instructorUsername: q.course.instructor.user.username,
-        instructorAvatar: q.course.instructor.user.avatar,
+
+        instructorAvatar: toAbsoluteMediaUrl(q.course.instructor.user.avatar),
+
         sessionName: q.session?.name || 'N/A',
         termName: q.session?.sessionTerms?.[0]?.term?.name || 'N/A',
       }));

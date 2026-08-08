@@ -7,13 +7,28 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
-    domains: [
-      'samane-yoga.storage.c2.liara.site',
-      'beta.samaneyoga.ir',
-      'trustseal.enamad.ir',
-      'lh3.googleusercontent.com',
-      'static.postex.ir',
-      'localhost',
+    domains: ['static.postex.ir'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'media.samaneyoga.ir',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'trustseal.enamad.ir',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        pathname: '/**',
+      },
     ],
   },
 

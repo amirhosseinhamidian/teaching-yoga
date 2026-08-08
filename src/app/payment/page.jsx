@@ -1,29 +1,37 @@
 /* eslint-disable no-undef */
 import React from 'react';
 import { headers } from 'next/headers';
+
 import PaymentMain from '@/components/templates/payment/PaymentMain';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import Footer from '@/components/Footer/Footer';
 
 export async function generateMetadata() {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/payment`,
-    { method: 'GET', headers: headers() }
-  );
-
-  const result = await res.json();
-
   const defaultSeo = {
     title: 'پرداخت | سمانه یوگا',
     robots: 'noindex, nofollow',
   };
 
-  if (!result.success || !result.data) return defaultSeo;
+  try {
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=/payment`,
+      { method: 'GET', headers: headers() }
+    );
 
-  return {
-    title: result.data.siteTitle || defaultSeo.title,
-    robots: result.data.robotsTag || defaultSeo.robots,
-  };
+    if (!res.ok) return defaultSeo;
+
+    const result = await res.json();
+
+    if (!result?.success || !result?.data) return defaultSeo;
+
+    return {
+      title: result.data.siteTitle || defaultSeo.title,
+      robots: result.data.robotsTag || defaultSeo.robots,
+    };
+  } catch (error) {
+    console.error('[PAYMENT_METADATA]', error);
+    return defaultSeo;
+  }
 }
 
 async function fetchCheckoutData() {
@@ -57,8 +65,8 @@ async function fetchCheckoutData() {
       cart: cartJson?.cart || null,
       shopCart: shopJson?.cart || null,
     };
-  } catch (err) {
-    console.error('Error fetching checkout data:', err);
+  } catch (error) {
+    console.error('Error fetching checkout data:', error);
     return { cart: null, shopCart: null };
   }
 }

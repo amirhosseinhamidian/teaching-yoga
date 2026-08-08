@@ -3,13 +3,20 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import PropTypes from 'prop-types';
-import Button from '@/components/Ui/Button/Button';
-import { TbTruckReturn } from 'react-icons/tb';
-import { IoClose } from 'react-icons/io5';
+
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import Input from '@/components/Ui/Input/Input';
 import TextArea from '@/components/Ui/TextArea/TextArea';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
+
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
+import {
+  HiOutlineArrowUturnLeft,
+  HiOutlineInformationCircle,
+  HiOutlineXMark,
+} from 'react-icons/hi2';
+import { TbTruckReturn } from 'react-icons/tb';
 
 const RETURN_REASONS = [
   { value: 'DAMAGED', label: 'خراب/آسیب‌دیده' },
@@ -31,14 +38,12 @@ export default function ReturnRequestModal({
     return Array.isArray(order?.items) ? order.items : [];
   }, [order]);
 
-  // ✅ DropDown شما value را با === مقایسه می‌کند، پس نوع را ثابت نگه می‌داریم (string)
-  const [orderItemId, setOrderItemId] = useState(''); // string
-  const [reason, setReason] = useState('DAMAGED'); // enum value
+  const [orderItemId, setOrderItemId] = useState('');
+  const [reason, setReason] = useState('DAMAGED');
   const [qty, setQty] = useState(1);
   const [description, setDescription] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  // ✅ options برای انتخاب محصول (value: string)
   const productOptions = useMemo(() => {
     return items.map((item) => ({
       label: `${item.title} (تعداد: ${Number(item.qty || 1).toLocaleString(
@@ -48,7 +53,6 @@ export default function ReturnRequestModal({
     }));
   }, [items]);
 
-  // ✅ options برای انتخاب دلیل مرجوعی (value: enum string)
   const reasonOptions = useMemo(() => {
     return RETURN_REASONS.map((r) => ({
       label: r.label,
@@ -67,7 +71,6 @@ export default function ReturnRequestModal({
     return Number.isFinite(q) && q > 0 ? q : 1;
   }, [selectedItem]);
 
-  // ✅ وقتی مودال باز شد، ریست و انتخاب آیتم اول (اگر هست)
   useEffect(() => {
     if (!open) return;
 
@@ -79,7 +82,6 @@ export default function ReturnRequestModal({
     setSubmitting(false);
   }, [open, items]);
 
-  // ✅ اگر کاربر محصول را عوض کرد، qty را معتبر نگه دار
   useEffect(() => {
     setQty((prev) => {
       const n = Number(prev || 1);
@@ -117,7 +119,7 @@ export default function ReturnRequestModal({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            orderItemId: Number(orderItemId), // ✅ سرور عدد می‌خواهد
+            orderItemId: Number(orderItemId),
             reason,
             description: description?.trim() ? description.trim() : null,
             qty: qtyNum,
@@ -151,38 +153,45 @@ export default function ReturnRequestModal({
 
   return (
     <div
-      className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4'
+      className='fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 backdrop-blur-sm sm:items-center sm:p-4'
       onMouseDown={safeClose}
     >
       <div
-        className='w-full max-w-lg rounded-2xl bg-surface-light p-4 shadow-xl dark:bg-surface-dark'
+        className='w-full max-w-xl'
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className='mb-4 flex items-center justify-between border-b border-gray-300 pb-4 pt-2 dark:border-gray-700'>
-          <div className='flex items-center gap-2'>
-            <TbTruckReturn size={24} />
-            <h4 className='text-sm font-semibold lg:text-base'>
-              درخواست مرجوعی
-            </h4>
-          </div>
-          <button
-            type='button'
-            onClick={safeClose}
-            className='rounded-lg px-2 py-1 text-sm text-slate-500 transition hover:bg-gray-100 dark:hover:bg-gray-800'
-            disabled={submitting}
-          >
-            <IoClose
-              size={24}
-              className='text-subtext-light dark:text-subtext-dark'
-            />
-          </button>
-        </div>
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='lg'
+          topLine
+          className='max-h-[92dvh] overflow-y-auto rounded-b-none p-4 shadow-[0_-20px_70px_rgba(0,0,0,0.20)] sm:rounded-b-[28px] sm:p-5'
+        >
+          <div className='mb-5 flex items-start justify-between gap-3 border-b border-black/5 pb-4 dark:border-white/10'>
+            <div className='flex items-center gap-3'>
+              <span className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+                <TbTruckReturn size={22} />
+              </span>
 
-        {/* Body */}
-        <div className='space-y-3 text-xs'>
-          {/* ✅ Product DropDown */}
-          <div>
+              <div>
+                <p className='text-[10px] font-bold text-secondary'>خدمات پس از خرید</p>
+                <h4 className='mt-0.5 text-sm font-black text-text-light sm:text-base dark:text-text-dark'>
+                  درخواست مرجوعی
+                </h4>
+              </div>
+            </div>
+
+            <button
+              type='button'
+              onClick={safeClose}
+              disabled={submitting}
+              className='flex h-9 w-9 items-center justify-center rounded-xl bg-black/5 text-subtext-light transition-colors hover:bg-secondary/10 hover:text-secondary disabled:opacity-50 dark:bg-white/5 dark:text-subtext-dark'
+            >
+              <HiOutlineXMark size={20} />
+            </button>
+          </div>
+
+          <div className='space-y-4 text-xs'>
             <DropDown
               label='محصول مورد نظر'
               fullWidth
@@ -197,31 +206,33 @@ export default function ReturnRequestModal({
                   ? 'آیتمی یافت نشد'
                   : 'محصول مورد نظر را انتخاب کنید'
               }
-              className={`bg-surface-light dark:bg-surface-dark ${submitting ? 'pointer-events-none opacity-70' : ''}`}
+              className={`bg-surface-light dark:bg-surface-dark ${
+                submitting ? 'pointer-events-none opacity-70' : ''
+              }`}
             />
-          </div>
 
-          {/* qty */}
-          <div>
-            <Input
-              type='number'
-              label='تعداد مرجوعی'
-              min={1}
-              max={maxQty}
-              fullWidth
-              value={qty}
-              onChange={(v) => {
-                setQty(Math.max(1, Math.min(v, maxQty)));
-              }}
-              disabled={submitting || !orderItemId}
-            />
-            <span className='mr-4 whitespace-nowrap text-[11px] text-subtext-light dark:text-subtext-dark'>
-              حداکثر: <span className='font-faNa'>{maxQty}</span>
-            </span>
-          </div>
+            <div className='rounded-2xl border border-black/5 bg-background-light/40 p-3 dark:border-white/10 dark:bg-background-dark/30'>
+              <Input
+                type='number'
+                label='تعداد مرجوعی'
+                min={1}
+                max={maxQty}
+                fullWidth
+                value={qty}
+                onChange={(v) => {
+                  setQty(Math.max(1, Math.min(v, maxQty)));
+                }}
+                disabled={submitting || !orderItemId}
+              />
 
-          {/* ✅ Reason DropDown */}
-          <div>
+              <span className='mt-2 block text-[10px] text-subtext-light dark:text-subtext-dark'>
+                حداکثر قابل انتخاب:{' '}
+                <span className='font-faNa font-black text-text-light dark:text-text-dark'>
+                  {maxQty}
+                </span>
+              </span>
+            </div>
+
             <DropDown
               label='دلیل مرجوعی'
               fullWidth
@@ -231,46 +242,62 @@ export default function ReturnRequestModal({
               placeholder='دلیل مرجوعی را انتخاب کنید'
               className={submitting ? 'pointer-events-none opacity-70' : ''}
             />
-          </div>
 
-          {/* description */}
-          <TextArea
-            value={description}
-            onChange={setDescription}
-            rows={4}
-            label='توضیحات تکمیلی (اختیاری)'
-            className=''
-            placeholder='مثلاً بسته‌بندی آسیب دیده بود یا سایز مناسب نبود...'
-            disabled={submitting}
-          />
-
-          <p className='pt-1 text-[11px] text-slate-500'>
-            توجه: پس از ثبت درخواست، سفارش به بخش «مرجوعی‌ها» منتقل می‌شود و پس
-            از بررسی پشتیبانی نتیجه به شما اطلاع داده خواهد شد.
-          </p>
-
-          {/* actions */}
-          <div className='mt-2 flex justify-end gap-2'>
-            <OutlineButton
-              variant='outline'
-              className='text-xs'
-              onClick={safeClose}
+            <TextArea
+              value={description}
+              onChange={setDescription}
+              rows={4}
+              label='توضیحات تکمیلی (اختیاری)'
+              placeholder='مثلاً بسته‌بندی آسیب دیده بود یا سایز مناسب نبود...'
               disabled={submitting}
-            >
-              انصراف
-            </OutlineButton>
+            />
 
-            <Button
-              shadow
-              className='text-xs'
-              onClick={submit}
-              isLoading={submitting}
-              disabled={items.length === 0 || !orderItemId}
-            >
-              ثبت درخواست
-            </Button>
+            <div className='flex items-start gap-2 rounded-2xl border border-secondary/10 bg-secondary/5 p-3 text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+              <HiOutlineInformationCircle
+                size={17}
+                className='mt-0.5 shrink-0 text-secondary'
+              />
+              <p>
+                پس از ثبت درخواست، سفارش به بخش «مرجوعی‌ها» منتقل می‌شود و پس
+                از بررسی پشتیبانی نتیجه به شما اطلاع داده خواهد شد.
+              </p>
+            </div>
+
+            <div className='flex flex-col-reverse gap-2 border-t border-black/5 pt-4 sm:flex-row sm:justify-end dark:border-white/10'>
+              <SiteButton
+                type='button'
+                variant='outline'
+                size='md'
+                onClick={safeClose}
+                disabled={submitting}
+                className='w-full sm:w-auto'
+              >
+                انصراف
+              </SiteButton>
+
+              <SiteButton
+                type='button'
+                variant='primary'
+                size='md'
+                onClick={submit}
+                disabled={submitting || items.length === 0 || !orderItemId}
+                className='w-full sm:w-auto'
+              >
+                {submitting ? (
+                  <span className='flex items-center gap-2'>
+                    <span className='h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white' />
+                    در حال ثبت...
+                  </span>
+                ) : (
+                  <span className='flex items-center gap-2'>
+                    <HiOutlineArrowUturnLeft size={17} />
+                    ثبت درخواست
+                  </span>
+                )}
+              </SiteButton>
+            </div>
           </div>
-        </div>
+        </SiteCard>
       </div>
     </div>
   );

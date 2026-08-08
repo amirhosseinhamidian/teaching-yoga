@@ -1,16 +1,34 @@
+/* eslint-disable react/prop-types */
 /* eslint-disable no-undef */
-import CourseDetailsCard from '@/components/CourseCards/CourseDetailsCard';
-import PageTitle from '@/components/Ui/PageTitle/PageTitle';
+
 import React from 'react';
-import { BsCameraVideo } from 'react-icons/bs';
-import { WiTime4 } from 'react-icons/wi';
-import { BiBarChartAlt2 } from 'react-icons/bi';
-import { BiSupport } from 'react-icons/bi';
-import { GrGroup } from 'react-icons/gr';
-import { FaStar } from 'react-icons/fa6';
-import { BsInfoCircle } from 'react-icons/bs';
-import { FiMonitor } from 'react-icons/fi';
-import { redirect } from 'next/navigation';
+import Link from 'next/link';
+import { headers } from 'next/headers';
+import { notFound } from 'next/navigation';
+
+import HeaderWrapper from '@/components/Header/HeaderWrapper';
+import Footer from '@/components/Footer/Footer';
+
+import CourseDetailsCard from '@/components/CourseCards/CourseDetailsCard';
+import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
+import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
+import CoursePriceCard from '@/components/CourseCards/CoursePriceCard';
+import CourseSubscriptionCard from '@/components/CourseCards/CourseSubscriptionCard';
+import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
+import CourseIntroPlayer from '@/components/CourseCards/CourseIntroPlayer';
+
+import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
+import CommentsMainCard from '@/components/Comment/CommentsMainCard';
+
+import CourseFAQ from '@/components/CourseCards/CourseFAQ';
+
+import PageBackground from '@/components/SiteUi/PageBackground/PageBackground';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SectionHeader from '@/components/SiteUi/SectionHeader/SectionHeader';
+
+import { getAuthUser } from '@/utils/getAuthUser';
+import { formatTime } from '@/utils/dateTimeHelper';
 
 import {
   BEGINNER,
@@ -20,354 +38,575 @@ import {
   INTERMEDIATE_ADVANCED,
   BEGINNER_ADVANCED,
 } from '@/constants/courseLevels';
+
 import { COMPLETED, IN_PROGRESS } from '@/constants/courseStatus';
-import CourseDescriptionCard from '@/components/CourseCards/CourseDescriptionCard';
-import CourseLessonsCard from '@/components/CourseCards/CourseLessonsCard';
-import CommentsMainCard from '@/components/Comment/CommentsMainCard';
-import CourseFAQ from '@/components/CourseCards/CourseFAQ';
-import VideoPlayer from '@/components/VideoPlayer/VideoPlayer';
-import InstructorCard from '@/components/modules/InstructorCard/InstructorCard';
-import { headers } from 'next/headers';
-import Footer from '@/components/Footer/Footer';
-import { getAuthUser } from '@/utils/getAuthUser';
-import CoursePriceCard from '@/components/CourseCards/CoursePriceCard';
-import CourseWatchCard from '@/components/CourseCards/CourseWatchCard';
-import { formatTime } from '@/utils/dateTimeHelper';
-import HeaderWrapper from '@/components/Header/HeaderWrapper';
-import CourseSubscriptionCard from '@/components/CourseCards/CourseSubscriptionCard';
+
 import {
   toAbsoluteAppUrl,
   toOpenGraphImages,
 } from '@/server/media/absolute-url';
 
-export async function generateMetadata({ params }) {
-  const { shortAddress } = params;
-  // درخواست برای اطلاعات سئو
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/admin/seo/internal?page=${shortAddress}`,
-    {
-      method: 'GET',
-      headers: headers(),
-    }
-  );
+import {
+  HiOutlineAcademicCap,
+  HiOutlineCheckBadge,
+  HiOutlineHome,
+  HiOutlineSparkles,
+} from 'react-icons/hi2';
 
-  // اطلاعات پیش‌فرض
-  const defaultSeoData = {
-    title: 'سمانه یوگا',
-    description: 'دوره های یوگا و مدیتیشن با سمانه',
-    robots: 'index, follow',
-    canonical: `https://samaneyoga.ir/courses/${shortAddress}`,
-  };
+import { BsCameraVideo, BsInfoCircle } from 'react-icons/bs';
 
-  if (!res.ok) {
-    console.error('Failed to fetch SEO data for the course.');
-    return defaultSeoData;
-  }
+import { WiTime4 } from 'react-icons/wi';
 
-  const result = await res.json();
+import { BiBarChartAlt2, BiSupport } from 'react-icons/bi';
 
-  if (!result.success || !result.data) {
-    return defaultSeoData;
-  }
+import { GrGroup } from 'react-icons/gr';
+import { FaStar } from 'react-icons/fa6';
+import { FiMonitor } from 'react-icons/fi';
+import { PiCrownSimple } from 'react-icons/pi';
 
-  const seoData = result.data;
+export const dynamic = 'force-dynamic';
 
-  return {
-    title: seoData?.siteTitle || defaultSeoData.title,
-    description: seoData?.metaDescription || defaultSeoData.description,
-    keywords: seoData?.keywords || '',
-    robots: seoData?.robotsTag || defaultSeoData.robots,
-    canonical: seoData?.canonicalTag || defaultSeoData.canonical,
-    openGraph: {
-      title: seoData?.ogTitle || '',
-      description: seoData?.ogDescription || '',
-      url: toAbsoluteAppUrl(seoData.ogUrl || `/courses/${shortAddress}`),
+const DEFAULT_DESCRIPTION =
+  'دوره‌های آنلاین یوگا و مدیتیشن سمانه یوگا؛ آموزش اصولی و مرحله‌به‌مرحله برای ساختن یک مسیر تمرینی آگاهانه.';
 
-      images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
-    },
-  };
-}
+const getApiBaseUrl = () =>
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || '';
 
-const fetchCourseData = async (shortAddress) => {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/courses/${shortAddress}`,
-      {
-        method: 'GET',
-        headers: headers(),
-        next: {
-          revalidate: 1, // 2 hours
-        },
-      }
-    );
-    if (!response.ok) {
-      throw new Error('Failed to fetch course data');
-    }
+const getCourseLevel = (level) => {
+  switch (level) {
+    case BEGINNER:
+      return 'مبتدی';
 
-    const course = await response.json();
-    const videoLink = course.introLink;
+    case INTERMEDIATE:
+      return 'متوسط';
 
-    return { course, videoLink };
-  } catch (error) {
-    console.error('Error fetching course data:', error);
-    redirect('/not-found');
+    case ADVANCED:
+      return 'پیشرفته';
+
+    case BEGINNER_INTERMEDIATE:
+      return 'مبتدی تا متوسط';
+
+    case INTERMEDIATE_ADVANCED:
+      return 'متوسط تا پیشرفته';
+
+    case BEGINNER_ADVANCED:
+      return 'مبتدی تا پیشرفته';
+
+    default:
+      return 'مبتدی';
   }
 };
 
-const checkUserBuyCourse = async (shortAddress, userId) => {
-  const baseResult = {
+const getCourseStatus = (status) => {
+  switch (status) {
+    case COMPLETED:
+      return 'تکمیل‌شده';
+
+    case IN_PROGRESS:
+      return 'در حال تکمیل';
+
+    default:
+      return 'تکمیل‌شده';
+  }
+};
+
+const getPricingModeLabel = (pricingMode) => {
+  switch (pricingMode) {
+    case 'SUBSCRIPTION_ONLY':
+      return 'دسترسی با اشتراک';
+
+    case 'BOTH':
+      return 'خرید یا اشتراک';
+
+    case 'TERM_ONLY':
+    default:
+      return 'خرید دوره';
+  }
+};
+
+const fetchCourseData = async (shortAddress) => {
+  try {
+    const apiBaseUrl = getApiBaseUrl();
+
+    if (!apiBaseUrl || !shortAddress) {
+      return null;
+    }
+
+    const response = await fetch(
+      `${apiBaseUrl}/api/courses/${encodeURIComponent(shortAddress)}`,
+      {
+        method: 'GET',
+        headers: headers(),
+        cache: 'no-store',
+      }
+    );
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`Course API returned ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    const course =
+      result?.data &&
+      typeof result.data === 'object' &&
+      !Array.isArray(result.data)
+        ? result.data
+        : result;
+
+    if (!course?.id) {
+      return null;
+    }
+
+    return {
+      course,
+
+      videoLink: course?.introLink || '',
+    };
+  } catch (error) {
+    console.error('[COURSE_DETAIL_FETCH_ERROR]', error);
+
+    return null;
+  }
+};
+
+const checkUserCourseAccess = async (shortAddress, userId) => {
+  const defaultResult = {
     hasAccess: false,
     viaSubscription: false,
     inSubscription: false,
   };
 
   try {
-    if (!shortAddress) return baseResult;
+    const apiBaseUrl = getApiBaseUrl();
 
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
-    const url = new URL(`${base}/api/check-purchase`);
-
-    url.searchParams.set('shortAddress', String(shortAddress)); // URL خودش encode می‌کنه
-    if (userId) url.searchParams.set('userId', String(userId));
-
-    const res = await fetch(url.toString(), { method: 'GET' });
-
-    // امن‌تر: ممکنه body خالی یا غیر JSON باشه
-    let data = {};
-    const contentType = res.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      data = await res.json().catch(() => ({}));
-    } else {
-      // اگر html/text بود، ignore
-      data = {};
+    if (!apiBaseUrl || !shortAddress) {
+      return defaultResult;
     }
 
-    // ✅ 200: از دیتا استفاده کن، ولی اگر فیلد purchased نبود، به 200 اعتماد کن
-    if (res.status === 200) {
+    const url = new URL(`${apiBaseUrl}/api/check-purchase`);
+
+    url.searchParams.set('shortAddress', String(shortAddress));
+
+    if (userId) {
+      url.searchParams.set('userId', String(userId));
+    }
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: headers(),
+      cache: 'no-store',
+    });
+
+    const contentType = response.headers.get('content-type') || '';
+
+    const data = contentType.includes('application/json')
+      ? await response.json().catch(() => ({}))
+      : {};
+
+    const inSubscription = Boolean(
+      data?.inSubscription ?? data?.isInSubscription
+    );
+
+    if (response.status === 200) {
       const purchased =
         typeof data?.purchased === 'boolean' ? data.purchased : true;
 
       return {
-        hasAccess: purchased || !!data?.viaSubscription,
-        viaSubscription: !!data?.viaSubscription,
-        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
+        hasAccess: purchased || Boolean(data?.viaSubscription),
+
+        viaSubscription: Boolean(data?.viaSubscription),
+
+        inSubscription,
       };
     }
 
-    // ✅ 403: دسترسی ندارد ولی inSubscription ممکنه مهم باشد
-    if (res.status === 403) {
-      return {
-        ...baseResult,
-        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
-      };
-    }
-
-    // ✅ بقیه status ها: خطای سرور/بدنه
-    if (!res.ok) {
-      console.error('check-purchase failed:', res.status, data);
-      return {
-        ...baseResult,
-        inSubscription: !!(data?.inSubscription ?? data?.isInSubscription),
-      };
-    }
-
-    return baseResult;
+    return {
+      ...defaultResult,
+      inSubscription,
+    };
   } catch (error) {
-    console.error('Error while checking user course:', error);
-    return baseResult;
+    console.error('[COURSE_ACCESS_CHECK_ERROR]', error);
+
+    return defaultResult;
   }
 };
 
-async function page({ params }) {
-  const user = getAuthUser();
-  const userId = user?.id || null;
+export async function generateMetadata({ params }) {
   const { shortAddress } = params;
 
-  const { course, videoLink } = await fetchCourseData(shortAddress);
-  const { hasAccess, viaSubscription, inSubscription } =
-    await checkUserBuyCourse(shortAddress, userId);
+  const defaultSeo = {
+    title: 'دوره آموزشی | سمانه یوگا',
 
-  if (!course) {
-    redirect('/not-found');
+    description: DEFAULT_DESCRIPTION,
+
+    robots: 'index, follow',
+
+    canonical: `https://samaneyoga.ir/courses/${shortAddress}`,
+  };
+
+  try {
+    const apiBaseUrl = getApiBaseUrl();
+
+    const response = await fetch(
+      `${apiBaseUrl}/api/admin/seo/internal?page=${encodeURIComponent(
+        shortAddress
+      )}`,
+      {
+        method: 'GET',
+
+        headers: headers(),
+
+        next: {
+          revalidate: 7200,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Course SEO API returned ${response.status}`);
+    }
+
+    const result = await response.json();
+
+    const seoData = result?.data;
+
+    if (!result?.success || !seoData) {
+      throw new Error('Course SEO response is invalid');
+    }
+
+    return {
+      title: seoData?.siteTitle || defaultSeo.title,
+
+      description: seoData?.metaDescription || defaultSeo.description,
+
+      keywords: seoData?.keywords || '',
+
+      robots: seoData?.robotsTag || defaultSeo.robots,
+
+      alternates: {
+        canonical: toAbsoluteAppUrl(
+          seoData?.canonicalTag || `/courses/${shortAddress}`
+        ),
+      },
+
+      openGraph: {
+        siteName: seoData?.ogSiteName || 'سمانه یوگا',
+
+        title: seoData?.ogTitle || seoData?.siteTitle || defaultSeo.title,
+
+        description:
+          seoData?.ogDescription ||
+          seoData?.metaDescription ||
+          defaultSeo.description,
+
+        url: toAbsoluteAppUrl(seoData?.ogUrl || `/courses/${shortAddress}`),
+
+        images: toOpenGraphImages(seoData?.ogImage, seoData?.ogImageAlt || ''),
+
+        type: 'website',
+        locale: 'fa_IR',
+      },
+    };
+  } catch (error) {
+    console.error('[COURSE_DETAIL_METADATA_ERROR]', error);
+
+    return {
+      title: defaultSeo.title,
+
+      description: defaultSeo.description,
+
+      robots: defaultSeo.robots,
+
+      alternates: {
+        canonical: defaultSeo.canonical,
+      },
+    };
+  }
+}
+
+const CourseDetailPage = async ({ params }) => {
+  const { shortAddress } = params;
+
+  const user = await getAuthUser();
+
+  const [courseResult, accessResult] = await Promise.all([
+    fetchCourseData(shortAddress),
+
+    checkUserCourseAccess(shortAddress, user?.id || null),
+  ]);
+
+  if (!courseResult?.course) {
+    notFound();
   }
 
-  const getLevel = (level) => {
-    let value = '';
-    switch (level) {
-      case BEGINNER:
-        value = 'مبتدی';
-        break;
-      case INTERMEDIATE:
-        value = 'متوسط';
-        break;
-      case ADVANCED:
-        value = 'پیشرفته';
-        break;
-      case BEGINNER_INTERMEDIATE:
-        value = 'مبتدی/متوسط';
-        break;
-      case INTERMEDIATE_ADVANCED:
-        value = 'متوسط/پیشرفته';
-        break;
-      case BEGINNER_ADVANCED:
-        value = 'مبتدی تا پیشرفته';
-        break;
-      default:
-        value = 'مبتدی';
-        break;
-    }
-    return value;
-  };
+  const { course, videoLink } = courseResult;
 
-  const getCourseStatus = (status) => {
-    let value = '';
-    switch (status) {
-      case COMPLETED:
-        value = 'تکمیل شده';
-        break;
-      case IN_PROGRESS:
-        value = 'در حال تکمیل';
-        break;
-      default:
-        value = 'تکمیل شده';
-        break;
-    }
-    return value;
-  };
+  const { hasAccess, viaSubscription, inSubscription } = accessResult;
+
+  const allowsDirectPurchase = course.pricingMode !== 'SUBSCRIPTION_ONLY';
+
+  const allowsSubscription =
+    course.pricingMode === 'SUBSCRIPTION_ONLY' || course.pricingMode === 'BOTH';
 
   return (
     <>
       <HeaderWrapper />
-      <div className='container'>
-        <div className='mb-5 flex flex-col-reverse lg:grid lg:grid-cols-2'>
-          <div className='flex flex-col justify-between lg:col-span-1'>
-            <div>
-              <PageTitle className='font-faNa'>{course.title}</PageTitle>
-              <p className='mb-6 font-thin'>{course.shortDescription}</p>
-            </div>
-            <div className='flex w-full flex-col gap-4 sm:flex-row'>
-              <div className='flex w-full flex-col gap-4 sm:flex-row'>
-                {hasAccess ? (
-                  <CourseWatchCard
-                    shortAddress={shortAddress}
-                    className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                  />
-                ) : (
-                  <>
-                    {/* ✅ فقط وقتی خرید مستقیم مجازه، باکس قیمت رو نشون بده */}
-                    {course.pricingMode !== 'SUBSCRIPTION_ONLY' && (
-                      <CoursePriceCard
-                        price={course.price}
-                        discount={course.discount}
-                        finalPrice={course.finalPrice}
-                        courseId={course.id}
-                        className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                      />
-                    )}
 
-                    {/* ✅ وقتی دوره داخل پلن‌های اشتراک هست و مدلش اجازه اشتراک میده */}
-                    {(course.pricingMode === 'SUBSCRIPTION_ONLY' ||
-                      course.pricingMode === 'BOTH') && (
-                      <CourseSubscriptionCard
-                        courseId={course.id}
-                        className='w-full basis-full sm:basis-1/2 lg:basis-full'
-                      />
-                    )}
-                  </>
+      <main
+        dir='rtl'
+        className='relative isolate min-h-screen overflow-hidden bg-background-light transition-colors duration-300 dark:bg-background-dark'
+      >
+        <PageBackground />
+
+        <div className='container mx-auto px-4 pb-16 pt-3 sm:px-6 sm:pb-20 sm:pt-6 lg:pb-24 lg:pt-8'>
+          {/* Breadcrumb */}
+          <nav
+            aria-label='مسیر صفحه'
+            className='mb-3 flex min-w-0 items-center gap-1.5 overflow-hidden text-[10px] text-subtext-light sm:mb-5 sm:gap-2 sm:text-xs dark:text-subtext-dark'
+          >
+            <Link
+              href='/'
+              className='flex shrink-0 items-center gap-1 transition-colors hover:text-secondary'
+            >
+              <HiOutlineHome size={14} />
+
+              <span className='hidden sm:inline'>خانه</span>
+            </Link>
+
+            <span className='opacity-35'>/</span>
+
+            <Link
+              href='/courses'
+              className='shrink-0 transition-colors hover:text-secondary'
+            >
+              دوره‌ها
+            </Link>
+
+            <span className='opacity-35'>/</span>
+
+            <span className='truncate text-text-light dark:text-text-dark'>
+              {course.title}
+            </span>
+          </nav>
+
+          {/* Course top */}
+          <SiteCard
+            as='section'
+            variant='glass'
+            padding='none'
+            radius='lg'
+            topLine
+          >
+            <div
+              aria-hidden='true'
+              className='absolute -right-24 -top-24 h-60 w-60 rounded-full bg-secondary/10 blur-[90px]'
+            />
+
+            <div className='relative z-10 grid lg:grid-cols-[minmax(0,1.05fr)_minmax(380px,0.95fr)] lg:items-center'>
+              {/* Video - mobile first */}
+              <div className='order-1 lg:order-2'>
+                <CourseIntroPlayer
+                  videoUrl={videoLink}
+                  posterUrl={course.cover}
+                  className='rounded-none border-0 shadow-none lg:m-5 lg:rounded-[24px]'
+                />
+              </div>
+
+              {/* Info */}
+              <div className='order-2 p-4 sm:p-6 lg:order-1 lg:p-8'>
+                <div className='flex flex-wrap gap-2'>
+                  <SiteBadge icon={HiOutlineSparkles} size='sm'>
+                    دوره آموزشی
+                  </SiteBadge>
+
+                  <SiteBadge
+                    icon={HiOutlineAcademicCap}
+                    variant='neutral'
+                    size='sm'
+                  >
+                    {getCourseLevel(course.level)}
+                  </SiteBadge>
+
+                  <SiteBadge
+                    icon={
+                      allowsSubscription ? PiCrownSimple : HiOutlineCheckBadge
+                    }
+                    variant={allowsSubscription ? 'yellow' : 'secondary'}
+                    size='sm'
+                  >
+                    {getPricingModeLabel(course.pricingMode)}
+                  </SiteBadge>
+
+                  {hasAccess && (
+                    <SiteBadge
+                      icon={HiOutlineCheckBadge}
+                      variant='success'
+                      size='sm'
+                    >
+                      دسترسی فعال
+                    </SiteBadge>
+                  )}
+
+                  {!hasAccess && inSubscription && (
+                    <SiteBadge icon={PiCrownSimple} variant='yellow' size='sm'>
+                      موجود در اشتراک
+                    </SiteBadge>
+                  )}
+                </div>
+
+                <h1 className='mt-4 text-xl font-black leading-9 text-text-light sm:text-3xl sm:leading-[1.7] lg:text-[34px] dark:text-text-dark'>
+                  {course.title}
+                </h1>
+
+                {course.shortDescription && (
+                  <p className='mt-2 line-clamp-3 text-xs leading-7 text-subtext-light sm:mt-4 sm:line-clamp-none sm:text-sm sm:leading-8 lg:text-base dark:text-subtext-dark'>
+                    {course.shortDescription}
+                  </p>
                 )}
 
-                {/* for smaller screen */}
-                <div className='self-stretch sm:basis-1/2 lg:hidden'>
-                  <InstructorCard
-                    instructor={course.instructor}
-                    className='h-full justify-between'
-                  />
+                <div className='mt-4 sm:mt-6'>
+                  {hasAccess ? (
+                    <CourseWatchCard
+                      shortAddress={shortAddress}
+                      viaSubscription={viaSubscription}
+                    />
+                  ) : (
+                    <div
+                      className={
+                        allowsDirectPurchase && allowsSubscription
+                          ? 'grid gap-3 md:grid-cols-2'
+                          : 'grid grid-cols-1'
+                      }
+                    >
+                      {allowsDirectPurchase && (
+                        <CoursePriceCard
+                          price={Number(course.price || 0)}
+                          discount={Number(course.discount || 0)}
+                          finalPrice={Number(course.finalPrice || 0)}
+                          courseId={course.id}
+                        />
+                      )}
+
+                      {allowsSubscription && (
+                        <CourseSubscriptionCard courseId={course.id} />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-          </div>
-          <div className='m-auto mt-10 items-center lg:col-span-1 lg:mt-0 lg:py-8 lg:pr-10'>
-            <VideoPlayer videoUrl={videoLink} posterUrl={course.cover} />
-          </div>
-        </div>
+          </SiteCard>
 
-        <div className='grid grid-cols-3 gap-2 sm:gap-4'>
-          <div className='col-span-3 lg:col-span-2'>
-            <div className='grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:gap-4'>
-              <CourseDetailsCard
-                icon={BsCameraVideo}
-                title='تعداد جلسات'
-                value={course.sessionCount}
-                horizontal={true}
-              />
-              <CourseDetailsCard
-                icon={WiTime4}
-                title='زمان دوره'
-                value={formatTime(course.duration, 'hh:mm:ss')}
-                horizontal={true}
-              />
-              <CourseDetailsCard
-                icon={BiBarChartAlt2}
-                title='سطح دوره'
-                value={getLevel(course.level)}
-                horizontal={true}
-              />
-              <CourseDetailsCard
-                icon={BiSupport}
-                title='پشتیبانی'
-                value='آنلاین'
-                horizontal={true}
-              />
-              <CourseDetailsCard
-                icon={GrGroup}
-                title='شرکت کنندگان'
-                value={course.participants}
-                horizontal={true}
-              />
-              <CourseDetailsCard
-                icon={FiMonitor}
-                title='نوع مشاهده'
-                value='آنلاین'
-                horizontal={true}
-              />
-            </div>
-            <CourseDescriptionCard
-              description={course.description}
-              className='mt-4'
-            />
-            <CourseLessonsCard
-              className='mt-4'
-              shortAddress={course.shortAddress}
-            />
-            <CommentsMainCard
-              className='mt-4'
-              isCourse={true}
-              referenceId={course.id}
-            />
-            <CourseFAQ className='my-4' />
-          </div>
-          {/* for larger screen */}
-          <div className='hidden lg:col-span-1 lg:block'>
-            <InstructorCard instructor={course.instructor} />
-            <div className='mt-3 grid grid-cols-2 gap-3'>
-              <CourseDetailsCard
-                icon={FaStar}
-                title='میزان رضایت'
-                value={course.rating}
+          {/* Course meta */}
+          <section className='mt-5 sm:mt-7'>
+            <SiteCard variant='glass' padding='md' radius='md' topLine>
+              <SectionHeader
+                eyebrow='اطلاعات دوره'
+                title='مشخصات این آموزش'
+                icon={HiOutlineAcademicCap}
+                className='mb-4'
               />
 
-              <CourseDetailsCard
-                icon={BsInfoCircle}
-                title='وضعیت دوره'
-                value={getCourseStatus(course.status)}
-              />
+              <div className='grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6'>
+                <CourseDetailsCard
+                  icon={BsCameraVideo}
+                  title='جلسات'
+                  value={course.sessionCount}
+                />
+
+                <CourseDetailsCard
+                  icon={WiTime4}
+                  title='مدت دوره'
+                  value={formatTime(course.duration, 'hh:mm:ss')}
+                />
+
+                <CourseDetailsCard
+                  icon={BiBarChartAlt2}
+                  title='سطح'
+                  value={getCourseLevel(course.level)}
+                />
+
+                <CourseDetailsCard
+                  icon={BiSupport}
+                  title='پشتیبانی'
+                  value='آنلاین'
+                />
+
+                <CourseDetailsCard
+                  icon={GrGroup}
+                  title='هنرجویان'
+                  value={course.participants}
+                />
+
+                <CourseDetailsCard
+                  icon={FiMonitor}
+                  title='نوع مشاهده'
+                  value='آنلاین'
+                />
+              </div>
+            </SiteCard>
+          </section>
+
+          {/* Main */}
+          <div className='mt-5 grid items-start gap-5 sm:mt-7 lg:grid-cols-[minmax(0,1fr)_310px] lg:gap-7 xl:grid-cols-[minmax(0,1fr)_340px]'>
+            <div className='min-w-0 space-y-5'>
+              <CourseDescriptionCard description={course.description} />
+
+              <CourseLessonsCard shortAddress={course.shortAddress} />
+
+              <CommentsMainCard isCourse referenceId={course.id} />
+
+              <CourseFAQ />
             </div>
+
+            {/* Sidebar */}
+            <aside className='space-y-4 lg:sticky lg:top-24'>
+              <InstructorCard instructor={course.instructor} />
+
+              <div className='grid grid-cols-2 gap-3'>
+                <CourseDetailsCard
+                  icon={FaStar}
+                  title='رضایت'
+                  value={course.rating}
+                />
+
+                <CourseDetailsCard
+                  icon={BsInfoCircle}
+                  title='وضعیت'
+                  value={getCourseStatus(course.status)}
+                />
+              </div>
+
+              <SiteCard
+                variant='secondary'
+                padding='sm'
+                radius='md'
+                className='hidden lg:block'
+              >
+                <HiOutlineSparkles size={22} className='text-secondary' />
+
+                <h3 className='mt-3 text-sm font-black leading-7 text-text-light dark:text-text-dark'>
+                  با ریتم خودت تمرین کن
+                </h3>
+
+                <p className='mt-1.5 text-xs leading-7 text-subtext-light dark:text-subtext-dark'>
+                  جلسات را مرحله‌به‌مرحله ببین و تمرین‌ها را متناسب با زمان و
+                  شرایط خودت ادامه بده.
+                </p>
+              </SiteCard>
+            </aside>
           </div>
         </div>
-      </div>
+      </main>
+
       <Footer />
     </>
   );
-}
+};
 
-export default page;
+export default CourseDetailPage;

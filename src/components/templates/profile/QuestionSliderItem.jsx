@@ -1,77 +1,152 @@
 'use client';
+
 import React from 'react';
 import PropTypes from 'prop-types';
 import Image from 'next/image';
+
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
 import { getShamsiDate } from '@/utils/dateTimeHelper';
-import { RiQuestionAnswerLine } from 'react-icons/ri';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
+
+import {
+  HiOutlineChatBubbleLeftEllipsis,
+  HiOutlineCheckCircle,
+  HiOutlineClock,
+  HiOutlineSparkles,
+} from 'react-icons/hi2';
+import { RiQuestionAnswerLine } from 'react-icons/ri';
 
 const QuestionSliderItem = ({ question }) => {
   const { user } = useAuthUser();
+
   return (
-    <div className='flex flex-col gap-4'>
+    <div className='space-y-4 pb-8'>
       <div className='flex flex-wrap items-center gap-2'>
-        <span className='whitespace-nowrap rounded-full border border-gray-500 px-2 py-1 text-2xs text-subtext-light sm:text-xs dark:text-subtext-dark'>
+        <SiteBadge variant='secondary' size='sm'>
           {question.courseTitle}
-        </span>
-        <span className='whitespace-nowrap rounded-full border border-gray-500 px-2 py-1 text-2xs text-subtext-light sm:text-xs dark:text-subtext-dark'>
+        </SiteBadge>
+
+        <span className='rounded-xl border border-black/5 bg-background-light/45 px-2.5 py-1.5 text-[9px] font-bold text-subtext-light sm:text-[10px] dark:border-white/10 dark:bg-background-dark/30 dark:text-subtext-dark'>
           {question.termName}
         </span>
-        <span className='whitespace-nowrap rounded-full border border-gray-500 px-2 py-1 text-2xs text-subtext-light sm:text-xs dark:text-subtext-dark'>
+
+        <span className='rounded-xl border border-black/5 bg-background-light/45 px-2.5 py-1.5 text-[9px] font-bold text-subtext-light sm:text-[10px] dark:border-white/10 dark:bg-background-dark/30 dark:text-subtext-dark'>
           {question.sessionName}
         </span>
       </div>
-      <div className='flex flex-col rounded-xl border border-subtext-light px-4 py-2 lg:flex-row dark:border-subtext-dark'>
-        <div>
-          <div className='flex items-center gap-2'>
-            <Image
-              src={user?.avatar || '/images/default-profile.png'}
-              alt={user.username}
-              width={256}
-              height={256}
-              className='h-11 w-11 rounded-full border xs:h-12 xs:w-12 sm:h-14 sm:w-14'
-            />
-            <div className='flex flex-col'>
-              <span className='text-sm sm:text-base'>{user.username}</span>
-              <span className='font-faNa text-xs text-subtext-light sm:text-sm dark:text-subtext-dark'>
+
+      <SiteCard
+        variant='glass'
+        padding='none'
+        radius='md'
+        className='relative overflow-hidden p-4 sm:p-5'
+      >
+        <div className='mb-4 flex items-center justify-between gap-3'>
+          <div className='flex min-w-0 items-center gap-3'>
+            <div className='relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-secondary/15 bg-secondary/10 sm:h-12 sm:w-12'>
+              <Image
+                src={user?.avatar || '/images/default-profile.png'}
+                alt={user?.username || 'کاربر'}
+                fill
+                sizes='48px'
+                className='object-cover'
+              />
+            </div>
+
+            <div className='min-w-0'>
+              <p className='truncate text-xs font-black text-text-light sm:text-sm dark:text-text-dark'>
+                {user?.username}
+              </p>
+              <p className='mt-0.5 font-faNa text-[9px] text-subtext-light sm:text-[10px] dark:text-subtext-dark'>
                 {getShamsiDate(question.updatedAt)}
-              </span>
+              </p>
             </div>
           </div>
+
+          <span className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary/10 text-secondary'>
+            <HiOutlineChatBubbleLeftEllipsis size={18} />
+          </span>
         </div>
-        <p className='my-4 mr-2 text-xs sm:mr-16 sm:text-sm lg:mr-8'>
+
+        <p className='text-xs leading-7 text-text-light sm:text-sm sm:leading-8 dark:text-text-dark'>
           {question.questionText}
         </p>
-      </div>
+      </SiteCard>
+
       {question.isAnswered ? (
-        <div className='flex flex-col rounded-xl border border-subtext-light px-4 py-2 lg:flex-row dark:border-subtext-dark'>
-          <div className='flex items-center gap-2'>
-            <Image
-              src={question?.instructorAvatar || '/images/default-profile.png'}
-              alt={question.instructorUsername}
-              width={256}
-              height={256}
-              className='h-14 w-14 rounded-full'
-            />
-            <div className='flex flex-col'>
-              <span className='text-sm sm:text-base'>
-                {question.instructorUsername}
-              </span>
-              <span className='font-faNa text-xs text-subtext-light sm:text-sm dark:text-subtext-dark'>
-                {getShamsiDate(question.answeredAt)}
-              </span>
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='md'
+          topLine
+          className='relative overflow-hidden p-4 sm:p-5'
+        >
+          <div
+            aria-hidden='true'
+            className='absolute -left-20 -top-20 h-44 w-44 rounded-full bg-secondary/10 blur-[70px]'
+          />
+
+          <div className='relative z-10'>
+            <div className='mb-4 flex flex-wrap items-center justify-between gap-3'>
+              <div className='flex min-w-0 items-center gap-3'>
+                <div className='relative h-11 w-11 shrink-0 overflow-hidden rounded-2xl border border-secondary/15 bg-secondary/10 sm:h-12 sm:w-12'>
+                  <Image
+                    src={
+                      question?.instructorAvatar || '/images/default-profile.png'
+                    }
+                    alt={question.instructorUsername}
+                    fill
+                    sizes='48px'
+                    className='object-cover'
+                  />
+                </div>
+
+                <div className='min-w-0'>
+                  <div className='flex items-center gap-2'>
+                    <p className='truncate text-xs font-black text-text-light sm:text-sm dark:text-text-dark'>
+                      {question.instructorUsername}
+                    </p>
+
+                    <HiOutlineCheckCircle size={15} className='text-secondary' />
+                  </div>
+
+                  <p className='mt-0.5 font-faNa text-[9px] text-subtext-light sm:text-[10px] dark:text-subtext-dark'>
+                    {getShamsiDate(question.answeredAt)}
+                  </p>
+                </div>
+              </div>
+
+              <SiteBadge variant='secondary' size='sm'>
+                <span className='flex items-center gap-1.5'>
+                  <HiOutlineSparkles size={13} />
+                  پاسخ مربی
+                </span>
+              </SiteBadge>
             </div>
-          </div>
-          <div className='my-4 mr-2 text-xs sm:mr-16 sm:text-sm lg:mr-8'>
+
             <div
-              dangerouslySetInnerHTML={{ __html: question.answerText }} // رندر HTML در JSX
+              className='text-xs leading-7 text-subtext-light sm:text-sm sm:leading-8 dark:text-subtext-dark [&_a]:font-bold [&_a]:text-secondary [&_p]:my-2 [&_strong]:font-black [&_strong]:text-text-light dark:[&_strong]:text-text-dark'
+              dangerouslySetInnerHTML={{ __html: question.answerText }}
             />
           </div>
-        </div>
+        </SiteCard>
       ) : (
-        <div className='flex min-h-44 flex-col items-center justify-center gap-4 rounded-xl border border-subtext-light px-4 py-2 text-xs text-secondary sm:text-sm dark:border-subtext-dark'>
-          <RiQuestionAnswerLine size={42} className='text-secondary' />
-          مربی در حال بررسی و پاسخ به سوال شماست. از صبر و شکیبایی شما متشکریم.
+        <div className='flex min-h-40 flex-col items-center justify-center rounded-[22px] border border-dashed border-secondary/20 bg-secondary/5 px-5 text-center'>
+          <span className='flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+            <RiQuestionAnswerLine size={25} />
+          </span>
+
+          <div className='mt-3 flex items-center gap-1.5 text-secondary'>
+            <HiOutlineClock size={15} />
+            <span className='text-[10px] font-black sm:text-xs'>در انتظار پاسخ</span>
+          </div>
+
+          <p className='mt-1.5 max-w-md text-[10px] leading-6 text-subtext-light sm:text-xs dark:text-subtext-dark'>
+            مربی در حال بررسی و پاسخ به سوال شماست. از صبر و شکیبایی شما
+            متشکریم.
+          </p>
         </div>
       )}
     </div>

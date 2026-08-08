@@ -1,5 +1,6 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(request) {
   try {
@@ -10,29 +11,29 @@ export async function GET(request) {
     const search = searchParams.get('search') || '';
     const skip = (page - 1) * perPage;
 
-    const totalArticles = await prismadb.article.count({
-      where: {
-        title: {
-          contains: search,
-          mode: 'insensitive',
-        },
+    const where = {
+      title: {
+        contains: search,
+        mode: 'insensitive',
       },
+    };
+
+    const totalArticles = await prismadb.article.count({
+      where,
     });
 
     const articles = await prismadb.article.findMany({
-      where: {
-        title: {
-          contains: search,
-          mode: 'insensitive',
-        },
+      where,
+      include: {
+        comments: true,
       },
-      include: { comments: true },
       skip,
       take: perPage,
-      orderBy: { createAt: 'desc' },
+      orderBy: {
+        createAt: 'desc',
+      },
     });
 
-    // دریافت تعداد بازدیدها برای هر مقاله
     const articlesWithVisits = await Promise.all(
       articles.map(async (article) => {
         const visitCount = await prismadb.visitLog.count({
@@ -43,7 +44,8 @@ export async function GET(request) {
 
         return {
           ...article,
-          visitCount, // اضافه کردن تعداد بازدید
+          cover: toAbsoluteMediaUrl(article.cover),
+          visitCount,
         };
       })
     );
@@ -62,16 +64,19 @@ export async function GET(request) {
     );
   } catch (error) {
     return NextResponse.json(
-      { message: 'خطایی رخ داده است', error },
+      {
+        message: 'خطایی رخ داده است',
+        error,
+      },
       { status: 500 }
     );
   }
 }
 
-// ایجاد مقاله جدید (POST)
 export async function POST(req) {
   try {
     const body = await req.json();
+
     const {
       title,
       content,
@@ -91,7 +96,9 @@ export async function POST(req) {
       !shortAddress
     ) {
       return NextResponse.json(
-        { message: 'عنوان و محتوا الزامی هستند' },
+        {
+          message: 'عنوان و محتوا الزامی هستند',
+        },
         { status: 400 }
       );
     }
@@ -104,15 +111,25 @@ export async function POST(req) {
         shortAddress,
         readTime,
         subtitle,
-        isActive: isActive ?? false, // مقدار پیش‌فرض false است
+        isActive: isActive ?? false,
       },
     });
 
-    return NextResponse.json(newArticle, { status: 201 });
+    return NextResponse.json(
+      {
+        ...newArticle,
+        cover: toAbsoluteMediaUrl(newArticle.cover),
+      },
+      { status: 201 }
+    );
   } catch (error) {
     console.error(error);
+
     return NextResponse.json(
-      { message: 'خطایی رخ داده است', error },
+      {
+        message: 'خطایی رخ داده است',
+        error,
+      },
       { status: 500 }
     );
   }

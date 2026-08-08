@@ -3,6 +3,7 @@ import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 import { getCourseComments } from '../../actions/commentActions';
 import { getAuthUser } from '@/utils/getAuthUser';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 // =============================
 // GET → Get Comments
@@ -20,7 +21,7 @@ export async function GET(request) {
       );
     }
 
-    const authUser = getAuthUser();
+    const authUser = await getAuthUser();
     const userId = authUser?.id || null;
 
     const commentsData = await getCourseComments(courseId, userId, page);
@@ -28,6 +29,7 @@ export async function GET(request) {
     return NextResponse.json(commentsData);
   } catch (error) {
     console.error('GET COMMENTS ERROR:', error);
+
     return NextResponse.json(
       { error: 'Error fetching comments' },
       { status: 500 }
@@ -40,7 +42,8 @@ export async function GET(request) {
 // =============================
 export async function POST(request) {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
+
     if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -60,16 +63,27 @@ export async function POST(request) {
 
     const newComment = await prismadb.comment.create({
       data: {
-        courseId,
+        courseId: Number(courseId),
         content,
-        userId: user.id, // from JWT
+        userId: user.id,
       },
-      include: { user: true },
+      include: {
+        user: true,
+      },
     });
 
-    return NextResponse.json(newComment);
+    return NextResponse.json({
+      ...newComment,
+      user: newComment.user
+        ? {
+            ...newComment.user,
+            avatar: toAbsoluteMediaUrl(newComment.user.avatar),
+          }
+        : null,
+    });
   } catch (error) {
     console.error('CREATE COMMENT ERROR:', error);
+
     return NextResponse.json(
       { error: 'Error creating comment' },
       { status: 500 }
@@ -82,7 +96,8 @@ export async function POST(request) {
 // =============================
 export async function PUT(request) {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
+
     if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -100,9 +115,10 @@ export async function PUT(request) {
       );
     }
 
-    // Only comment owner can update
     const comment = await prismadb.comment.findUnique({
-      where: { id: commentId },
+      where: {
+        id: Number(commentId),
+      },
     });
 
     if (!comment || comment.userId !== user.id) {
@@ -113,13 +129,29 @@ export async function PUT(request) {
     }
 
     const updatedComment = await prismadb.comment.update({
-      where: { id: commentId },
-      data: { content },
+      where: {
+        id: Number(commentId),
+      },
+      data: {
+        content,
+      },
+      include: {
+        user: true,
+      },
     });
 
-    return NextResponse.json(updatedComment);
+    return NextResponse.json({
+      ...updatedComment,
+      user: updatedComment.user
+        ? {
+            ...updatedComment.user,
+            avatar: toAbsoluteMediaUrl(updatedComment.user.avatar),
+          }
+        : null,
+    });
   } catch (error) {
     console.error('UPDATE COMMENT ERROR:', error);
+
     return NextResponse.json(
       { error: 'Error updating comment' },
       { status: 500 }
@@ -132,7 +164,8 @@ export async function PUT(request) {
 // =============================
 export async function DELETE(request) {
   try {
-    const user = getAuthUser();
+    const user = await getAuthUser();
+
     if (!user) {
       return NextResponse.json(
         { error: 'Authentication required' },
@@ -151,14 +184,15 @@ export async function DELETE(request) {
     }
 
     const existing = await prismadb.comment.findUnique({
-      where: { id: commentId },
+      where: {
+        id: commentId,
+      },
     });
 
     if (!existing) {
       return NextResponse.json({ error: 'Comment not found' }, { status: 404 });
     }
 
-    // Only owner OR admin can delete
     if (existing.userId !== user.id && user.role !== 'ADMIN') {
       return NextResponse.json(
         { error: 'Not allowed to delete this comment' },
@@ -167,12 +201,17 @@ export async function DELETE(request) {
     }
 
     await prismadb.comment.delete({
-      where: { id: commentId },
+      where: {
+        id: commentId,
+      },
     });
 
-    return NextResponse.json({ message: 'Comment deleted successfully' });
+    return NextResponse.json({
+      message: 'Comment deleted successfully',
+    });
   } catch (error) {
     console.error('DELETE COMMENT ERROR:', error);
+
     return NextResponse.json(
       { error: 'Error deleting comment' },
       { status: 500 }

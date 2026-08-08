@@ -1,11 +1,22 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
+
 import PropTypes from 'prop-types';
-import Button from '@/components/Ui/Button/Button';
+
 import Input from '@/components/Ui/Input/Input';
-import { MdOutlineDiscount } from 'react-icons/md';
-import Link from 'next/link';
+
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+
+import {
+  HiOutlineAcademicCap,
+  HiOutlineArrowLeft,
+  HiOutlineReceiptPercent,
+  HiOutlineShoppingBag,
+  HiOutlineSparkles,
+  HiOutlineTag,
+} from 'react-icons/hi2';
 
 import { useCart } from '@/hooks/cart/useCart';
 import { useShopCart } from '@/hooks/shopCart/useShopCart';
@@ -15,7 +26,6 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
 
 export default function DetailOrderCard({ className }) {
-  // دوره‌ها
   const {
     cartId,
     items: courseItems,
@@ -25,24 +35,24 @@ export default function DetailOrderCard({ className }) {
     loading: courseLoading,
   } = useCart();
 
-  // محصولات
   const {
     items: shopItems,
-    subtotal: shopSubtotal, // ممکنه از API بیاد (فقط fallback)
-    discountAmount: shopDiscountAmountFromState, // تخفیف کد (از API)
-    payable: shopPayableFromState, // قابل پرداخت محصولات (از API)
+    subtotal: shopSubtotal,
+    discountAmount: shopDiscountAmountFromState,
+    payable: shopPayableFromState,
     loading: shopLoading,
   } = useShopCart();
 
   const { applyDiscount } = useCartActions();
 
   const [discountCode, setDiscountCode] = useState('');
+
   const { isDark } = useTheme();
+
   const toast = createToastHandler(isDark);
 
   const loading = courseLoading || shopLoading;
 
-  // آیا چیزی در سبدها هست؟
   const hasCourseItems = useMemo(
     () => Array.isArray(courseItems) && courseItems.length > 0,
     [courseItems]
@@ -55,31 +65,37 @@ export default function DetailOrderCard({ className }) {
 
   const hasAnyItems = hasCourseItems || hasShopItems;
 
-  /* ======================
-     محصولات: محاسبه دقیق تخفیف خود محصول (Per Item)
-     - مبلغ قبل از تخفیف محصول: Σ compareAt*qty (اگر compareAt نبود => unitPrice)
-     - مبلغ بعد از تخفیف محصول: Σ unitPrice*qty
-     - تخفیف خود محصول: Σ max(0, compareAt - unitPrice) * qty
-  ====================== */
   const shopTotals = useMemo(() => {
     const list = Array.isArray(shopItems) ? shopItems : [];
+
     if (!list.length) {
-      return { compareAtTotal: 0, unitTotal: 0, productDiscount: 0 };
+      return {
+        compareAtTotal: 0,
+
+        unitTotal: 0,
+
+        productDiscount: 0,
+      };
     }
 
     let compareAtTotal = 0;
+
     let unitTotal = 0;
+
     let productDiscount = 0;
 
     for (const item of list) {
       const qty = Math.max(0, Number(item.qty || 0));
+
       const unitPrice = Math.max(0, Number(item.unitPrice || 0));
+
       const compareAt = Math.max(
         0,
         item.compareAt != null ? Number(item.compareAt) : 0
       );
 
       compareAtTotal += (compareAt > 0 ? compareAt : unitPrice) * qty;
+
       unitTotal += unitPrice * qty;
 
       if (compareAt > 0 && compareAt > unitPrice) {
@@ -87,28 +103,34 @@ export default function DetailOrderCard({ className }) {
       }
     }
 
-    return { compareAtTotal, unitTotal, productDiscount };
+    return {
+      compareAtTotal,
+      unitTotal,
+      productDiscount,
+    };
   }, [shopItems]);
 
-  const shopTotalCompareAt = shopTotals.compareAtTotal; // مبلغ محصولات (قبل از تخفیف محصول)
-  const shopSubtotalSafe = shopTotals.unitTotal; // مبلغ محصولات (بعد از تخفیف محصول)
-  const shopProductDiscount = shopTotals.productDiscount; // تخفیف خود محصول
+  const shopTotalCompareAt = shopTotals.compareAtTotal;
 
-  // قابل پرداخت محصولات (ترجیحاً از API)
+  const shopSubtotalSafe = shopTotals.unitTotal;
+
+  const shopProductDiscount = shopTotals.productDiscount;
+
   const shopPayable = useMemo(() => {
     if (shopPayableFromState != null) {
-      const n = Number(shopPayableFromState || 0);
-      return n >= 0 ? n : 0;
+      const number = Number(shopPayableFromState || 0);
+
+      return number >= 0 ? number : 0;
     }
 
-    // fallback: اگر payable نیامده، از subtotalSafe - discountAmount استفاده کن
     const code = Math.max(0, Number(shopDiscountAmountFromState || 0));
+
     return Math.max(0, Number(shopSubtotalSafe || 0) - code);
   }, [shopPayableFromState, shopSubtotalSafe, shopDiscountAmountFromState]);
 
-  // ✅ تخفیف کد محصولات را از اختلاف subtotalSafe و payable به دست می‌آوریم (دقیق)
   const shopCodeDiscount = useMemo(() => {
     const diff = Number(shopSubtotalSafe || 0) - Number(shopPayable || 0);
+
     return diff > 0 ? diff : 0;
   }, [shopSubtotalSafe, shopPayable]);
 
@@ -116,39 +138,46 @@ export default function DetailOrderCard({ className }) {
     return Number(shopProductDiscount || 0) + Number(shopCodeDiscount || 0);
   }, [shopProductDiscount, shopCodeDiscount]);
 
-  /* ======================
-     جمع کل
-     - مبلغ کل: (دوره‌ها: courseTotal) + (محصولات: shopTotalCompareAt)
-     - تخفیف کل: (دوره‌ها: courseDiscount) + (محصولات: shopTotalDiscount)
-     - قابل پرداخت: (دوره‌ها: coursePayable) + (محصولات: shopPayable)
-  ====================== */
   const grandTotal = useMemo(() => {
-    const c = hasCourseItems ? Number(courseTotal || 0) : 0;
-    const s = hasShopItems ? Number(shopTotalCompareAt || 0) : 0;
-    return c + s;
+    const courses = hasCourseItems ? Number(courseTotal || 0) : 0;
+
+    const shop = hasShopItems ? Number(shopTotalCompareAt || 0) : 0;
+
+    return courses + shop;
   }, [hasCourseItems, courseTotal, hasShopItems, shopTotalCompareAt]);
 
   const grandDiscount = useMemo(() => {
-    const c = hasCourseItems ? Number(courseDiscount || 0) : 0;
-    const s = hasShopItems ? Number(shopTotalDiscount || 0) : 0;
-    return c + s;
+    const courses = hasCourseItems ? Number(courseDiscount || 0) : 0;
+
+    const shop = hasShopItems ? Number(shopTotalDiscount || 0) : 0;
+
+    return courses + shop;
   }, [hasCourseItems, courseDiscount, hasShopItems, shopTotalDiscount]);
 
   const grandPayable = useMemo(() => {
-    const c = hasCourseItems ? Number(coursePayable || 0) : 0;
-    const s = hasShopItems ? Number(shopPayable || 0) : 0;
-    return c + s;
+    const courses = hasCourseItems ? Number(coursePayable || 0) : 0;
+
+    const shop = hasShopItems ? Number(shopPayable || 0) : 0;
+
+    return courses + shop;
   }, [hasCourseItems, coursePayable, hasShopItems, shopPayable]);
 
   const handleApplyDiscount = async () => {
-    if (!discountCode.trim()) return;
-
-    if (!hasAnyItems) {
-      toast.showErrorToast('سبد خرید شما خالی است.');
+    if (!discountCode.trim()) {
       return;
     }
 
-    const res = await applyDiscount({ code: discountCode, cartId });
+    if (!hasAnyItems) {
+      toast.showErrorToast('سبد خرید شما خالی است.');
+
+      return;
+    }
+
+    const res = await applyDiscount({
+      code: discountCode,
+
+      cartId,
+    });
 
     if (res.meta?.requestStatus === 'fulfilled') {
       toast.showSuccessToast('کد تخفیف با موفقیت اعمال شد');
@@ -157,162 +186,254 @@ export default function DetailOrderCard({ className }) {
     }
   };
 
-  const formatPrice = (v) => {
-    const n = Number(v || 0);
-    return n === 0 ? 'رایگان' : `${n.toLocaleString('fa-IR')} تومان`;
+  const formatPrice = (value) => {
+    const number = Number(value || 0);
+
+    return number === 0 ? 'رایگان' : `${number.toLocaleString('fa-IR')} تومان`;
   };
 
-  const formatDiscount = (v) => {
-    const n = Number(v || 0);
-    return n === 0 ? '-' : `${n.toLocaleString('fa-IR')} تومان`;
+  const formatDiscount = (value) => {
+    const number = Number(value || 0);
+
+    return number === 0 ? '-' : `${number.toLocaleString('fa-IR')} تومان`;
   };
 
-  // فقط دوره‌های رایگان و محصولی وجود ندارد
   const onlyFreeCoursesNoShop = useMemo(() => {
-    if (!hasCourseItems) return false;
-    if (hasShopItems) return false;
+    if (!hasCourseItems) {
+      return false;
+    }
+
+    if (hasShopItems) {
+      return false;
+    }
+
     return Number(coursePayable || 0) === 0;
   }, [hasCourseItems, hasShopItems, coursePayable]);
 
   return (
-    <div
-      className={`rounded-xl bg-surface-light p-6 shadow sm:p-8 dark:bg-surface-dark ${className}`}
+    <SiteCard
+      variant='glass'
+      padding='none'
+      radius='lg'
+      topLine
+      className={`relative overflow-hidden p-5 sm:p-6 ${className || ''}`}
     >
-      <h2 className='mb-6 text-lg font-semibold md:text-xl'>جزئیات سفارش</h2>
+      <div
+        aria-hidden='true'
+        className='pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-secondary/10 blur-[85px]'
+      />
 
-      {!hasAnyItems ? (
-        <div className='rounded-xl bg-foreground-light/35 p-4 text-sm text-subtext-light dark:bg-foreground-dark/35 dark:text-subtext-dark'>
-          سبد خرید شما خالی است.
+      <div className='relative z-10'>
+        {/* Header */}
+        <div className='mb-5 flex items-center gap-3 border-b border-black/5 pb-4 dark:border-white/10'>
+          <span className='flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+            <HiOutlineReceiptPercent size={22} />
+          </span>
+
+          <div>
+            <p className='text-[9px] font-bold text-secondary'>خلاصه خرید</p>
+
+            <h2 className='mt-0.5 text-base font-black text-text-light dark:text-text-dark'>
+              جزئیات سفارش
+            </h2>
+          </div>
         </div>
-      ) : (
-        <>
-          {/* دوره‌ها */}
-          {hasCourseItems && (
-            <div className='mb-5 rounded-xl bg-foreground-light/35 p-4 dark:bg-foreground-dark/35'>
-              <h3 className='mb-3 text-sm font-semibold'>دوره‌ها</h3>
 
-              <div className='flex justify-between'>
-                <span>مبلغ</span>
-                <span className='font-faNa'>{formatPrice(courseTotal)}</span>
+        {!hasAnyItems ? (
+          <div className='rounded-2xl bg-background-light/50 p-4 text-xs text-subtext-light dark:bg-background-dark/30 dark:text-subtext-dark'>
+            سبد خرید شما خالی است.
+          </div>
+        ) : (
+          <div className='space-y-3'>
+            {/* Courses */}
+            {hasCourseItems && (
+              <div className='rounded-[20px] border border-black/5 bg-background-light/45 p-4 dark:border-white/10 dark:bg-background-dark/30'>
+                <div className='mb-3 flex items-center gap-2'>
+                  <HiOutlineAcademicCap size={17} className='text-secondary' />
+
+                  <h3 className='text-xs font-black text-text-light dark:text-text-dark'>
+                    دوره‌ها
+                  </h3>
+                </div>
+
+                <div className='space-y-2.5 text-[10px] sm:text-xs'>
+                  <div className='flex justify-between gap-3 text-subtext-light dark:text-subtext-dark'>
+                    <span>مبلغ</span>
+
+                    <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                      {formatPrice(courseTotal)}
+                    </span>
+                  </div>
+
+                  <div className='flex justify-between gap-3 text-subtext-light dark:text-subtext-dark'>
+                    <span>تخفیف</span>
+
+                    <span className='font-faNa font-bold text-red'>
+                      {formatDiscount(courseDiscount)}
+                    </span>
+                  </div>
+
+                  <div className='flex justify-between gap-3 border-t border-black/5 pt-2.5 font-black dark:border-white/10'>
+                    <span className='text-text-light dark:text-text-dark'>
+                      قابل پرداخت
+                    </span>
+
+                    <span className='font-faNa text-secondary'>
+                      {formatPrice(coursePayable)}
+                    </span>
+                  </div>
+                </div>
               </div>
+            )}
 
-              <div className='mt-2 flex justify-between'>
-                <span>تخفیف</span>
-                <span className='font-faNa text-red'>
-                  {formatDiscount(courseDiscount)}
-                </span>
+            {/* Products */}
+            {hasShopItems && (
+              <div className='rounded-[20px] border border-black/5 bg-background-light/45 p-4 dark:border-white/10 dark:bg-background-dark/30'>
+                <div className='mb-3 flex items-center gap-2'>
+                  <HiOutlineShoppingBag size={17} className='text-secondary' />
+
+                  <h3 className='text-xs font-black text-text-light dark:text-text-dark'>
+                    محصولات
+                  </h3>
+                </div>
+
+                <div className='space-y-2.5 text-[10px] sm:text-xs'>
+                  <div className='flex justify-between gap-3 text-subtext-light dark:text-subtext-dark'>
+                    <span>مبلغ</span>
+
+                    <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                      {formatPrice(shopTotalCompareAt)}
+                    </span>
+                  </div>
+
+                  <div className='flex justify-between gap-3 text-subtext-light dark:text-subtext-dark'>
+                    <span>تخفیف محصول</span>
+
+                    <span className='font-faNa font-bold text-red'>
+                      {formatDiscount(shopProductDiscount)}
+                    </span>
+                  </div>
+
+                  <div className='flex justify-between gap-3 text-subtext-light dark:text-subtext-dark'>
+                    <span>تخفیف کد</span>
+
+                    <span className='font-faNa font-bold text-red'>
+                      {formatDiscount(shopCodeDiscount)}
+                    </span>
+                  </div>
+
+                  <div className='flex justify-between gap-3 border-t border-black/5 pt-2.5 font-black dark:border-white/10'>
+                    <span className='text-text-light dark:text-text-dark'>
+                      قابل پرداخت
+                    </span>
+
+                    <span className='font-faNa text-secondary'>
+                      {formatPrice(shopPayable)}
+                    </span>
+                  </div>
+                </div>
               </div>
+            )}
 
-              <div className='mt-2 flex justify-between font-bold text-green-light dark:text-green-dark'>
-                <span>قابل پرداخت</span>
-                <span className='font-faNa'>{formatPrice(coursePayable)}</span>
+            {/* Grand total */}
+            <div className='relative overflow-hidden rounded-[22px] border border-secondary/15 bg-secondary/[0.06] p-4 dark:bg-secondary/[0.09]'>
+              <HiOutlineSparkles
+                size={80}
+                className='pointer-events-none absolute -left-4 -top-4 text-secondary/[0.05]'
+              />
+
+              <div className='relative z-10 space-y-3'>
+                <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                  <span>جمع کل</span>
+
+                  <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                    {formatPrice(grandTotal)}
+                  </span>
+                </div>
+
+                <div className='flex justify-between gap-3 text-[10px] text-subtext-light sm:text-xs dark:text-subtext-dark'>
+                  <span>جمع تخفیف</span>
+
+                  <span className='font-faNa font-bold text-red'>
+                    {formatDiscount(grandDiscount)}
+                  </span>
+                </div>
+
+                <div className='h-px bg-secondary/15' />
+
+                <div className='flex items-end justify-between gap-3'>
+                  <span className='text-xs font-black text-text-light dark:text-text-dark'>
+                    مبلغ قابل پرداخت
+                  </span>
+
+                  <strong className='font-faNa text-base font-black text-secondary sm:text-lg'>
+                    {formatPrice(grandPayable)}
+                  </strong>
+                </div>
               </div>
-            </div>
-          )}
-
-          {/* محصولات */}
-          {hasShopItems && (
-            <div className='mb-5 rounded-xl bg-foreground-light/35 p-4 dark:bg-foreground-dark/35'>
-              <h3 className='mb-3 text-sm font-semibold'>محصولات</h3>
-
-              <div className='flex justify-between'>
-                <span>مبلغ</span>
-                <span className='font-faNa'>
-                  {formatPrice(shopTotalCompareAt)}
-                </span>
-              </div>
-
-              <div className='mt-2 flex justify-between'>
-                <span>تخفیف محصول</span>
-                <span className='font-faNa text-red'>
-                  {formatDiscount(shopProductDiscount)}
-                </span>
-              </div>
-
-              <div className='mt-2 flex justify-between'>
-                <span>تخفیف کد</span>
-                <span className='font-faNa text-red'>
-                  {formatDiscount(shopCodeDiscount)}
-                </span>
-              </div>
-
-              <div className='mt-2 flex justify-between font-bold text-green-light dark:text-green-dark'>
-                <span>قابل پرداخت</span>
-                <span className='font-faNa'>{formatPrice(shopPayable)}</span>
-              </div>
-            </div>
-          )}
-
-          {/* جمع کل */}
-          <div className='rounded-xl border border-foreground-light p-4 dark:border-foreground-dark'>
-            <div className='flex justify-between'>
-              <span>جمع کل</span>
-              <span className='font-faNa'>{formatPrice(grandTotal)}</span>
-            </div>
-
-            <div className='mt-2 flex justify-between'>
-              <span>جمع تخفیف</span>
-              <span className='font-faNa text-red'>
-                {formatDiscount(grandDiscount)}
-              </span>
-            </div>
-
-            <hr className='my-4 border-gray-300 dark:border-gray-700' />
-
-            <div className='flex justify-between font-bold text-green-light dark:text-green-dark'>
-              <span>مبلغ قابل پرداخت</span>
-              <span className='font-faNa'>{formatPrice(grandPayable)}</span>
             </div>
           </div>
-        </>
-      )}
+        )}
 
-      {/* دکمه‌ها */}
-      {hasAnyItems && grandPayable !== 0 ? (
-        <>
-          {/* کد تخفیف */}
-          <div className='mx-auto mb-6 mt-8 flex w-full items-center gap-2 sm:flex-wrap sm:gap-4 xl:w-3/4'>
-            <div className='relative w-full xs:flex-1'>
-              <Input
-                value={discountCode}
-                onChange={setDiscountCode}
-                placeholder='کد تخفیف'
-                fontDefault={false}
-                className='w-full pr-10'
-                isUppercase
-              />
-              <MdOutlineDiscount
-                size={20}
-                className='absolute right-2 top-2.5 text-subtext-light dark:text-subtext-dark'
-              />
+        {/* Discount */}
+        {hasAnyItems && grandPayable !== 0 && (
+          <div className='mt-5'>
+            <label className='mb-2 flex items-center gap-1.5 text-[10px] font-black text-text-light dark:text-text-dark'>
+              <HiOutlineTag size={15} className='text-secondary' />
+              کد تخفیف
+            </label>
+
+            <div className='flex items-center gap-2'>
+              <div className='min-w-0 flex-1'>
+                <Input
+                  value={discountCode}
+                  onChange={setDiscountCode}
+                  placeholder='کد تخفیف'
+                  fontDefault={false}
+                  className='w-full'
+                  isUppercase
+                />
+              </div>
+
+              <SiteButton
+                type='button'
+                variant='outline'
+                size='md'
+                disabled={loading}
+                onClick={handleApplyDiscount}
+              >
+                ثبت
+              </SiteButton>
             </div>
-
-            <Button
-              shadow
-              onClick={handleApplyDiscount}
-              isLoading={loading}
-              className='text-xs sm:text-sm'
-            >
-              ثبت
-            </Button>
           </div>
+        )}
 
-          <Link className='flex w-full justify-center' href='/payment'>
-            <Button
-              className='mb-2 flex w-full items-center justify-center gap-1 sm:mb-4'
-              shadow
-              isLoading={loading}
-            >
-              تایید و ادامه پرداخت
-            </Button>
-          </Link>
-        </>
-      ) : hasAnyItems && grandPayable === 0 ? (
-        <Button className='mt-10 w-full sm:mb-4' shadow isLoading={loading}>
-          {onlyFreeCoursesNoShop ? 'افزودن دوره رایگان' : 'تکمیل سفارش رایگان'}
-        </Button>
-      ) : null}
-    </div>
+        {/* CTA */}
+        {hasAnyItems && grandPayable !== 0 ? (
+          <SiteButton
+            href='/payment'
+            variant='primary'
+            size='lg'
+            endIcon={HiOutlineArrowLeft}
+            className='mt-5 w-full'
+          >
+            تایید و ادامه پرداخت
+          </SiteButton>
+        ) : hasAnyItems && grandPayable === 0 ? (
+          <SiteButton
+            type='button'
+            variant='primary'
+            size='lg'
+            disabled={loading}
+            className='mt-5 w-full'
+          >
+            {onlyFreeCoursesNoShop
+              ? 'افزودن دوره رایگان'
+              : 'تکمیل سفارش رایگان'}
+          </SiteButton>
+        ) : null}
+      </div>
+    </SiteCard>
   );
 }
 

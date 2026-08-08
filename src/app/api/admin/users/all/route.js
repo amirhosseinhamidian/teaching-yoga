@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET() {
   try {
@@ -9,12 +10,22 @@ export async function GET() {
       },
     });
 
-    return NextResponse.json({ users });
+    return NextResponse.json({
+      users: users.map((user) => ({
+        ...user,
+        avatar: toAbsoluteMediaUrl(user.avatar),
+      })),
+    });
   } catch (error) {
     console.error('Error fetching all users:', error);
+
     return NextResponse.json(
-      { error: 'خطا در دریافت کاربران' },
-      { status: 500 }
+      {
+        error: 'خطا در دریافت کاربران',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

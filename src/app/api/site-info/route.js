@@ -1,9 +1,59 @@
-import prisma from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 
-// ثبت اطلاعات جدید (POST)
+import prismadb from '@/libs/prismadb';
+
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+const cleanOptionalString = (value) => {
+  if (typeof value !== 'string') {
+    return null;
+  }
+
+  const normalized = value.trim();
+
+  return normalized || null;
+};
+
+const serializeSiteInfo = (siteInfo) => {
+  if (!siteInfo) {
+    return null;
+  }
+
+  return {
+    ...siteInfo,
+
+    /*
+     * خود heroImage و teachingMethodImage
+     * همان storage key دیتابیس باقی می‌مانند.
+     *
+     * این دو فیلد برای نمایش در Client هستند.
+     */
+    heroImageUrl: siteInfo.heroImage
+      ? toAbsoluteMediaUrl(siteInfo.heroImage)
+      : null,
+
+    teachingMethodImageUrl: siteInfo.teachingMethodImage
+      ? toAbsoluteMediaUrl(siteInfo.teachingMethodImage)
+      : null,
+  };
+};
+
+/*
+|--------------------------------------------------------------------------
+| POST
+|--------------------------------------------------------------------------
+*/
+
 export async function POST(req) {
   try {
+    const body = await req.json();
+
     const {
       shortDescription,
       fullDescription,
@@ -14,12 +64,23 @@ export async function POST(req) {
       coursesLinks,
       articlesLinks,
       usefulLinks,
-      heroImageUrl,
-      rules,
-    } = await req.json();
 
-    // اطلاعات را در پایگاه داده ذخیره می‌کنیم
-    const siteInfo = await prisma.siteInfo.create({
+      /*
+       * فیلدهای جدید/اصلی Media
+       */
+      heroImage,
+      teachingMethodImage,
+
+      /*
+       * فقط برای سازگاری موقت
+       * با Client خیلی قدیمی.
+       */
+      heroImageUrl,
+
+      rules,
+    } = body;
+
+    const siteInfo = await prismadb.siteInfo.create({
       data: {
         shortDescription,
         fullDescription,
@@ -30,24 +91,43 @@ export async function POST(req) {
         coursesLinks,
         articlesLinks,
         usefulLinks,
-        heroImageUrl,
+
+        heroImage:
+          cleanOptionalString(heroImage) || cleanOptionalString(heroImageUrl),
+
+        teachingMethodImage: cleanOptionalString(teachingMethodImage),
+
         rules,
       },
     });
 
-    return NextResponse.json(siteInfo, { status: 201 }); // موفقیت در ثبت
+    return NextResponse.json(serializeSiteInfo(siteInfo), {
+      status: 201,
+    });
   } catch (error) {
-    console.error(error);
+    console.error('[SITE_INFO_POST_ERROR]', error);
+
     return NextResponse.json(
-      { message: 'Error creating site information' },
-      { status: 500 }
+      {
+        message: 'Error creating site information',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
 
-// آپدیت اطلاعات موجود (PUT)
+/*
+|--------------------------------------------------------------------------
+| PUT
+|--------------------------------------------------------------------------
+*/
+
 export async function PUT(req) {
   try {
+    const body = await req.json();
+
     const {
       id,
       shortDescription,
@@ -60,12 +140,26 @@ export async function PUT(req) {
       articlesLinks,
       usefulLinks,
       heroImage,
+      teachingMethodImage,
       rules,
-    } = await req.json();
+    } = body;
 
-    // به‌روزرسانی اطلاعات سایت بر اساس id
-    const updatedSiteInfo = await prisma.siteInfo.update({
-      where: { id },
+    if (!id) {
+      return NextResponse.json(
+        {
+          message: 'Site info ID is required',
+        },
+        {
+          status: 400,
+        }
+      );
+    }
+
+    const updatedSiteInfo = await prismadb.siteInfo.update({
+      where: {
+        id,
+      },
+
       data: {
         shortDescription,
         fullDescription,
@@ -76,53 +170,61 @@ export async function PUT(req) {
         coursesLinks,
         articlesLinks,
         usefulLinks,
-        heroImage,
+
+        heroImage: cleanOptionalString(heroImage),
+
+        teachingMethodImage: cleanOptionalString(teachingMethodImage),
+
         rules,
       },
     });
 
-    return NextResponse.json(updatedSiteInfo, { status: 200 }); // موفقیت در به‌روزرسانی
+    return NextResponse.json(serializeSiteInfo(updatedSiteInfo), {
+      status: 200,
+    });
   } catch (error) {
-    console.error(error);
+    console.error('[SITE_INFO_PUT_ERROR]', error);
+
     return NextResponse.json(
-      { message: 'Error updating site information' },
-      { status: 500 }
+      {
+        message: 'Error updating site information',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }
 
-// دریافت اطلاعات موجود (GET)
-export async function GET(req) {
-  try {
-    // بررسی پارامترهای جستجو
-    const { searchParams } = req.nextUrl;
-    const onlyRules = searchParams.get('rules');
+/*
+|--------------------------------------------------------------------------
+| GET
+|--------------------------------------------------------------------------
+*/
 
-    // دریافت اطلاعات از دیتابیس
-    const siteInfo = await prisma.siteInfo.findFirst();
+export async function GET() {
+  try {
+    const siteInfo = await prismadb.siteInfo.findFirst();
 
     if (!siteInfo) {
-      return NextResponse.json(
-        { message: 'No site information found' },
-        { status: 400 }
-      );
+      return NextResponse.json(null, {
+        status: 200,
+      });
     }
 
-    // اگر درخواست فقط مقدار `rules` را بخواهد
-    if (onlyRules !== null) {
-      return NextResponse.json(
-        { rules: siteInfo.rules || '' },
-        { status: 200 }
-      );
-    }
-
-    // در غیر این صورت، کل اطلاعات سایت ارسال می‌شود
-    return NextResponse.json(siteInfo, { status: 200 });
+    return NextResponse.json(serializeSiteInfo(siteInfo), {
+      status: 200,
+    });
   } catch (error) {
-    console.error(error);
+    console.error('[SITE_INFO_GET_ERROR]', error);
+
     return NextResponse.json(
-      { message: 'Error retrieving site information' },
-      { status: 500 }
+      {
+        message: 'Error fetching site information',
+      },
+      {
+        status: 500,
+      }
     );
   }
 }

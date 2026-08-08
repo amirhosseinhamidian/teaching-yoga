@@ -1,5 +1,6 @@
 // app/api/subscription/plans/route.js
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 import { NextResponse } from 'next/server';
 
 export async function GET() {
@@ -23,7 +24,18 @@ export async function GET() {
       orderBy: { price: 'asc' },
     });
 
-    return NextResponse.json(plans, { status: 200 });
+    const formattedPlans = plans.map((plan) => ({
+      ...plan,
+      planCourses: plan.planCourses.map((pc) => ({
+        ...pc,
+        course: {
+          ...pc.course,
+          cover: toAbsoluteMediaUrl(pc.course.cover),
+        },
+      })),
+    }));
+
+    return NextResponse.json(formattedPlans, { status: 200 });
   } catch (error) {
     console.error('[SUBSCRIPTION_PLANS_GET]', error);
     return NextResponse.json(

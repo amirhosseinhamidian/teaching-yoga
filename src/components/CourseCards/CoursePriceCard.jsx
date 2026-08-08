@@ -1,116 +1,174 @@
 /* eslint-disable no-undef */
+
 'use client';
-import React, { useState } from 'react';
+
+import React, { useMemo, useState } from 'react';
+
 import PropTypes from 'prop-types';
-import Button from '../Ui/Button/Button';
-import Price from '../Price/Price';
-import { createToastHandler } from '@/utils/toastHandler';
-import { useTheme } from '@/contexts/ThemeContext';
-import Modal from '../modules/Modal/Modal';
-import { LuLogIn } from 'react-icons/lu';
+
 import { usePathname, useRouter } from 'next/navigation';
+
 import { useDispatch } from 'react-redux';
 
-import { addToCart } from '@/libs/redux/features/cartSlice'; // ✔️ مسیر صحیح
+import Price from '../Price/Price';
+import Modal from '../modules/Modal/Modal';
+
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+
+import { createToastHandler } from '@/utils/toastHandler';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
+import { addToCart } from '@/libs/redux/features/cartSlice';
+
+import { LuLogIn } from 'react-icons/lu';
+
+import { HiOutlineCheckBadge, HiOutlineShoppingBag } from 'react-icons/hi2';
+
 const CoursePriceCard = ({
-  className,
-  discount,
+  className = '',
+  discount = 0,
   price,
   finalPrice,
   courseId,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   const { isDark } = useTheme();
-  const toast = createToastHandler(isDark);
 
-  const { isAuthenticated } = useAuthUser(); // ✔️ مهم
+  const toast = useMemo(() => createToastHandler(isDark), [isDark]);
+
+  const { isAuthenticated } = useAuthUser();
+
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useDispatch();
 
-  // -------------------------
-  // Add to Cart Handler
-  // -------------------------
+  const isFree = Number(finalPrice || 0) === 0;
+
   const handleAddCourseToCart = async () => {
     if (!isAuthenticated) {
       setShowLoginModal(true);
       return;
     }
 
-    setIsLoading(true);
+    try {
+      setIsLoading(true);
 
-    const result = await dispatch(addToCart(courseId));
-    setIsLoading(false);
+      const result = await dispatch(addToCart(courseId));
 
-    if (result.meta.requestStatus === 'fulfilled') {
-      toast.showSuccessToast('به سبد خرید اضافه شد!');
-      router.push('/cart');
-    } else {
-      const errorMessage =
-        result.payload?.message ||
-        result.payload ||
-        'خطا در افزودن به سبد خرید';
+      if (result?.meta?.requestStatus === 'fulfilled') {
+        toast.showSuccessToast(
+          isFree ? 'دوره با موفقیت اضافه شد' : 'دوره به سبد خرید اضافه شد'
+        );
 
-      toast.showErrorToast(errorMessage);
+        router.push('/cart');
+        return;
+      }
+
+      toast.showErrorToast(
+        result?.payload?.message ||
+          result?.payload ||
+          'خطا در افزودن دوره به سبد خرید'
+      );
+    } catch (error) {
+      console.error('[COURSE_ADD_TO_CART_ERROR]', error);
+
+      toast.showErrorToast('خطا در افزودن دوره به سبد خرید');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // -------------------------
-  // Login Redirect Handler
-  // -------------------------
   const loginHandler = () => {
     sessionStorage.setItem('previousPage', pathname);
+
     router.push('/login');
   };
 
   return (
-    <div
-      className={`flex flex-col justify-between gap-10 rounded-xl bg-surface-light p-4 shadow sm:gap-6 dark:bg-surface-dark ${className}`}
-    >
-      <h4 className='mr-4 text-xs font-semibold text-subtext-light sm:text-sm dark:text-subtext-dark'>
-        هزینه و ثبت نام همیشگی
-      </h4>
-      <Price
-        className='ml-4'
-        discount={discount}
-        finalPrice={finalPrice}
-        price={price}
-      />
-
-      <Button
-        shadow
-        className='w-full self-end text-xs xs:text-base'
-        onClick={handleAddCourseToCart}
-        isLoading={isLoading}
+    <>
+      <SiteCard
+        variant='soft'
+        padding='sm'
+        radius='md'
+        className={`flex h-full flex-col ${className}`}
       >
-        ثبت نام
-      </Button>
+        <div className='flex items-center justify-between gap-2'>
+          <div>
+            <p className='text-[9px] font-bold text-secondary'>ثبت‌نام مستقل</p>
+
+            <h2 className='mt-0.5 text-sm font-black text-text-light dark:text-text-dark'>
+              خرید دائمی دوره
+            </h2>
+          </div>
+
+          <SiteBadge variant='secondary' size='sm'>
+            دسترسی همیشگی
+          </SiteBadge>
+        </div>
+
+        <div className='mt-3'>
+          <Price
+            discount={Number(discount || 0)}
+            finalPrice={Number(finalPrice || 0)}
+            price={Number(price || 0)}
+          />
+        </div>
+
+        <div className='mt-3 flex items-start gap-1.5 text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+          <HiOutlineCheckBadge
+            size={15}
+            className='mt-1 shrink-0 text-secondary'
+          />
+
+          <span>بدون نیاز به تمدید اشتراک</span>
+        </div>
+
+        <SiteButton
+          type='button'
+          variant='primary'
+          size='md'
+          startIcon={HiOutlineShoppingBag}
+          loading={isLoading}
+          disabled={isLoading}
+          onClick={handleAddCourseToCart}
+          fullWidth
+          className='mt-3'
+        >
+          {isFree ? 'شروع رایگان' : 'خرید دوره'}
+        </SiteButton>
+      </SiteCard>
 
       {showLoginModal && (
         <Modal
-          title='ثبت نام یا ورود به حساب کاربری'
-          desc='برای تهیه دوره لطفا ابتدا وارد حساب کاربری خود شوید یا در سایت ثبت نام کنید.'
+          title='ورود یا ساخت حساب کاربری'
+          desc='برای تهیه دوره ابتدا وارد حساب کاربری خود شوید یا یک حساب جدید بسازید.'
           icon={LuLogIn}
           iconSize={36}
           primaryButtonClick={loginHandler}
           secondaryButtonClick={() => setShowLoginModal(false)}
-          primaryButtonText='ورود | ثبت نام'
+          primaryButtonText='ورود | ثبت‌نام'
           secondaryButtonText='لغو'
         />
       )}
-    </div>
+    </>
   );
 };
 
 CoursePriceCard.propTypes = {
   discount: PropTypes.number,
+
   className: PropTypes.string,
+
   price: PropTypes.number.isRequired,
+
   finalPrice: PropTypes.number.isRequired,
+
   courseId: PropTypes.number.isRequired,
 };
 

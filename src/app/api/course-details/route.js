@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 // Handler for GET request to fetch course details with terms, sessions, and progress data
 export async function GET(request) {
@@ -36,7 +37,13 @@ export async function GET(request) {
     if (!course) {
       return NextResponse.json({ error: 'Course not found' }, { status: 404 });
     }
-    return NextResponse.json(course, { status: 200 });
+    return NextResponse.json(
+      {
+        ...course,
+        cover: toAbsoluteMediaUrl(course.cover),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error fetching course details:', error);
     return NextResponse.json(

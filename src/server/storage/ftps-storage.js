@@ -138,10 +138,7 @@ const promoteRemotePath = async ({
   try {
     await removeRemotePathIfExists(client, backupPath);
 
-    const existingDestination = await findRemoteEntry(
-      client,
-      destinationPath
-    );
+    const existingDestination = await findRemoteEntry(client, destinationPath);
 
     if (existingDestination) {
       await client.rename(destinationPath, backupPath);
@@ -159,10 +156,9 @@ const promoteRemotePath = async ({
         destinationPath
       ).catch(() => null);
 
-      const backupStillExists = await findRemoteEntry(
-        client,
-        backupPath
-      ).catch(() => null);
+      const backupStillExists = await findRemoteEntry(client, backupPath).catch(
+        () => null
+      );
 
       if (!destinationStillExists && backupStillExists) {
         await client.rename(backupPath, destinationPath).catch(() => {});
@@ -223,15 +219,9 @@ class FtpsMediaStorage {
 
     const destinationPath = toRemotePath(normalizedKey);
 
-    const incomingPath = createTemporaryRemotePath(
-      destinationPath,
-      'incoming'
-    );
+    const incomingPath = createTemporaryRemotePath(destinationPath, 'incoming');
 
-    const backupPath = createTemporaryRemotePath(
-      destinationPath,
-      'backup'
-    );
+    const backupPath = createTemporaryRemotePath(destinationPath, 'backup');
 
     const localSourcePath = path.resolve(sourcePath);
 
@@ -260,25 +250,16 @@ class FtpsMediaStorage {
 
     const destinationPath = toRemotePath(normalizedKey);
 
-    const incomingPath = createTemporaryRemotePath(
-      destinationPath,
-      'incoming'
-    );
+    const incomingPath = createTemporaryRemotePath(destinationPath, 'incoming');
 
-    const backupPath = createTemporaryRemotePath(
-      destinationPath,
-      'backup'
-    );
+    const backupPath = createTemporaryRemotePath(destinationPath, 'backup');
 
     const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
 
     await withFtpsClient(async (client) => {
       await client.ensureDir(path.posix.dirname(destinationPath));
 
-      await client.uploadFrom(
-        Readable.from([buffer]),
-        incomingPath
-      );
+      await client.uploadFrom(Readable.from([buffer]), incomingPath);
 
       await promoteRemotePath({
         client,
@@ -300,25 +281,16 @@ class FtpsMediaStorage {
 
     const destinationPath = toRemotePath(normalizedPrefix);
 
-    const incomingPath = createTemporaryRemotePath(
-      destinationPath,
-      'incoming'
-    );
+    const incomingPath = createTemporaryRemotePath(destinationPath, 'incoming');
 
-    const backupPath = createTemporaryRemotePath(
-      destinationPath,
-      'backup'
-    );
+    const backupPath = createTemporaryRemotePath(destinationPath, 'backup');
 
     const localSourceDirectory = path.resolve(sourceDirectory);
 
     await withFtpsClient(async (client) => {
       await client.ensureDir(path.posix.dirname(destinationPath));
 
-      await client.uploadFromDir(
-        localSourceDirectory,
-        incomingPath
-      );
+      await client.uploadFromDir(localSourceDirectory, incomingPath);
 
       await promoteRemotePath({
         client,
@@ -357,8 +329,7 @@ class FtpsMediaStorage {
     const normalizedKey = normalizeRemoteStorageKey(key);
 
     const baseUrl =
-      process.env.MEDIA_PUBLIC_BASE_URL ||
-      process.env.VIDEO_PUBLIC_BASE_URL;
+      process.env.MEDIA_PUBLIC_BASE_URL || process.env.VIDEO_PUBLIC_BASE_URL;
 
     if (!baseUrl) {
       throw new Error(

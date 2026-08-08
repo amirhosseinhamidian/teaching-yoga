@@ -1,63 +1,122 @@
 'use client';
+
 import React, { useState } from 'react';
+
 import PropTypes from 'prop-types';
+
 import Image from 'next/image';
-import { LuTrash } from 'react-icons/lu';
+
 import Modal from '@/components/modules/Modal/Modal';
+
+import {
+  HiOutlineAcademicCap,
+  HiOutlinePhoto,
+  HiOutlineTrash,
+} from 'react-icons/hi2';
 
 const CourseItem = ({ data, onDeleteItem }) => {
   const [showDeleteItemModal, setShowDeleteItemModal] = useState(false);
 
+  const [imageError, setImageError] = useState(false);
+
   const handleDeleteCourse = async (courseId) => {
     await onDeleteItem(courseId);
+
     setShowDeleteItemModal(false);
   };
 
-  const getCoursePrice = (coursePrice) => {
-    return coursePrice === 0 ? (
-      <h3 className='mt-1 font-faNa text-xs sm:text-sm'>رایگان</h3>
-    ) : (
-      <h3 className='mt-1 font-faNa text-xs sm:text-sm'>
-        قیمت نهایی: {coursePrice?.toLocaleString('fa-IR')}{' '}
-        <span className='text-[8px] sm:text-2xs'>تومان</span>
-      </h3>
-    );
-  };
+  const finalPrice = Number(data.finalPrice || 0);
+
+  const discount = Number(data.discount || 0);
 
   return (
     <>
-      <div className='flex items-start justify-between gap-2 p-4'>
-        <div className='flex flex-wrap gap-2 md:gap-4'>
-          <Image
-            src={data.courseCoverImage}
-            alt={data.courseTitle}
-            width={360}
-            height={280}
-            className='h-9 w-14 rounded-lg object-cover xs:h-14 xs:w-20 sm:h-20 sm:w-28'
-          />
-          <div>
-            <h3 className='text-base md:text-lg'>{data.courseTitle}</h3>
-            {data.discount !== 0 && (
-              <h4 className='mt-1 font-faNa text-xs text-red sm:text-sm'>
-                تخفیف: {data?.discount?.toLocaleString('fa-IR')}{' '}
-                <span className='text-[8px] sm:text-2xs'>تومان</span>
-              </h4>
-            )}
-            {getCoursePrice(data.finalPrice)}
+      <article className='group flex items-start gap-3 p-4 sm:gap-4 sm:p-5'>
+        {/* Image */}
+        <div className='relative aspect-[4/3] w-24 shrink-0 overflow-hidden rounded-[18px] border border-black/5 bg-background-light/60 sm:w-32 dark:border-white/10 dark:bg-background-dark/35'>
+          {data.courseCoverImage && !imageError ? (
+            <Image
+              src={data.courseCoverImage}
+              alt={data.courseTitle}
+              fill
+              sizes='128px'
+              className='object-cover transition-transform duration-500 group-hover:scale-[1.03]'
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className='absolute inset-0 flex items-center justify-center bg-secondary/5 text-secondary/40'>
+              <HiOutlinePhoto size={24} />
+            </div>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className='min-w-0 flex-1'>
+          <div className='flex items-start justify-between gap-3'>
+            <div className='min-w-0'>
+              <div className='mb-1.5 flex items-center gap-1.5 text-[9px] font-bold text-secondary sm:text-[10px]'>
+                <HiOutlineAcademicCap size={14} />
+                دوره آموزشی
+              </div>
+
+              <h3 className='line-clamp-2 text-sm font-black leading-6 text-text-light sm:text-base sm:leading-7 dark:text-text-dark'>
+                {data.courseTitle}
+              </h3>
+            </div>
+
+            <button
+              type='button'
+              aria-label='حذف دوره'
+              onClick={() => setShowDeleteItemModal(true)}
+              className='flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-red/10 text-red transition-all duration-200 hover:scale-105 hover:bg-red hover:text-white'
+            >
+              <HiOutlineTrash size={18} />
+            </button>
+          </div>
+
+          {/* Price */}
+          <div className='mt-3 flex flex-wrap items-end justify-between gap-3'>
+            <div>
+              {discount !== 0 && (
+                <div className='mb-1 flex items-center gap-1'>
+                  <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                    تخفیف
+                  </span>
+
+                  <strong className='font-faNa text-xs font-black text-red'>
+                    {discount.toLocaleString('fa-IR')}
+                  </strong>
+
+                  <span className='text-[8px] text-subtext-light dark:text-subtext-dark'>
+                    تومان
+                  </span>
+                </div>
+              )}
+
+              {finalPrice === 0 ? (
+                <strong className='text-sm font-black'>رایگان</strong>
+              ) : (
+                <div className='flex items-baseline gap-1'>
+                  <strong className='font-faNa text-base font-black sm:text-lg'>
+                    {finalPrice.toLocaleString('fa-IR')}
+                  </strong>
+
+                  <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                    تومان
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <LuTrash
-          size={20}
-          className='ml-4 mt-2 text-red md:cursor-pointer'
-          onClick={() => setShowDeleteItemModal(true)}
-        />
-      </div>
+      </article>
+
       {showDeleteItemModal && (
         <Modal
           title='حذف دوره از سبد خرید'
           desc={`آیا از حذف ${data.courseTitle} از سبد خرید خود مطمئن هستید؟`}
-          icon={LuTrash}
-          iconSize={32}
+          icon={HiOutlineTrash}
+          iconSize={26}
           primaryButtonText='خیر'
           secondaryButtonText='بله'
           primaryButtonClick={() => setShowDeleteItemModal(false)}
@@ -70,6 +129,7 @@ const CourseItem = ({ data, onDeleteItem }) => {
 
 CourseItem.propTypes = {
   data: PropTypes.object.isRequired,
+
   onDeleteItem: PropTypes.func.isRequired,
 };
 

@@ -2,6 +2,7 @@
 /* eslint-disable no-undef */
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -148,7 +149,7 @@ export async function GET(request) {
 
         // کاربر
         username: payment.user?.username || '',
-        avatar: payment.user?.avatar || '',
+        avatar: normalizeMediaUrl(payment.user?.avatar),
         firstname: payment.user?.firstname || '',
         lastname: payment.user?.lastname || '',
         phone: payment.user?.phone || '',

@@ -2,7 +2,7 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 import { getAuthUser } from '@/utils/getAuthUser';
-
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
@@ -170,7 +170,7 @@ export async function GET() {
         title: course.title,
         subtitle: course.subtitle,
         isHighPriority: course.isHighPriority,
-        cover: course.cover,
+        cover: toAbsoluteMediaUrl(course.cover),
         shortAddress: course.shortAddress,
 
         // ✅ نوع دوره

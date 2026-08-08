@@ -273,19 +273,22 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     }
   };
 
-  const validateShortAddress = async () => {
-    if (shortAddress.length < 4) {
+  const validateShortAddress = async (value = shortAddress) => {
+    const normalizedShortAddress = String(value || '').trim();
+
+    if (normalizedShortAddress.length < 4) {
       setShortAddressStatus('invalid');
       setShortAddressError('آدرس باید حداقل ۴ کاراکتر باشد.');
       return;
     }
-    if (/\s|‌/.test(shortAddress)) {
+
+    if (/\s|‌/.test(normalizedShortAddress)) {
       setShortAddressStatus('invalid');
       setShortAddressError('استفاده از فاصله یا نیم فاصله مجاز نیست.');
       return;
     }
 
-    if (/[^a-zA-Z0-9\\-]/.test(shortAddress)) {
+    if (/[^a-zA-Z0-9-]/.test(normalizedShortAddress)) {
       setShortAddressStatus('invalid');
       setShortAddressError(
         'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.'
@@ -293,16 +296,22 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       return;
     }
 
-    if (!/^[a-zA-Z0-9\\-]+$/.test(shortAddress)) {
+    if (!/^[a-zA-Z0-9-]+$/.test(normalizedShortAddress)) {
       setShortAddressStatus('invalid');
-      setShortAddressError('آدرس باید فقط شامل حروف انگلیسی یا اعداد باشد.');
+      setShortAddressError(
+        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.'
+      );
       return;
     }
 
     setShortAddressStatus('loading');
+
     const response = await fetch(
-      `/api/admin/validate-course-short-address?shortAddress=${encodeURIComponent(shortAddress)}`
+      `/api/admin/validate-course-short-address?shortAddress=${encodeURIComponent(
+        normalizedShortAddress
+      )}`
     );
+
     const data = await response.json();
 
     if (data.isValid) {
@@ -409,13 +418,14 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       errors.shortAddress = 'استفاده از فاصله یا نیم فاصله مجاز نیست.';
     }
 
-    if (/[^a-zA-Z0-9\\-]/.test(shortAddress)) {
+    if (/[^a-zA-Z0-9-]/.test(shortAddress)) {
       errors.shortAddress =
         'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.';
     }
 
-    if (!/^[a-zA-Z0-9\\-]+$/.test(shortAddress)) {
-      errors.shortAddress = 'آدرس باید فقط شامل حروف انگلیسی یا اعداد باشد.';
+    if (!/^[a-zA-Z0-9-]+$/.test(shortAddress)) {
+      errors.shortAddress =
+        'آدرس فقط می‌تواند شامل حروف انگلیسی، اعداد و "-" باشد.';
     }
 
     const coverRegex = /\.(jpg|jpeg|png)$/i;
@@ -478,7 +488,7 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     const payload = {
       title,
       subtitle: shortDesc,
-      shortDescription: shortDesc,
+      shortDescription: firstDesc,
       description: completeDesc,
       cover: coverLink,
       isHighPriority: highPriority,

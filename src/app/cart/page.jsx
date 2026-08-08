@@ -1,9 +1,13 @@
 /* eslint-disable no-undef */
-import Footer from '@/components/Footer/Footer';
+
 import React from 'react';
-import CartMain from '@/components/templates/cart/CartMain';
-import { headers } from 'next/headers';
+
+import Footer from '@/components/Footer/Footer';
 import HeaderWrapper from '@/components/Header/HeaderWrapper';
+
+import CartMain from '@/components/templates/cart/CartMain';
+
+import { headers } from 'next/headers';
 
 export async function generateMetadata() {
   const res = await fetch(
@@ -16,9 +20,9 @@ export async function generateMetadata() {
 
   const result = await res.json();
 
-  // اطلاعات پیش‌فرض
   const defaultSeoData = {
     title: 'سبد خرید | سمانه یوگا',
+
     robots: 'noindex, nofollow',
   };
 
@@ -30,6 +34,7 @@ export async function generateMetadata() {
 
   return {
     title: seoData?.siteTitle || defaultSeoData.title,
+
     robots: seoData?.robotsTag || defaultSeoData.robots,
   };
 }
@@ -38,7 +43,9 @@ export default async function CartPage() {
   return (
     <>
       <HeaderWrapper />
+
       <CartMain />
+
       <Footer />
     </>
   );

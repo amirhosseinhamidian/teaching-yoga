@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export async function GET(request) {
   try {
@@ -17,6 +18,12 @@ export async function GET(request) {
       },
     });
 
+    const formattedEpisodes = episodes.map((episode) => ({
+      ...episode,
+      audioUrl: toAbsoluteMediaUrl(episode.audioUrl),
+      coverImageUrl: toAbsoluteMediaUrl(episode.coverImageUrl),
+    }));
+
     if (episodes.length === 0) {
       return NextResponse.json(
         { message: 'No episodes found' },
@@ -25,7 +32,7 @@ export async function GET(request) {
     }
 
     return NextResponse.json({
-      data: episodes,
+      data: formattedEpisodes,
       pagination: {
         total: totalEpisode,
         page,

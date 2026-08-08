@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function GET(request, { params }) {
   const { id } = params;
@@ -65,7 +66,12 @@ export async function GET(request, { params }) {
       answeredAt: question.answeredAt,
       createdAt: question.createdAt,
       updatedAt: question.updatedAt,
-      user: question.user,
+      user: question.user
+        ? {
+            ...question.user,
+            avatar: normalizeMediaUrl(question.user.avatar),
+          }
+        : null,
       course: question.course,
       session: {
         id: question.session.id,

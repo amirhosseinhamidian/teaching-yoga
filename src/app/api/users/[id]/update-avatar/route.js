@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function PUT(request, { params }) {
   try {
@@ -44,7 +45,13 @@ export async function PUT(request, { params }) {
     });
 
     // در صورت موفقیت
-    return NextResponse.json(updatedUser, { status: 200 });
+    return NextResponse.json(
+      {
+        ...updatedUser,
+        avatar: normalizeMediaUrl(updatedUser.avatar),
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error('Error updating avatar:', error);
     return NextResponse.json(

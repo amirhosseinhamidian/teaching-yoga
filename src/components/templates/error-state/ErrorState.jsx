@@ -5,6 +5,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import PropTypes from 'prop-types';
 
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
+import { HiOutlineArrowRight, HiOutlineHome } from 'react-icons/hi2';
+
 const icons = {
   notFound: (
     <svg
@@ -75,80 +80,111 @@ const ErrorState = ({
   onRetry = null,
 
   showBackButton = true,
+  fullScreen = false,
 }) => {
   const router = useRouter();
 
   return (
     <main
       dir='rtl'
-      className='relative isolate min-h-[68vh] overflow-hidden bg-background-light px-4 py-14 sm:px-6 sm:py-20 dark:bg-background-dark'
+      className={`relative isolate overflow-hidden bg-background-light px-4 dark:bg-background-dark ${
+        fullScreen
+          ? 'flex min-h-screen items-center py-8 sm:py-12'
+          : 'min-h-[68vh] py-14 sm:px-6 sm:py-20'
+      }`}
     >
-      {/* دکور پس‌زمینه با رنگ اصلی سایت */}
+      {/* Background */}
       <div
         aria-hidden='true'
-        className='absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl'
+        className='absolute -right-32 -top-32 h-80 w-80 rounded-full bg-secondary/10 blur-[110px] sm:h-[420px] sm:w-[420px]'
       />
 
       <div
         aria-hidden='true'
-        className='absolute -bottom-32 -left-24 h-80 w-80 rounded-full bg-primary/5 blur-3xl'
+        className='bg-yellow/10 absolute -bottom-36 -left-32 h-80 w-80 rounded-full blur-[120px] sm:h-[440px] sm:w-[440px]'
+      />
+
+      <div
+        aria-hidden='true'
+        className='absolute left-1/2 top-0 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-secondary/25 to-transparent'
       />
 
       <div className='relative mx-auto flex w-full max-w-5xl items-center justify-center'>
-        <section className='relative w-full overflow-hidden rounded-[2rem] border border-subtext-light/20 bg-surface-light/95 p-6 shadow-[0_24px_80px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:p-10 lg:p-14 dark:border-subtext-dark/20 dark:bg-surface-dark/95'>
-          {/* خط رنگی بالای کارت */}
-          <div className='absolute inset-x-0 top-0 h-1 bg-primary' />
+        <SiteCard
+          as='section'
+          variant='glass'
+          padding='none'
+          radius='lg'
+          topLine
+          className='w-full p-5 sm:p-8 lg:p-12'
+        >
+          <div
+            aria-hidden='true'
+            className='absolute -right-24 -top-24 h-64 w-64 rounded-full bg-secondary/10 blur-[90px]'
+          />
 
-          <div className='grid items-center gap-10 lg:grid-cols-[1fr_0.8fr]'>
-            <div>
-              <div className='mb-5 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 text-xs font-medium text-secondary'>
+          <div className='relative z-10 grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-12'>
+            {/* Content */}
+            <div className='order-2 text-center lg:order-1 lg:text-right'>
+              <div className='inline-flex min-h-8 items-center gap-2 rounded-full border border-secondary/20 bg-secondary/10 px-3 text-[10px] font-bold text-secondary sm:text-xs'>
                 <span className='h-2 w-2 rounded-full bg-secondary' />
 
                 {eyebrow}
               </div>
 
-              <h1 className='font-faNa text-2xl font-bold leading-relaxed text-text-light sm:text-3xl lg:text-4xl dark:text-text-dark'>
+              <h1 className='mt-4 text-xl font-black leading-9 text-text-light sm:text-2xl sm:leading-10 lg:text-3xl lg:leading-[1.7] dark:text-text-dark'>
                 {title}
               </h1>
 
-              <p className='mt-4 max-w-2xl text-sm leading-8 text-subtext-light sm:text-base dark:text-subtext-dark'>
+              <p className='mx-auto mt-3 max-w-2xl text-xs leading-7 text-subtext-light sm:text-sm sm:leading-8 lg:mx-0 lg:text-base lg:leading-9 dark:text-subtext-dark'>
                 {description}
               </p>
 
-              <div className='mt-8 flex flex-wrap items-center gap-3'>
+              {/* Actions */}
+              <div className='mt-6 flex flex-col justify-center gap-2.5 sm:flex-row sm:flex-wrap lg:justify-start'>
                 {onRetry ? (
-                  <button
+                  <SiteButton
                     type='button'
+                    variant='primary'
+                    size='md'
                     onClick={onRetry}
-                    className='inline-flex min-h-11 items-center justify-center rounded-xl bg-secondary px-6 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/20'
+                    className='w-full sm:w-auto'
                   >
                     {retryLabel}
-                  </button>
+                  </SiteButton>
                 ) : (
-                  <Link
+                  <SiteButton
                     href={primaryHref}
-                    className='inline-flex min-h-11 items-center justify-center rounded-xl bg-secondary px-6 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-primary/20'
+                    variant='primary'
+                    size='md'
+                    startIcon={HiOutlineHome}
+                    className='w-full sm:w-auto'
                   >
                     {primaryLabel}
-                  </Link>
+                  </SiteButton>
                 )}
 
                 {onRetry && (
-                  <Link
+                  <SiteButton
                     href={primaryHref}
-                    className='inline-flex min-h-11 items-center justify-center rounded-xl border border-subtext-light/30 bg-surface-light px-6 text-sm font-medium text-text-light transition duration-200 hover:-translate-y-0.5 hover:border-primary hover:text-primary dark:border-subtext-dark/30 dark:bg-surface-dark dark:text-text-dark'
+                    variant='secondary'
+                    size='md'
+                    startIcon={HiOutlineHome}
+                    className='w-full sm:w-auto'
                   >
                     {primaryLabel}
-                  </Link>
+                  </SiteButton>
                 )}
 
                 {secondaryHref && secondaryLabel && (
-                  <Link
+                  <SiteButton
                     href={secondaryHref}
-                    className='inline-flex min-h-11 items-center justify-center rounded-xl border border-subtext-light/30 bg-surface-light px-6 text-sm font-medium text-text-light transition duration-200 hover:-translate-y-0.5 hover:border-secondary hover:text-secondary dark:border-subtext-dark/30 dark:bg-surface-dark dark:text-text-dark'
+                    variant='outline'
+                    size='md'
+                    className='w-full sm:w-auto'
                   >
                     {secondaryLabel}
-                  </Link>
+                  </SiteButton>
                 )}
               </div>
 
@@ -156,46 +192,46 @@ const ErrorState = ({
                 <button
                   type='button'
                   onClick={() => router.back()}
-                  className='mt-6 inline-flex items-center gap-2 text-sm text-subtext-light transition hover:text-primary dark:text-subtext-dark'
+                  className='mx-auto mt-5 inline-flex items-center gap-1.5 text-xs font-bold text-subtext-light transition-colors duration-200 hover:text-secondary lg:mx-0 dark:text-subtext-dark'
                 >
-                  <svg
-                    viewBox='0 0 24 24'
-                    fill='none'
-                    stroke='currentColor'
-                    strokeWidth='1.8'
-                    className='h-4 w-4'
-                    aria-hidden='true'
-                  >
-                    <path d='m15 18-6-6 6-6' />
-                  </svg>
-                  بازگشت به صفحه قبل
+                  <HiOutlineArrowRight size={16} />
+
+                  <span>بازگشت به صفحه قبل</span>
                 </button>
               )}
             </div>
 
-            <div className='relative flex min-h-64 items-center justify-center'>
-              <div
-                aria-hidden='true'
-                className='absolute h-56 w-56 rounded-full border border-primary/10 bg-primary/5 sm:h-64 sm:w-64'
-              />
+            {/* Illustration */}
+            <div className='order-1 flex items-center justify-center lg:order-2'>
+              <div className='relative flex h-[180px] w-[180px] items-center justify-center sm:h-[220px] sm:w-[220px] lg:h-[260px] lg:w-[260px]'>
+                <div
+                  aria-hidden='true'
+                  className='absolute inset-0 rounded-full border border-dashed border-secondary/20'
+                />
 
-              <div
-                aria-hidden='true'
-                className='absolute h-44 w-44 rotate-12 rounded-[2rem] border border-subtext-light/10 bg-surface-light/70 shadow-xl backdrop-blur dark:border-subtext-dark/10 dark:bg-surface-dark/70'
-              />
+                <div
+                  aria-hidden='true'
+                  className='absolute h-[78%] w-[78%] rotate-12 rounded-[32px] border border-secondary/10 bg-secondary/[0.035] dark:bg-secondary/[0.07]'
+                />
 
-              <div className='relative flex flex-col items-center text-center'>
-                <div className='mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-lg'>
-                  {icons[variant] || icons.server}
+                <div
+                  aria-hidden='true'
+                  className='absolute h-[70%] w-[70%] rounded-full bg-secondary/10 blur-[35px]'
+                />
+
+                <div className='relative flex flex-col items-center text-center'>
+                  <span className='flex h-14 w-14 items-center justify-center rounded-2xl border border-secondary/15 bg-surface-light/80 text-secondary shadow-[0_14px_40px_rgba(38,145,125,0.15)] backdrop-blur-md sm:h-16 sm:w-16 dark:bg-surface-dark/80'>
+                    {icons[variant] || icons.server}
+                  </span>
+
+                  <span className='mt-3 font-faNa text-5xl font-black leading-none tracking-tight text-secondary sm:text-6xl lg:text-7xl'>
+                    {code}
+                  </span>
                 </div>
-
-                <span className='font-faNa text-7xl font-black tracking-tight text-primary sm:text-8xl'>
-                  {code}
-                </span>
               </div>
             </div>
           </div>
-        </section>
+        </SiteCard>
       </div>
     </main>
   );
@@ -219,6 +255,7 @@ ErrorState.propTypes = {
   onRetry: PropTypes.func,
 
   showBackButton: PropTypes.bool,
+  fullScreen: PropTypes.bool,
 };
 
 export default ErrorState;

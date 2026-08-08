@@ -1,266 +1,408 @@
+/* eslint-disable react/prop-types */
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
+
 import Image from 'next/image';
-import { ImSpinner2 } from 'react-icons/im';
-import Button from '@/components/Ui/Button/Button';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
-import { TbShoppingCartOff } from 'react-icons/tb';
+
 import { useRouter } from 'next/navigation';
 
-// Redux
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+
+import {
+  HiOutlineArrowLeft,
+  HiOutlineBookOpen,
+  HiOutlinePhoto,
+  HiOutlineShoppingBag,
+  HiOutlineShoppingCart,
+  HiOutlineXMark,
+} from 'react-icons/hi2';
+
 import { useCart } from '@/hooks/cart/useCart';
+
 import { useShopCart } from '@/hooks/shopCart/useShopCart';
 
-// eslint-disable-next-line react/prop-types
+/*
+|--------------------------------------------------------------------------
+| Image
+|--------------------------------------------------------------------------
+*/
+
+function CartImage({ src, alt }) {
+  const [error, setError] = useState(false);
+
+  return (
+    <div className='relative flex h-14 w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-black/5 bg-background-light/60 dark:border-white/10 dark:bg-background-dark/40'>
+      {src && !error ? (
+        <Image
+          src={src}
+          alt={alt || 'تصویر'}
+          fill
+          sizes='72px'
+          className='object-cover'
+          onError={() => setError(true)}
+        />
+      ) : (
+        <HiOutlinePhoto size={20} className='text-secondary/40' />
+      )}
+    </div>
+  );
+}
+
+/*
+|--------------------------------------------------------------------------
+| Modal
+|--------------------------------------------------------------------------
+*/
+
 export default function CartModal({ onClose }) {
   const router = useRouter();
 
-  // دوره‌ها
   const {
     items: courseItems,
+
     loading: courseLoading,
+
     totalPrice: coursePayable,
   } = useCart();
 
-  // محصولات
   const {
     items: shopItems,
+
     loading: shopLoading,
+
     subtotal: shopPayable,
   } = useShopCart();
 
   const loading = courseLoading || shopLoading;
 
   const hasCourseItems = Array.isArray(courseItems) && courseItems.length > 0;
+
   const hasShopItems = Array.isArray(shopItems) && shopItems.length > 0;
 
   const shopQty = useMemo(() => {
-    if (!hasShopItems) return 0;
-    return shopItems.reduce((sum, it) => sum + Number(it.qty || 0), 0);
+    if (!hasShopItems) {
+      return 0;
+    }
+
+    return shopItems.reduce((sum, item) => sum + Number(item.qty || 0), 0);
   }, [hasShopItems, shopItems]);
 
   const grandPayable = useMemo(() => {
-    const c = Number(coursePayable || 0);
-    const s = Number(shopPayable || 0);
-    return c + s;
+    const courses = Number(coursePayable || 0);
+
+    const shop = Number(shopPayable || 0);
+
+    return courses + shop;
   }, [coursePayable, shopPayable]);
 
   const goToPayment = () => {
     router.push('/payment');
+
     onClose();
   };
 
   const goToCart = () => {
     router.push('/cart');
+
     onClose();
   };
 
-  const formatPrice = (v) => {
-    const n = Number(v || 0);
-    return n === 0 ? 'رایگان' : n.toLocaleString('fa-IR');
+  const formatPrice = (value) => {
+    const number = Number(value || 0);
+
+    return number === 0 ? 'رایگان' : number.toLocaleString('fa-IR');
   };
 
   return (
     <div
-      className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'
+      className='fixed inset-0 z-50 bg-black/45 backdrop-blur-sm'
       onClick={onClose}
     >
       <div
-        className='absolute left-7 top-14 w-60 rounded-xl bg-surface-light p-4 xs:left-14 xs:w-[300px] sm:w-96 dark:bg-background-dark'
-        onClick={(e) => e.stopPropagation()}
+        dir='rtl'
+        role='dialog'
+        aria-modal='true'
+        aria-label='سبد خرید'
+        onClick={(event) => event.stopPropagation()}
+        className='absolute left-4 top-[68px] flex max-h-[calc(100dvh-90px)] w-[calc(100%-2rem)] max-w-[420px] flex-col overflow-hidden rounded-[28px] border border-white/30 bg-surface-light/95 shadow-[0_28px_85px_rgba(15,23,42,0.26)] backdrop-blur-2xl xs:left-6 sm:left-10 dark:border-white/10 dark:bg-surface-dark/95 dark:shadow-[0_30px_95px_rgba(0,0,0,0.5)]'
       >
-        {loading ? (
-          <div className='flex min-h-36 min-w-52 items-center justify-center sm:min-h-48 md:min-h-60'>
-            <ImSpinner2 className='animate-spin text-secondary' size={42} />
-          </div>
-        ) : hasCourseItems || hasShopItems ? (
-          <>
-            <div className='mb-3 flex items-center justify-between'>
-              <h2 className='text-sm font-semibold xs:text-base md:text-lg'>
-                سبد خرید
-              </h2>
-              <div className='flex items-center gap-2 text-2xs text-subtext-light dark:text-subtext-dark'>
-                {hasCourseItems && (
-                  <span className='rounded-lg bg-foreground-light px-2 py-1 dark:bg-foreground-dark'>
-                    دوره‌ها: {courseItems.length.toLocaleString('fa-IR')}
-                  </span>
-                )}
-                {hasShopItems && (
-                  <span className='rounded-lg bg-foreground-light px-2 py-1 dark:bg-foreground-dark'>
-                    محصولات: {shopQty.toLocaleString('fa-IR')}
-                  </span>
-                )}
+        {/* Header */}
+        <div className='relative shrink-0 border-b border-black/5 px-4 py-4 dark:border-white/10'>
+          <div
+            aria-hidden='true'
+            className='pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-secondary/10 blur-[65px]'
+          />
+
+          <div className='relative z-10 flex items-center justify-between gap-3'>
+            <div className='flex items-center gap-3'>
+              <span className='flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+                <HiOutlineShoppingCart size={22} />
+              </span>
+
+              <div>
+                <h2 className='text-sm font-black text-text-light sm:text-base dark:text-text-dark'>
+                  سبد خرید
+                </h2>
+
+                <p className='mt-0.5 text-[9px] text-subtext-light sm:text-[10px] dark:text-subtext-dark'>
+                  مرور سریع اقلام انتخاب‌شده
+                </p>
               </div>
             </div>
 
-            {/* Courses */}
-            {hasCourseItems && (
-              <div className='mb-4 rounded-xl bg-foreground-light p-3 dark:bg-foreground-dark'>
-                <h3 className='mb-2 text-xs font-semibold xs:text-sm'>
-                  دوره‌ها
-                </h3>
+            <button
+              type='button'
+              aria-label='بستن'
+              onClick={onClose}
+              className='flex h-9 w-9 items-center justify-center rounded-xl bg-black/5 text-text-light transition-colors hover:bg-secondary/10 hover:text-secondary dark:bg-white/5 dark:text-text-dark'
+            >
+              <HiOutlineXMark size={20} />
+            </button>
+          </div>
 
-                {courseItems.map((course, index) => (
-                  <div key={course.courseId}>
-                    <div className='flex items-center justify-between gap-2'>
-                      <div className='flex items-center gap-2'>
-                        <Image
-                          src={course.courseCoverImage}
-                          alt={course.courseTitle}
-                          width={280}
-                          height={160}
-                          className='h-8 w-12 rounded-lg object-cover xs:h-12 xs:w-16'
-                        />
-                        <h4 className='text-xs font-thin md:text-sm'>
-                          {course.courseTitle}
-                        </h4>
-                      </div>
+          {!loading && (hasCourseItems || hasShopItems) && (
+            <div className='relative z-10 mt-3 flex flex-wrap gap-2'>
+              {hasCourseItems && (
+                <SiteBadge variant='secondary' size='sm'>
+                  {courseItems.length.toLocaleString('fa-IR')} دوره
+                </SiteBadge>
+              )}
 
-                      <div className='flex items-baseline gap-1'>
-                        <span className='font-faNa text-xs sm:text-sm'>
-                          {course.finalPrice === 0
-                            ? 'رایگان'
-                            : formatPrice(course.finalPrice)}
-                        </span>
-                        {course.finalPrice !== 0 && (
-                          <span className='text-2xs sm:text-xs'>تومان</span>
-                        )}
-                      </div>
-                    </div>
+              {hasShopItems && (
+                <SiteBadge variant='yellow' size='sm'>
+                  {shopQty.toLocaleString('fa-IR')} محصول
+                </SiteBadge>
+              )}
+            </div>
+          )}
+        </div>
 
-                    {index < courseItems.length - 1 && (
-                      <hr className='mx-2 my-3 border-t border-gray-300 dark:border-gray-700' />
-                    )}
+        {/* Body */}
+        <div className='custom-scrollbar min-h-0 flex-1 overflow-y-auto p-4'>
+          {loading ? (
+            <div className='flex min-h-[280px] flex-col items-center justify-center gap-3'>
+              <span className='h-8 w-8 animate-spin rounded-full border-[3px] border-secondary/20 border-t-secondary' />
+
+              <span className='text-xs font-bold text-subtext-light dark:text-subtext-dark'>
+                در حال دریافت سبد خرید...
+              </span>
+            </div>
+          ) : hasCourseItems || hasShopItems ? (
+            <div className='space-y-4'>
+              {/* Courses */}
+              {hasCourseItems && (
+                <section>
+                  <div className='mb-2 flex items-center gap-2'>
+                    <HiOutlineBookOpen size={17} className='text-secondary' />
+
+                    <h3 className='text-xs font-black text-text-light dark:text-text-dark'>
+                      دوره‌ها
+                    </h3>
                   </div>
-                ))}
-              </div>
-            )}
 
-            {/* Shop products */}
-            {hasShopItems && (
-              <div className='mb-4 rounded-xl bg-foreground-light p-3 dark:bg-foreground-dark'>
-                <h3 className='mb-2 text-xs font-semibold xs:text-sm'>
-                  محصولات
-                </h3>
-
-                {shopItems.map((item, index) => {
-                  const lineTotal =
-                    Number(item.unitPrice || 0) * Number(item.qty || 0);
-
-                  return (
-                    <div key={item.id}>
-                      <div className='flex items-center justify-between gap-2'>
-                        <div className='flex items-center gap-2'>
-                          <Image
-                            src={item.coverImage}
-                            alt={item.productTitle}
-                            width={280}
-                            height={160}
-                            className='h-8 w-12 rounded-lg object-cover xs:h-12 xs:w-16'
+                  <div className='overflow-hidden rounded-[20px] border border-black/5 bg-background-light/40 dark:border-white/10 dark:bg-background-dark/25'>
+                    {courseItems.map((course, index) => (
+                      <div
+                        key={course.courseId}
+                        className={`flex items-center justify-between gap-3 p-3 ${
+                          index < courseItems.length - 1
+                            ? 'border-b border-black/5 dark:border-white/10'
+                            : ''
+                        }`}
+                      >
+                        <div className='flex min-w-0 items-center gap-2.5'>
+                          <CartImage
+                            src={course.courseCoverImage}
+                            alt={course.courseTitle}
                           />
 
-                          <div className='flex flex-col'>
-                            <h4 className='text-xs font-thin md:text-sm'>
-                              {item.productTitle}
-                            </h4>
-
-                            <div className='mt-1 flex flex-wrap items-center gap-1.5'>
-                              <span className='font-faNa text-2xs text-subtext-light dark:text-subtext-dark'>
-                                تعداد:{' '}
-                                {Number(item.qty || 0).toLocaleString('fa-IR')}
-                              </span>
-
-                              {/* رنگ */}
-                              {item?.color?.name && (
-                                <span className='flex items-center gap-1 rounded-lg bg-foreground-light px-2 py-0.5 text-2xs text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-                                  <span>رنگ:</span>
-                                  <span className='font-faNa'>
-                                    {item.color.name}
-                                  </span>
-                                  {item?.color?.hex && (
-                                    <span
-                                      className='h-2.5 w-2.5 rounded-full border border-black/10 dark:border-white/10'
-                                      style={{
-                                        backgroundColor: item.color.hex,
-                                      }}
-                                      title={item.color.hex}
-                                    />
-                                  )}
-                                </span>
-                              )}
-
-                              {/* سایز */}
-                              {item?.size?.name && (
-                                <span className='rounded-lg bg-foreground-light px-2 py-0.5 text-2xs text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-                                  سایز:{' '}
-                                  <span className='font-faNa'>
-                                    {item.size.name}
-                                  </span>
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                          <h4 className='line-clamp-2 text-[11px] font-bold leading-5 text-text-light sm:text-xs dark:text-text-dark'>
+                            {course.courseTitle}
+                          </h4>
                         </div>
 
-                        <div className='flex items-baseline gap-1'>
-                          <span className='font-faNa text-xs sm:text-sm'>
-                            {lineTotal === 0
-                              ? 'رایگان'
-                              : formatPrice(lineTotal)}
-                          </span>
-                          {lineTotal !== 0 && (
-                            <span className='text-2xs sm:text-xs'>تومان</span>
+                        <div className='shrink-0 text-left'>
+                          <strong className='font-faNa text-xs font-black'>
+                            {formatPrice(course.finalPrice)}
+                          </strong>
+
+                          {Number(course.finalPrice) !== 0 && (
+                            <span className='mr-1 text-[8px] text-subtext-light dark:text-subtext-dark'>
+                              تومان
+                            </span>
                           )}
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </section>
+              )}
 
-                      {index < shopItems.length - 1 && (
-                        <hr className='mx-2 my-3 border-t border-gray-300 dark:border-gray-700' />
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+              {/* Products */}
+              {hasShopItems && (
+                <section>
+                  <div className='mb-2 flex items-center gap-2'>
+                    <HiOutlineShoppingBag
+                      size={17}
+                      className='text-secondary'
+                    />
 
-            <hr className='my-4 border-t border-gray-300 dark:border-gray-700' />
+                    <h3 className='text-xs font-black text-text-light dark:text-text-dark'>
+                      محصولات
+                    </h3>
+                  </div>
 
-            {/* Grand total */}
-            <div className='flex items-center justify-between'>
-              <h3 className='text-sm sm:text-base'>مبلغ کل</h3>
+                  <div className='overflow-hidden rounded-[20px] border border-black/5 bg-background-light/40 dark:border-white/10 dark:bg-background-dark/25'>
+                    {shopItems.map((item, index) => {
+                      const lineTotal =
+                        Number(item.unitPrice || 0) * Number(item.qty || 0);
 
-              {grandPayable === 0 ? (
-                <h3 className='font-faNa text-sm sm:text-base'>رایگان</h3>
-              ) : (
-                <div className='flex items-baseline gap-1'>
-                  <h3 className='font-faNa text-sm sm:text-base'>
-                    {formatPrice(grandPayable)}
-                  </h3>
-                  <h6 className='text-2xs sm:text-xs'>تومان</h6>
-                </div>
+                      return (
+                        <div
+                          key={item.id}
+                          className={`flex items-center justify-between gap-3 p-3 ${
+                            index < shopItems.length - 1
+                              ? 'border-b border-black/5 dark:border-white/10'
+                              : ''
+                          }`}
+                        >
+                          <div className='flex min-w-0 items-center gap-2.5'>
+                            <CartImage
+                              src={item.coverImage}
+                              alt={item.productTitle}
+                            />
+
+                            <div className='min-w-0'>
+                              <h4 className='line-clamp-2 text-[11px] font-bold leading-5 text-text-light sm:text-xs dark:text-text-dark'>
+                                {item.productTitle}
+                              </h4>
+
+                              <div className='mt-1.5 flex flex-wrap gap-1'>
+                                <span className='rounded-lg bg-secondary/5 px-2 py-0.5 font-faNa text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                  تعداد:{' '}
+                                  {Number(item.qty || 0).toLocaleString(
+                                    'fa-IR'
+                                  )}
+                                </span>
+
+                                {item?.color?.name && (
+                                  <span className='flex items-center gap-1 rounded-lg bg-secondary/5 px-2 py-0.5 text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                    <span>{item.color.name}</span>
+
+                                    {item?.color?.hex && (
+                                      <span
+                                        className='h-2.5 w-2.5 rounded-full border border-black/10 dark:border-white/10'
+                                        style={{
+                                          backgroundColor: item.color.hex,
+                                        }}
+                                      />
+                                    )}
+                                  </span>
+                                )}
+
+                                {item?.size?.name && (
+                                  <span className='rounded-lg bg-secondary/5 px-2 py-0.5 font-faNa text-[8px] text-subtext-light dark:bg-secondary/10 dark:text-subtext-dark'>
+                                    سایز: {item.size.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className='shrink-0 text-left'>
+                            <strong className='font-faNa text-xs font-black'>
+                              {formatPrice(lineTotal)}
+                            </strong>
+
+                            {lineTotal !== 0 && (
+                              <span className='mr-1 text-[8px] text-subtext-light dark:text-subtext-dark'>
+                                تومان
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
               )}
             </div>
+          ) : (
+            <div className='flex min-h-[280px] flex-col items-center justify-center text-center'>
+              <span className='flex h-16 w-16 items-center justify-center rounded-[22px] bg-secondary/10 text-secondary'>
+                <HiOutlineShoppingCart size={30} />
+              </span>
 
-            <div className='mt-5 flex w-full flex-wrap gap-2'>
-              {grandPayable !== 0 && (
-                <Button
-                  className='flex-1 whitespace-nowrap text-xs xs:text-sm sm:text-base'
+              <h3 className='mt-4 text-sm font-black text-text-light dark:text-text-dark'>
+                سبد خرید خالی است
+              </h3>
+
+              <p className='mt-1.5 max-w-[240px] text-[10px] leading-6 text-subtext-light dark:text-subtext-dark'>
+                هنوز دوره یا محصولی برای خرید انتخاب نکرده‌اید.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        {!loading && (hasCourseItems || hasShopItems) && (
+          <div className='shrink-0 border-t border-black/5 bg-surface-light/90 p-4 dark:border-white/10 dark:bg-surface-dark/90'>
+            <div className='mb-4 flex items-end justify-between gap-3'>
+              <div>
+                <p className='text-[9px] font-bold text-subtext-light dark:text-subtext-dark'>
+                  مبلغ قابل پرداخت
+                </p>
+
+                <div className='mt-1 flex items-baseline gap-1'>
+                  <strong className='font-faNa text-lg font-black'>
+                    {formatPrice(grandPayable)}
+                  </strong>
+
+                  {grandPayable !== 0 && (
+                    <span className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                      تومان
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className='grid grid-cols-2 gap-2'>
+              <SiteButton
+                type='button'
+                variant='outline'
+                size='md'
+                onClick={goToCart}
+                className='w-full'
+              >
+                مشاهده سبد
+              </SiteButton>
+
+              {grandPayable !== 0 ? (
+                <SiteButton
+                  type='button'
+                  variant='primary'
+                  size='md'
+                  endIcon={HiOutlineArrowLeft}
                   onClick={goToPayment}
+                  className='w-full'
                 >
                   پرداخت
-                </Button>
+                </SiteButton>
+              ) : (
+                <SiteButton
+                  type='button'
+                  variant='primary'
+                  size='md'
+                  onClick={goToCart}
+                  className='w-full'
+                >
+                  ادامه
+                </SiteButton>
               )}
-
-              <Button className='' onClick={goToCart}>
-                سبد خرید
-              </Button>
             </div>
-          </>
-        ) : (
-          <div className='flex min-h-36 min-w-52 flex-col items-center justify-center gap-4 sm:min-h-48 md:min-h-60'>
-            <TbShoppingCartOff size={42} className='text-secondary' />
-            <span className='text-secondary'>سبد خرید خالی است.</span>
           </div>
         )}
       </div>

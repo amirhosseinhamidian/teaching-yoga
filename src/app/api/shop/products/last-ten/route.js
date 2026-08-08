@@ -1,14 +1,14 @@
-// src/app/api/shop/products/last-ten/route.js
-
 import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getShopEnabled } from '@/utils/server/shopGuard';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
     const enabled = await getShopEnabled();
+
     if (!enabled) {
       return NextResponse.json(
         { error: 'فروشگاه در حال حاضر غیرفعال است.' },
@@ -16,13 +16,11 @@ export async function GET() {
       );
     }
 
-    // تعداد محصولات (پیش‌فرض 10)
     const limit = 10;
 
-    // دریافت جدیدترین محصولات
     const products = await prismadb.product.findMany({
       where: {
-        isActive: true, // اگر فیلد فعال/غیرفعال داری
+        isActive: true,
       },
       orderBy: {
         createdAt: 'desc',
@@ -38,18 +36,33 @@ export async function GET() {
         compareAt: true,
         stock: true,
         isActive: true,
-        category: { select: { id: true, title: true } },
+        category: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
         colors: {
           select: {
-            color: { select: { id: true, name: true, hex: true } },
+            color: {
+              select: {
+                id: true,
+                name: true,
+                hex: true,
+              },
+            },
           },
         },
       },
     });
 
-    const normalizedItems = products.map((p) => ({
-      ...p,
-      colors: (p.colors || []).map(({ color }) => ({
+    const normalizedItems = products.map((product) => ({
+      ...product,
+      coverImage: toAbsoluteMediaUrl(product.coverImage),
+      images: Array.isArray(product.images)
+        ? product.images.map((image) => toAbsoluteMediaUrl(image))
+        : [],
+      colors: (product.colors || []).map(({ color }) => ({
         id: color.id,
         name: color.name,
         hex: color.hex,
@@ -69,6 +82,7 @@ export async function GET() {
     );
   } catch (error) {
     console.error('[SHOP_LAST_TEN_PRODUCTS]', error);
+
     return NextResponse.json(
       {
         success: false,

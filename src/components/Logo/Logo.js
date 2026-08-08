@@ -14,10 +14,10 @@ export default function Logo({ size = 'medium', className }) {
       <img
         src='/images/logo.png'
         alt='samaneh yoga logo'
-        className={`block ${sizeClasses[size]}`}
+        className={`block ${sizeClasses[size]} max-h-8 md:max-h-12`}
       />
       <h2
-        className={`font-fancy text-text-light dark:text-text-dark ${sizeClasses[size]}`}
+        className={`font-fancy text-base text-text-light sm:text-lg md:mb-1.5 md:text-xl dark:text-text-dark ${sizeClasses[size]}`}
       >
         سمانه یوگا
       </h2>

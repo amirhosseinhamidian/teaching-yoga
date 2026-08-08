@@ -1,159 +1,473 @@
 /* eslint-disable no-undef */
+
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+
 import PropTypes from 'prop-types';
+
+import { AnimatePresence, motion } from 'framer-motion';
+
 import CommentCard from './CommentCard';
-import OutlineButton from '../Ui/OutlineButton/OutlineButton';
-import { FaSpinner, FaAngleDown } from 'react-icons/fa6';
 import CreateCommentCard from './CreateCommentCard';
 import EmptyComment from './EmptyComment';
+
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+
 import { useAuthUser } from '@/hooks/auth/useAuthUser';
 
-const CommentsMainCard = ({ className, referenceId, isCourse }) => {
+import {
+  HiOutlineChatBubbleLeftRight,
+  HiOutlineSparkles,
+} from 'react-icons/hi2';
+
+const getApiBaseUrl = () =>
+  process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, '') || '';
+
+const getCommentsResponseData = (result) => {
+  const comments = Array.isArray(result?.comments)
+    ? result.comments
+    : Array.isArray(result?.data?.comments)
+      ? result.data.comments
+      : [];
+
+  const parsedTotalPages = Number(
+    result?.totalPages ?? result?.data?.totalPages ?? 1
+  );
+
+  return {
+    comments,
+
+    totalPages:
+      Number.isFinite(parsedTotalPages) && parsedTotalPages > 0
+        ? parsedTotalPages
+        : 1,
+  };
+};
+
+const CommentsSkeleton = () => {
+  return (
+    <div className='space-y-4'>
+      {Array.from({
+        length: 3,
+      }).map((_, index) => (
+        <SiteCard
+          key={index}
+          variant='soft'
+          padding='md'
+          radius='md'
+          className='animate-pulse'
+        >
+          <div className='flex items-center gap-3'>
+            <div className='h-12 w-12 rounded-2xl bg-black/[0.06] dark:bg-white/[0.07]' />
+
+            <div className='flex-1'>
+              <div className='h-3 w-28 rounded-full bg-black/[0.06] dark:bg-white/[0.07]' />
+
+              <div className='mt-2 h-2.5 w-20 rounded-full bg-black/[0.05] dark:bg-white/[0.06]' />
+            </div>
+          </div>
+
+          <div className='mt-5 space-y-2'>
+            <div className='h-3 w-full rounded-full bg-black/[0.05] dark:bg-white/[0.06]' />
+
+            <div className='h-3 w-4/5 rounded-full bg-black/[0.05] dark:bg-white/[0.06]' />
+          </div>
+        </SiteCard>
+      ))}
+    </div>
+  );
+};
+
+const CommentsMainCard = ({ className = '', referenceId, isCourse }) => {
   const { user } = useAuthUser();
 
   const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true); // فقط لود اولیه
-  const [pageLoading, setPageLoading] = useState(false); // لود صفحات بعدی
+
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const [pageLoading, setPageLoading] = useState(false);
+
+  const [error, setError] = useState('');
+
   const [page, setPage] = useState(1);
+
   const [totalPages, setTotalPages] = useState(1);
+
+  const [reloadKey, setReloadKey] = useState(0);
 
   const [showCreateCard, setShowCreateCard] = useState(false);
 
-  // Toggle create card
-  const toggleCreateCard = () => setShowCreateCard((prev) => !prev);
+  const loadCommentsPage = useCallback(
+    async ({ pageNumber, replace = false, signal }) => {
+      if (referenceId === null || referenceId === undefined) {
+        return false;
+      }
 
-  // ⬇️ URL مناسب با نوع کامنت (course/article)
-  const commentsUrl = isCourse
-    ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments?courseId=${referenceId}&page=${page}`
-    : `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/comments-article?articleId=${referenceId}&page=${page}`;
+      if (replace) {
+        setInitialLoading(true);
+      } else {
+        setPageLoading(true);
+      }
 
-  // ======================
-  // 🟦 Fetch Comments
-  // ======================
+      setError('');
+
+      try {
+        const apiBaseUrl = getApiBaseUrl();
+
+        const endpoint = isCourse ? '/api/comments' : '/api/comments-article';
+
+        const referenceKey = isCourse ? 'courseId' : 'articleId';
+
+        const url =
+          `${apiBaseUrl}${endpoint}` +
+          `?${referenceKey}=${encodeURIComponent(referenceId)}` +
+          `&page=${encodeURIComponent(pageNumber)}`;
+
+        const response = await fetch(url, {
+          method: 'GET',
+          credentials: 'include',
+          cache: 'no-store',
+          signal,
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          throw new Error(
+            result?.error || result?.message || 'دریافت دیدگاه‌ها انجام نشد.'
+          );
+        }
+
+        const {
+          comments: receivedComments,
+
+          totalPages: receivedTotalPages,
+        } = getCommentsResponseData(result);
+
+        if (signal?.aborted) {
+          return false;
+        }
+
+        setComments((currentComments) => {
+          if (replace) {
+            return receivedComments;
+          }
+
+          const existingIds = new Set(
+            currentComments.map((comment) => String(comment.id))
+          );
+
+          const newComments = receivedComments.filter(
+            (comment) => !existingIds.has(String(comment.id))
+          );
+
+          return [...currentComments, ...newComments];
+        });
+
+        setTotalPages(receivedTotalPages);
+
+        return true;
+      } catch (loadError) {
+        if (loadError?.name === 'AbortError') {
+          return false;
+        }
+
+        console.error('[COMMENTS_FETCH_ERROR]', loadError);
+
+        setError(loadError?.message || 'دریافت دیدگاه‌ها انجام نشد.');
+
+        return false;
+      } finally {
+        if (!signal?.aborted) {
+          if (replace) {
+            setInitialLoading(false);
+          } else {
+            setPageLoading(false);
+          }
+        }
+      }
+    },
+    [isCourse, referenceId]
+  );
+
   useEffect(() => {
     const controller = new AbortController();
 
-    const getComments = async () => {
-      if (page === 1) setLoading(true);
-      else setPageLoading(true);
+    setComments([]);
+    setPage(1);
+    setTotalPages(1);
 
-      try {
-        const res = await fetch(commentsUrl, {
-          signal: controller.signal,
-          credentials: 'include',
-        });
+    loadCommentsPage({
+      pageNumber: 1,
+      replace: true,
+      signal: controller.signal,
+    });
 
-        if (!res.ok) throw new Error('Failed to load comments');
-
-        const data = await res.json();
-
-        setComments((prev) =>
-          page === 1 ? data.comments : [...prev, ...data.comments]
-        );
-
-        setTotalPages(data.totalPages || 1);
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Error loading comments:', err);
-        }
-      } finally {
-        setLoading(false);
-        setPageLoading(false);
-      }
+    return () => {
+      controller.abort();
     };
+  }, [loadCommentsPage, reloadKey]);
 
-    getComments();
+  const toggleCreateCard = () => {
+    setShowCreateCard((currentValue) => !currentValue);
+  };
 
-    return () => controller.abort();
-  }, [page, referenceId]);
+  const loadMore = async () => {
+    if (pageLoading || page >= totalPages) {
+      return;
+    }
 
-  // ======================
-  // 🟦 Load More
-  // ======================
-  const loadMore = () => {
-    if (page < totalPages && !pageLoading) {
-      setPage((prev) => prev + 1);
+    const nextPage = page + 1;
+
+    const succeeded = await loadCommentsPage({
+      pageNumber: nextPage,
+      replace: false,
+    });
+
+    if (succeeded) {
+      setPage(nextPage);
     }
   };
 
-  // ======================
-  // 🟦 Add New Comment (Optimistic)
-  // ======================
   const addComment = (newComment) => {
-    setComments((prev) => [newComment, ...prev]);
+    if (!newComment) {
+      return;
+    }
+
+    setComments((currentComments) => [
+      newComment,
+
+      ...currentComments.filter(
+        (comment) => String(comment.id) !== String(newComment.id)
+      ),
+    ]);
   };
 
+  const hasMore = page < totalPages;
+
   return (
-    <div
-      className={`rounded-xl bg-surface-light p-6 pb-1 shadow dark:bg-surface-dark ${className}`}
+    <SiteCard
+      as='section'
+      variant='glass'
+      padding='none'
+      radius='lg'
+      topLine
+      dir='rtl'
+      className={`px-5 py-7 sm:px-7 sm:py-8 lg:px-8 ${className}`}
     >
-      <div className='flex items-baseline justify-between'>
-        <h3 className='mb-4 font-semibold md:text-lg'>نظرات کاربران</h3>
+      {/* Decorative glows */}
+      <div
+        aria-hidden='true'
+        className='absolute -right-24 -top-24 h-64 w-64 rounded-full bg-secondary/10 blur-[90px]'
+      />
 
-        <OutlineButton
-          className='text-2xs sm:text-sm'
-          onClick={toggleCreateCard}
-        >
-          {showCreateCard ? 'بستن' : 'ایجاد نظر جدید'}
-        </OutlineButton>
-      </div>
+      <div
+        aria-hidden='true'
+        className='bg-yellow/10 absolute -bottom-28 -left-28 h-64 w-64 rounded-full blur-[95px]'
+      />
 
-      {/* Create Comment Box */}
-      {showCreateCard && (
-        <CreateCommentCard
-          user={user}
-          isCourse={isCourse}
-          referenceId={referenceId}
-          onCloseClick={toggleCreateCard}
-          onCommentAdded={addComment}
-        />
-      )}
+      <div className='relative z-10'>
+        {/* Header */}
+        <div className='mb-7 flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between'>
+          <div className='flex items-start gap-4'>
+            <span className='flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'>
+              <HiOutlineChatBubbleLeftRight size={26} />
+            </span>
 
-      {/* Initial Loading */}
-      {loading && page === 1 ? (
-        <FaSpinner className='mx-auto my-4 animate-spin text-xl text-secondary md:text-3xl' />
-      ) : (
-        <>
-          {/* Render Comments */}
-          {comments.map((comment) => (
-            <CommentCard
-              key={comment.id}
-              className='my-4 sm:m-4'
-              comment={comment}
-            />
-          ))}
+            <div className='min-w-0'>
+              <div className='flex items-center gap-2 text-secondary'>
+                <HiOutlineSparkles size={16} />
 
-          {/* Load more */}
-          {page < totalPages && (
-            <OutlineButton
-              onClick={loadMore}
-              className='mx-auto my-6 flex items-center gap-2 text-sm'
-              disable={pageLoading}
+                <span className='text-[10px] font-bold sm:text-xs'>
+                  تجربه و دیدگاه کاربران
+                </span>
+              </div>
+
+              <h2 className='mt-1 text-xl font-black leading-9 text-text-light sm:text-2xl dark:text-text-dark'>
+                نظرات کاربران
+              </h2>
+
+              <p className='mt-2 max-w-2xl text-xs leading-7 text-subtext-light sm:text-sm dark:text-subtext-dark'>
+                تجربه، سؤال یا نظر خودت را با دیگر کاربران به اشتراک بگذار.
+              </p>
+            </div>
+          </div>
+
+          <div className='flex flex-wrap items-center gap-2 sm:justify-end'>
+            {!initialLoading && comments.length > 0 && (
+              <SiteBadge
+                icon={HiOutlineChatBubbleLeftRight}
+                variant='secondary'
+                size='lg'
+                className='font-faNa'
+              >
+                {comments.length.toLocaleString('fa-IR')} دیدگاه
+              </SiteBadge>
+            )}
+
+            <SiteButton
+              type='button'
+              size='md'
+              variant={showCreateCard ? 'secondary' : 'primary'}
+              startIcon={HiOutlineChatBubbleLeftRight}
+              aria-expanded={showCreateCard}
+              onClick={toggleCreateCard}
             >
-              مشاهده بیشتر
-              {pageLoading ? (
-                <FaSpinner className='animate-spin' />
-              ) : (
-                <FaAngleDown />
-              )}
-            </OutlineButton>
-          )}
-        </>
-      )}
+              {showCreateCard ? 'بستن فرم' : 'ثبت دیدگاه جدید'}
+            </SiteButton>
+          </div>
+        </div>
 
-      {/* Empty State */}
-      {!loading && comments.length === 0 && (
-        <EmptyComment isCourse={isCourse} />
-      )}
-    </div>
+        {/* Create Comment */}
+        <AnimatePresence initial={false}>
+          {showCreateCard && (
+            <motion.div
+              initial={{
+                height: 0,
+                opacity: 0,
+                y: -10,
+              }}
+              animate={{
+                height: 'auto',
+                opacity: 1,
+                y: 0,
+              }}
+              exit={{
+                height: 0,
+                opacity: 0,
+                y: -10,
+              }}
+              transition={{
+                height: {
+                  duration: 0.35,
+
+                  ease: [0.4, 0, 0.2, 1],
+                },
+
+                opacity: {
+                  duration: 0.22,
+                },
+              }}
+              className='overflow-hidden'
+            >
+              <CreateCommentCard
+                user={user}
+                isCourse={isCourse}
+                referenceId={referenceId}
+                onCloseClick={() => setShowCreateCard(false)}
+                onCommentAdded={addComment}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Comments */}
+        <div className='mt-6'>
+          {initialLoading ? (
+            <CommentsSkeleton />
+          ) : error && comments.length === 0 ? (
+            <SiteCard
+              variant='soft'
+              padding='lg'
+              radius='md'
+              role='alert'
+              className='border-rose-200 bg-rose-50 text-center dark:border-rose-500/30 dark:bg-rose-500/10'
+            >
+              <span className='mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300'>
+                <HiOutlineChatBubbleLeftRight size={28} />
+              </span>
+
+              <h3 className='mt-4 text-base font-black text-rose-700 dark:text-rose-300'>
+                دریافت دیدگاه‌ها انجام نشد
+              </h3>
+
+              <p className='mx-auto mt-2 max-w-lg text-sm leading-7 text-rose-600 dark:text-rose-300/80'>
+                {error}
+              </p>
+
+              <SiteButton
+                type='button'
+                variant='danger'
+                size='sm'
+                onClick={() => setReloadKey((currentValue) => currentValue + 1)}
+                className='mt-5'
+              >
+                تلاش دوباره
+              </SiteButton>
+            </SiteCard>
+          ) : comments.length === 0 ? (
+            <EmptyComment isCourse={isCourse} />
+          ) : (
+            <div className='space-y-4'>
+              <AnimatePresence initial={false}>
+                {comments.map((comment, index) => (
+                  <motion.div
+                    key={comment.id}
+                    initial={{
+                      opacity: 0,
+                      y: 18,
+                    }}
+                    animate={{
+                      opacity: 1,
+                      y: 0,
+                    }}
+                    exit={{
+                      opacity: 0,
+                      y: -10,
+                    }}
+                    transition={{
+                      duration: 0.4,
+
+                      delay: Math.min(index * 0.04, 0.2),
+                    }}
+                  >
+                    <CommentCard comment={comment} />
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+
+              {error && (
+                <div
+                  role='alert'
+                  className='rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-6 text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300'
+                >
+                  {error}
+                </div>
+              )}
+
+              {hasMore && (
+                <div className='flex justify-center border-t border-black/5 pt-6 dark:border-white/10'>
+                  <SiteButton
+                    type='button'
+                    size='lg'
+                    variant='secondary'
+                    loading={pageLoading}
+                    disabled={pageLoading}
+                    onClick={loadMore}
+                  >
+                    {pageLoading
+                      ? 'در حال دریافت...'
+                      : 'مشاهده دیدگاه‌های بیشتر'}
+                  </SiteButton>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </SiteCard>
   );
 };
 
 CommentsMainCard.propTypes = {
   className: PropTypes.string,
-  referenceId: PropTypes.number.isRequired,
+
+  referenceId: PropTypes.oneOfType([PropTypes.number, PropTypes.string])
+    .isRequired,
+
   isCourse: PropTypes.bool.isRequired,
 };
 

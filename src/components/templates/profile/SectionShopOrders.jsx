@@ -2,26 +2,36 @@
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
-import Button from '@/components/Ui/Button/Button';
-import { ImSpinner2 } from 'react-icons/im';
-import {
-  HiOutlineClock,
-  HiOutlineTruck,
-  HiOutlineCheckCircle,
-  HiOutlineXCircle,
-  HiOutlineArrowUturnLeft,
-} from 'react-icons/hi2';
-import Pagination from '@/components/Ui/Pagination/Pagination';
 import Image from 'next/image';
-import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
-import { MdContentCopy, MdOutlineCancel } from 'react-icons/md';
+import PropTypes from 'prop-types';
+import { useRouter } from 'next/navigation';
+
+import Pagination from '@/components/Ui/Pagination/Pagination';
 import Modal from '@/components/modules/Modal/Modal';
+
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
 import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
-import { useRouter } from 'next/navigation';
+
 import ReturnRequestModal from './ReturnRequestModal';
+
+import {
+  HiOutlineArrowUturnLeft,
+  HiOutlineCheckCircle,
+  HiOutlineChevronDown,
+  HiOutlineChevronUp,
+  HiOutlineClock,
+  HiOutlineClipboardDocumentCheck,
+  HiOutlineInformationCircle,
+  HiOutlineShoppingBag,
+  HiOutlineTruck,
+  HiOutlineXCircle,
+} from 'react-icons/hi2';
+import { ImSpinner2 } from 'react-icons/im';
+import { MdContentCopy, MdOutlineCancel } from 'react-icons/md';
 import { TbTruckReturn } from 'react-icons/tb';
-import PropTypes from 'prop-types';
 
 const PER_PAGE = 5;
 
@@ -34,12 +44,21 @@ const TABS = [
 ];
 
 const RETURN_STATUS_META = {
-  PENDING: { label: 'در انتظار بررسی', tone: 'bg-yellow-100 text-yellow-700' },
-  APPROVED: { label: 'تایید شده', tone: 'bg-sky-100 text-sky-700' },
-  REJECTED: { label: 'رد شده', tone: 'bg-rose-100 text-rose-700' },
+  PENDING: {
+    label: 'در انتظار بررسی',
+    tone: 'border-yellow/20 bg-yellow/10 text-yellow',
+  },
+  APPROVED: {
+    label: 'تایید شده',
+    tone: 'border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300',
+  },
+  REJECTED: {
+    label: 'رد شده',
+    tone: 'border-red/20 bg-red/10 text-red',
+  },
   COMPLETED: {
     label: 'مرجوعی انجام شد',
-    tone: 'bg-emerald-100 text-emerald-700',
+    tone: 'border-secondary/20 bg-secondary/10 text-secondary',
   },
 };
 
@@ -118,6 +137,28 @@ const canRequestReturn = (order) => {
   const diff = Date.now() - new Date(updatedAt).getTime();
   const sevenDays = 7 * 24 * 60 * 60 * 1000;
   return diff <= sevenDays;
+};
+
+const getStatusTone = (status) => {
+  const value = String(status || '').toUpperCase();
+
+  if (value === 'DELIVERED') {
+    return 'border-secondary/20 bg-secondary/10 text-secondary';
+  }
+
+  if (value === 'SHIPPED') {
+    return 'border-blue/20 bg-blue/10 text-blue';
+  }
+
+  if (value === 'CANCELLED') {
+    return 'border-red/20 bg-red/10 text-red';
+  }
+
+  if (value === 'RETURNED') {
+    return 'border-purple-500/20 bg-purple-500/10 text-purple-600 dark:text-purple-300';
+  }
+
+  return 'border-yellow/20 bg-yellow/10 text-yellow';
 };
 
 export default function SectionShopOrders({ onCounts }) {
@@ -208,20 +249,17 @@ export default function SectionShopOrders({ onCounts }) {
       });
     } catch (e) {
       console.error(e);
-      // در صورت خطا فقط مقدارها را صفر نگه می‌داریم
     } finally {
       setCountsLoading(false);
     }
   };
 
-  // ✅ با تغییر تب: صفحه 1 و بسته شدن جزئیات
   useEffect(() => {
     setOpenId(null);
     setPage(1);
     load(activeTab, 1);
   }, [activeTab]);
 
-  // ✅ با تغییر صفحه: دوباره load
   useEffect(() => {
     load(activeTab, page);
   }, [page]);
@@ -229,6 +267,7 @@ export default function SectionShopOrders({ onCounts }) {
   useEffect(() => {
     fetchCounts();
   }, []);
+
   const onPageChange = (newPage) => {
     const p = Math.max(1, Math.min(Number(newPage || 1), totalPages));
     setOpenId(null);
@@ -248,7 +287,6 @@ export default function SectionShopOrders({ onCounts }) {
         );
         return;
       }
-      // بعد از تغییر وضعیت، لیست همان تب را با همان صفحه refresh کن
       setActiveTab('cancelled');
       toast.showSuccessToast('سفارش شما لغو شد.');
 
@@ -281,7 +319,6 @@ export default function SectionShopOrders({ onCounts }) {
         return;
       }
 
-      // منطقیه بعد تایید تحویل، تب تکمیل شده رو باز کنیم
       setActiveTab('delivered');
       setPage(1);
       toast.showSuccessToast('دریافت محصول توسط شما تایید شد.');
@@ -296,38 +333,49 @@ export default function SectionShopOrders({ onCounts }) {
 
   return (
     <div className='w-full'>
-      {/* Header */}
-      <h3 className='mb-4 text-sm font-semibold sm:text-base'>
-        سفارشات فروشگاه
-      </h3>
+      <div className='mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between'>
+        <div>
+          <p className='text-[10px] font-bold text-secondary'>فروشگاه</p>
+          <h3 className='mt-1 text-sm font-black text-text-light sm:text-base dark:text-text-dark'>
+            سفارشات فروشگاه
+          </h3>
+          <p className='mt-1 text-[10px] text-subtext-light dark:text-subtext-dark'>
+            وضعیت آماده‌سازی، ارسال، تحویل و مرجوعی سفارش‌های خود را پیگیری کنید.
+          </p>
+        </div>
 
-      {/* Tabs */}
-      <div className='hide-scrollbar mb-4 flex w-full flex-wrap gap-2 overflow-x-auto'>
+        <span className='inline-flex w-fit items-center gap-1.5 rounded-xl border border-secondary/15 bg-secondary/5 px-3 py-1.5 text-[9px] font-bold text-secondary'>
+          <HiOutlineShoppingBag size={14} />
+          {selectedTab?.title}
+        </span>
+      </div>
+
+      <div className='hide-scrollbar mb-4 flex w-full gap-2 overflow-x-auto pb-1'>
         {TABS.map((t) => {
           const Icon = t.icon;
           const isActive = activeTab === t.key;
           const count = Number(tabCounts?.[t.key] || 0);
+
           return (
             <button
               key={t.key}
+              type='button'
               onClick={() => setActiveTab(t.key)}
-              className={`flex items-center gap-1 whitespace-nowrap rounded-xl border p-1 text-2xs transition-all xs:text-xs md:text-sm lg:p-2 ${
+              className={`flex min-h-11 min-w-fit items-center gap-2 whitespace-nowrap rounded-2xl border px-3 text-[10px] font-black transition-all sm:text-xs ${
                 isActive
-                  ? 'border-secondary bg-secondary/10 text-secondary'
-                  : 'border-gray-200 text-slate-700 dark:border-gray-700 dark:bg-surface-dark dark:text-slate-200'
+                  ? 'border-secondary/20 bg-secondary text-white shadow-[0_10px_26px_rgba(38,145,125,0.18)]'
+                  : 'border-black/5 bg-background-light/45 text-subtext-light hover:border-secondary/20 hover:bg-secondary/5 hover:text-secondary dark:border-white/10 dark:bg-background-dark/30 dark:text-subtext-dark'
               }`}
             >
-              <Icon
-                size={18}
-                className={isActive ? 'text-secondary' : 'text-subtext-light'}
-              />
+              <Icon size={17} />
               <span>{t.title}</span>
+
               {!countsLoading && (
                 <span
-                  className={`mr-1 rounded-md px-2 font-faNa text-xs ${
+                  className={`flex h-5 min-w-5 items-center justify-center rounded-lg px-1 font-faNa text-[9px] ${
                     isActive
-                      ? 'bg-secondary text-white'
-                      : 'bg-gray-100 text-slate-700 dark:bg-foreground-dark/40 dark:text-slate-200'
+                      ? 'bg-white/20 text-white'
+                      : 'bg-black/[0.04] text-text-light dark:bg-white/[0.06] dark:text-text-dark'
                   }`}
                 >
                   {count.toLocaleString('fa-IR')}
@@ -338,222 +386,280 @@ export default function SectionShopOrders({ onCounts }) {
         })}
       </div>
 
-      {/* Loading */}
       {loading ? (
-        <div className='my-10 flex h-40 w-full flex-col items-center justify-center gap-3 rounded-xl'>
+        <div className='flex min-h-[340px] w-full flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed border-black/5 dark:border-white/10'>
           <ImSpinner2 size={34} className='animate-spin text-secondary' />
-          <p className='text-sm'>در حال دریافت سفارش‌ها...</p>
+          <p className='text-xs text-subtext-light dark:text-subtext-dark'>
+            در حال دریافت سفارش‌ها...
+          </p>
         </div>
       ) : orders.length === 0 ? (
-        <div className='my-10 flex h-40 w-full items-center justify-center rounded-xl text-sm'>
-          سفارشی در این وضعیت وجود ندارد.
-        </div>
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='lg'
+          className='px-5 py-14 text-center'
+        >
+          <span className='mx-auto flex h-16 w-16 items-center justify-center rounded-[22px] bg-secondary/10 text-secondary'>
+            <HiOutlineShoppingBag size={30} />
+          </span>
+          <h3 className='mt-4 text-sm font-black text-text-light dark:text-text-dark'>
+            سفارشی در این وضعیت وجود ندارد
+          </h3>
+          <p className='mx-auto mt-2 max-w-sm text-[10px] leading-6 text-subtext-light sm:text-xs dark:text-subtext-dark'>
+            سفارش‌های مرتبط با وضعیت «{selectedTab?.title}» در این بخش نمایش داده
+            می‌شوند.
+          </p>
+        </SiteCard>
       ) : (
         <div className='space-y-3'>
           {orders.map((o) => {
             const isOpen = openId === o.id;
 
             return (
-              <div
+              <SiteCard
                 key={o.id}
-                className='rounded-xl border border-gray-200 p-4 dark:border-gray-700'
+                variant='glass'
+                padding='none'
+                radius='lg'
+                className='relative overflow-hidden p-4 sm:p-5'
               >
-                {/* top row */}
-                <div className='flex flex-wrap items-center justify-between gap-3'>
-                  <div className='flex flex-col gap-1'>
-                    <div className='text-sm font-semibold'>
-                      وضعیت: {humanizeShopStatus(o.status)}
-                    </div>
-                    <div className='text-[11px] text-subtext-light dark:text-subtext-dark'>
-                      تاریخ ثبت:{' '}
-                      <span className='font-faNa'>
-                        {formatDateFa(o.createdAt)}
-                      </span>
-                    </div>
-                  </div>
+                <div
+                  aria-hidden='true'
+                  className='pointer-events-none absolute -left-20 -top-20 h-44 w-44 rounded-full bg-secondary/[0.055] blur-[70px]'
+                />
 
-                  <div className='flex flex-col items-end gap-3'>
-                    <OutlineButton
-                      onClick={() => setOpenId(isOpen ? null : o.id)}
-                      className='rounded-md border px-1 py-0.5 text-2xs'
-                      color='blue'
-                    >
-                      {isOpen ? 'بستن جزئیات' : 'مشاهده جزئیات'}
-                    </OutlineButton>
-                    <div className='font-faNa text-sm font-semibold'>
-                      {formatToman(o.payableOnline)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* tracking */}
-                {shouldShowTracking(o.status) && (
-                  <div className='mt-3'>
-                    {o.trackingCode ? (
-                      <div className='flex items-center gap-1 text-sm text-subtext-light md:text-base dark:text-subtext-dark'>
-                        <span>کد رهگیری پستی:</span>
-
-                        <button
-                          type='button'
-                          onClick={() => {
-                            navigator.clipboard.writeText(o.trackingCode);
-                            toast.showSuccessToast('کد رهگیری کپی شد');
-                          }}
-                          className='flex items-center gap-1 rounded px-1 py-0.5 transition hover:bg-gray-100 dark:hover:bg-gray-800'
+                <div className='relative z-10'>
+                  <div className='flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between'>
+                    <div className='min-w-0'>
+                      <div className='flex flex-wrap items-center gap-2'>
+                        <span
+                          className={`rounded-xl border px-2.5 py-1.5 text-[9px] font-black ${getStatusTone(
+                            o.status
+                          )}`}
                         >
-                          <span className='font-faNa'>{o.trackingCode}</span>
-                          <MdContentCopy size={14} className='opacity-70' />
-                        </button>
-                      </div>
-                    ) : (
-                      <span className='text-xs text-red'>
-                        کد رهگیری هنوز ثبت نشده است.
-                      </span>
-                    )}
-                  </div>
-                )}
+                          {humanizeShopStatus(o.status)}
+                        </span>
 
-                {/* details */}
-                {isOpen && (
-                  <div className='mt-4 rounded-xl bg-foreground-light/30 p-4 text-xs dark:bg-foreground-dark/30'>
-                    <div className='flex flex-wrap items-center justify-between gap-3'>
-                      <div>
-                        <span className='text-subtext-light dark:text-subtext-dark'>
-                          روش ارسال:
-                        </span>{' '}
-                        <span>{o.shippingTitle || '—'}</span>
-                      </div>
-                      <div>
-                        <span className='text-subtext-light dark:text-subtext-dark'>
-                          هزینه ارسال:
-                        </span>{' '}
-                        <span className='font-faNa'>
-                          {o.postOptionKey === 'FALLBACK_POST_FAST' &&
-                          o.shippingCost === 0
-                            ? 'به زودی محاسبه می شود.'
-                            : o.shippingMethod === 'COURIER_COD'
-                              ? 'در محل'
-                              : `${formatToman(o.shippingCost)}`}
+                        <span className='font-faNa text-[9px] text-subtext-light dark:text-subtext-dark'>
+                          سفارش #{Number(o.id).toLocaleString('fa-IR')}
                         </span>
                       </div>
+
+                      <p className='mt-2 text-[10px] text-subtext-light dark:text-subtext-dark'>
+                        تاریخ ثبت:{' '}
+                        <span className='font-faNa font-bold text-text-light dark:text-text-dark'>
+                          {formatDateFa(o.createdAt)}
+                        </span>
+                      </p>
                     </div>
 
-                    {/* items list */}
-                    {Array.isArray(o.items) && o.items.length > 0 && (
-                      <div className='mt-3 border-t border-gray-200 pt-3 dark:border-gray-700'>
-                        <div className='mb-2 text-sm font-semibold'>
-                          اقلام سفارش
+                    <div className='flex items-center justify-between gap-3 sm:flex-col sm:items-end'>
+                      <p className='font-faNa text-base font-black text-secondary'>
+                        {formatToman(o.payableOnline)}
+                      </p>
+
+                      <button
+                        type='button'
+                        onClick={() => setOpenId(isOpen ? null : o.id)}
+                        className='inline-flex min-h-9 items-center gap-1.5 rounded-xl border border-secondary/15 bg-secondary/5 px-3 text-[9px] font-black text-secondary transition-all hover:bg-secondary/10'
+                      >
+                        {isOpen ? (
+                          <HiOutlineChevronUp size={15} />
+                        ) : (
+                          <HiOutlineChevronDown size={15} />
+                        )}
+                        {isOpen ? 'بستن جزئیات' : 'مشاهده جزئیات'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {shouldShowTracking(o.status) && (
+                    <div className='mt-4 rounded-2xl border border-black/5 bg-background-light/40 p-3 dark:border-white/10 dark:bg-background-dark/30'>
+                      {o.trackingCode ? (
+                        <div className='flex flex-wrap items-center justify-between gap-2'>
+                          <div className='flex items-center gap-2'>
+                            <HiOutlineTruck size={17} className='text-secondary' />
+                            <span className='text-[10px] font-bold text-text-light sm:text-xs dark:text-text-dark'>
+                              کد رهگیری پستی
+                            </span>
+                          </div>
+
+                          <button
+                            type='button'
+                            onClick={() => {
+                              navigator.clipboard.writeText(o.trackingCode);
+                              toast.showSuccessToast('کد رهگیری کپی شد');
+                            }}
+                            className='flex items-center gap-1.5 rounded-xl bg-surface-light/75 px-2.5 py-1.5 font-faNa text-[10px] font-black text-text-light transition hover:text-secondary dark:bg-surface-dark/65 dark:text-text-dark'
+                          >
+                            {o.trackingCode}
+                            <MdContentCopy size={14} className='text-secondary' />
+                          </button>
                         </div>
-                        <div className='space-y-3 md:space-y-6'>
-                          {o.items.map((it) => (
-                            <div key={it.id}>
-                              <div className='flex items-center justify-between gap-4'>
-                                <div
-                                  className='flex cursor-pointer items-center gap-2'
-                                  onClick={() =>
-                                    router.push(`/shop/products/${it.slug}`)
-                                  }
-                                >
-                                  <Image
-                                    src={it.coverImage}
-                                    alt={it.title}
-                                    width={64}
-                                    height={48}
-                                    className='rounded-lg object-cover'
-                                  />
-                                  <div className='flex flex-col'>
-                                    <span className='text-sm'>{it.title}</span>
-                                    <div className='mt-1 flex flex-wrap items-center gap-1.5'>
-                                      <span className='rounded-lg bg-foreground-light px-2 py-0.5 font-faNa text-2xs text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-                                        تعداد:{' '}
-                                        {Number(it.qty || 0).toLocaleString(
-                                          'fa-IR'
-                                        )}
+                      ) : (
+                        <div className='flex items-center gap-2 text-[10px] text-red sm:text-xs'>
+                          <HiOutlineInformationCircle size={16} />
+                          کد رهگیری هنوز ثبت نشده است.
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {isOpen && (
+                    <div className='mt-4 border-t border-black/5 pt-4 dark:border-white/10'>
+                      <div className='grid gap-2 sm:grid-cols-2'>
+                        <div className='rounded-2xl bg-background-light/40 p-3 dark:bg-background-dark/30'>
+                          <p className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                            روش ارسال
+                          </p>
+                          <p className='mt-1 text-[10px] font-black text-text-light sm:text-xs dark:text-text-dark'>
+                            {o.shippingTitle || '—'}
+                          </p>
+                        </div>
+
+                        <div className='rounded-2xl bg-background-light/40 p-3 dark:bg-background-dark/30'>
+                          <p className='text-[9px] text-subtext-light dark:text-subtext-dark'>
+                            هزینه ارسال
+                          </p>
+                          <p className='mt-1 font-faNa text-[10px] font-black text-text-light sm:text-xs dark:text-text-dark'>
+                            {o.postOptionKey === 'FALLBACK_POST_FAST' &&
+                            o.shippingCost === 0
+                              ? 'به زودی محاسبه می شود.'
+                              : o.shippingMethod === 'COURIER_COD'
+                                ? 'در محل'
+                                : `${formatToman(o.shippingCost)}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {Array.isArray(o.items) && o.items.length > 0 && (
+                        <div className='mt-5'>
+                          <div className='mb-3 flex items-center gap-2'>
+                            <HiOutlineClipboardDocumentCheck
+                              size={18}
+                              className='text-secondary'
+                            />
+                            <h4 className='text-xs font-black text-text-light sm:text-sm dark:text-text-dark'>
+                              اقلام سفارش
+                            </h4>
+                          </div>
+
+                          <div className='space-y-3'>
+                            {o.items.map((it) => (
+                              <div
+                                key={it.id}
+                                className='rounded-[20px] border border-black/5 bg-background-light/35 p-3 dark:border-white/10 dark:bg-background-dark/25'
+                              >
+                                <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                                  <button
+                                    type='button'
+                                    className='flex min-w-0 items-center gap-3 text-right'
+                                    onClick={() =>
+                                      router.push(`/shop/products/${it.slug}`)
+                                    }
+                                  >
+                                    <div className='relative h-16 w-20 shrink-0 overflow-hidden rounded-2xl bg-surface-light dark:bg-surface-dark'>
+                                      <Image
+                                        src={it.coverImage}
+                                        alt={it.title}
+                                        fill
+                                        sizes='80px'
+                                        className='object-contain p-1.5'
+                                      />
+                                    </div>
+
+                                    <div className='min-w-0'>
+                                      <span className='line-clamp-2 text-[11px] font-black leading-6 text-text-light sm:text-xs dark:text-text-dark'>
+                                        {it.title}
                                       </span>
 
-                                      {/* رنگ */}
-                                      {it?.color?.name && (
-                                        <span className='flex items-center gap-1 rounded-lg bg-foreground-light px-2 py-0.5 text-2xs text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-                                          <span>رنگ:</span>
-                                          <span className='font-faNa'>
-                                            {it.color.name}
-                                          </span>
-                                          {it?.color?.hex && (
-                                            <span
-                                              className='h-2.5 w-2.5 rounded-full border border-black/10 dark:border-white/10'
-                                              style={{
-                                                backgroundColor: it.color.hex,
-                                              }}
-                                              title={it.color.hex}
-                                            />
+                                      <div className='mt-1.5 flex flex-wrap items-center gap-1.5'>
+                                        <span className='rounded-lg bg-surface-light/70 px-2 py-1 font-faNa text-[9px] text-subtext-light dark:bg-surface-dark/60 dark:text-subtext-dark'>
+                                          تعداد:{' '}
+                                          {Number(it.qty || 0).toLocaleString(
+                                            'fa-IR'
                                           )}
                                         </span>
-                                      )}
 
-                                      {/* سایز */}
-                                      {it?.size?.name && (
-                                        <span className='rounded-lg bg-foreground-light px-2 py-0.5 text-2xs text-subtext-light dark:bg-foreground-dark dark:text-subtext-dark'>
-                                          سایز:{' '}
-                                          <span className='font-faNa'>
-                                            {it.size.name}
+                                        {it?.color?.name && (
+                                          <span className='flex items-center gap-1 rounded-lg bg-surface-light/70 px-2 py-1 text-[9px] text-subtext-light dark:bg-surface-dark/60 dark:text-subtext-dark'>
+                                            رنگ: {it.color.name}
+                                            {it?.color?.hex && (
+                                              <span
+                                                className='h-2.5 w-2.5 rounded-full border border-black/10 dark:border-white/10'
+                                                style={{
+                                                  backgroundColor: it.color.hex,
+                                                }}
+                                                title={it.color.hex}
+                                              />
+                                            )}
                                           </span>
-                                        </span>
-                                      )}
+                                        )}
+
+                                        {it?.size?.name && (
+                                          <span className='rounded-lg bg-surface-light/70 px-2 py-1 text-[9px] text-subtext-light dark:bg-surface-dark/60 dark:text-subtext-dark'>
+                                            سایز:{' '}
+                                            <span className='font-faNa'>
+                                              {it.size.name}
+                                            </span>
+                                          </span>
+                                        )}
+                                      </div>
                                     </div>
+                                  </button>
+
+                                  <div className='flex shrink-0 items-end justify-between gap-3 sm:flex-col sm:justify-center'>
+                                    <span className='whitespace-nowrap font-faNa text-xs font-black text-secondary'>
+                                      {formatToman(it.unitPrice)}
+                                    </span>
+                                    {it.qty > 1 && (
+                                      <span className='whitespace-nowrap font-faNa text-[9px] text-subtext-light dark:text-subtext-dark'>
+                                        جمع:{' '}
+                                        {formatToman(
+                                          Number(it.unitPrice || 0) *
+                                            Number(it.qty || 1)
+                                        )}
+                                      </span>
+                                    )}
                                   </div>
                                 </div>
-                                <div className='flex flex-col items-end'>
-                                  <span className='whitespace-nowrap font-faNa text-xs'>
-                                    {formatToman(it.unitPrice)}
-                                  </span>
-                                  {it.qty > 1 && (
-                                    <span className='whitespace-nowrap font-faNa text-[11px] text-subtext-light dark:text-subtext-dark'>
-                                      جمع:{' '}
-                                      {formatToman(
-                                        Number(it.unitPrice || 0) *
-                                          Number(it.qty || 1)
-                                      )}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                              <div className='mt-4 w-full md:mt-8 xl:w-1/2'>
+
                                 {it.returnRequest && (
-                                  <div className='mt-2 rounded-xl border border-gray-200 bg-foreground-light/60 p-3 text-[11px] dark:border-gray-700 dark:bg-foreground-dark/60'>
-                                    {/* status badge */}
-                                    <h4 className='mb-3 text-xs font-medium text-blue sm:text-sm'>
-                                      درخواست مرجوعی
-                                    </h4>
-                                    <div className='mb-2 flex flex-wrap items-center justify-between gap-3'>
+                                  <div className='mt-3 rounded-2xl border border-secondary/10 bg-surface-light/55 p-3 text-[10px] dark:bg-surface-dark/45'>
+                                    <div className='flex flex-wrap items-center justify-between gap-2'>
+                                      <div>
+                                        <p className='font-black text-text-light dark:text-text-dark'>
+                                          درخواست مرجوعی
+                                        </p>
+                                        <p className='mt-1 font-faNa text-[9px] text-subtext-light dark:text-subtext-dark'>
+                                          تاریخ ثبت درخواست:{' '}
+                                          {formatDateFa(
+                                            it.returnRequest.createdAt
+                                          )}
+                                        </p>
+                                      </div>
+
                                       <span
-                                        className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold ${
+                                        className={`rounded-xl border px-2.5 py-1.5 text-[9px] font-black ${
                                           RETURN_STATUS_META[
                                             it.returnRequest.status
-                                          ]?.tone || 'bg-gray-100 text-gray-700'
+                                          ]?.tone ||
+                                          'border-black/10 bg-black/5 text-subtext-light dark:border-white/10 dark:bg-white/5 dark:text-subtext-dark'
                                         }`}
                                       >
                                         {RETURN_STATUS_META[
                                           it.returnRequest.status
                                         ]?.label || 'در حال بررسی'}
                                       </span>
-
-                                      <span className='text-subtext-light dark:text-subtext-dark'>
-                                        تاریخ ثبت درخواست:{' '}
-                                        <span className='font-faNa'>
-                                          {formatDateFa(
-                                            it.returnRequest.createdAt
-                                          )}
-                                        </span>
-                                      </span>
                                     </div>
 
-                                    {/* details grid */}
-                                    <div className='flex items-center justify-between gap-3'>
-                                      <div>
+                                    <div className='mt-3 grid gap-2 sm:grid-cols-2'>
+                                      <div className='rounded-xl bg-background-light/45 p-2.5 dark:bg-background-dark/30'>
                                         <span className='text-subtext-light dark:text-subtext-dark'>
                                           دلیل:
                                         </span>{' '}
-                                        <span className='font-semibold'>
+                                        <span className='font-bold text-text-light dark:text-text-dark'>
                                           {RETURN_REASON_LABEL[
                                             it.returnRequest.reason
                                           ] ||
@@ -562,11 +668,11 @@ export default function SectionShopOrders({ onCounts }) {
                                         </span>
                                       </div>
 
-                                      <div>
+                                      <div className='rounded-xl bg-background-light/45 p-2.5 dark:bg-background-dark/30'>
                                         <span className='text-subtext-light dark:text-subtext-dark'>
                                           تعداد:
                                         </span>{' '}
-                                        <span className='font-faNa font-semibold'>
+                                        <span className='font-faNa font-black text-text-light dark:text-text-dark'>
                                           {Number(
                                             it.returnRequest.qty || 1
                                           ).toLocaleString('fa-IR')}
@@ -574,9 +680,8 @@ export default function SectionShopOrders({ onCounts }) {
                                       </div>
                                     </div>
 
-                                    {/* user description */}
                                     {it.returnRequest.description ? (
-                                      <div className='mt-2 rounded-lg bg-foreground-light p-2 text-slate-700 dark:bg-foreground-dark dark:text-slate-200'>
+                                      <div className='mt-2 rounded-xl bg-background-light/45 p-2.5 leading-6 text-text-light dark:bg-background-dark/30 dark:text-text-dark'>
                                         <span className='text-subtext-light dark:text-subtext-dark'>
                                           توضیحات شما:
                                         </span>{' '}
@@ -584,10 +689,9 @@ export default function SectionShopOrders({ onCounts }) {
                                       </div>
                                     ) : null}
 
-                                    {/* admin note (optional) */}
                                     {it.returnRequest.adminNote ? (
-                                      <div className='mt-2 rounded-lg bg-foreground-light p-2 text-slate-700 dark:bg-foreground-dark dark:text-slate-200'>
-                                        <span className='text-subtext-light dark:text-subtext-dark'>
+                                      <div className='mt-2 rounded-xl border border-secondary/10 bg-secondary/5 p-2.5 leading-6 text-text-light dark:text-text-dark'>
+                                        <span className='font-bold text-secondary'>
                                           پاسخ ادمین:
                                         </span>{' '}
                                         {it.returnRequest.adminNote}
@@ -596,59 +700,72 @@ export default function SectionShopOrders({ onCounts }) {
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          ))}
+                            ))}
+                          </div>
                         </div>
+                      )}
+
+                      <div className='mt-4 flex flex-wrap justify-end gap-2 border-t border-black/5 pt-4 dark:border-white/10'>
+                        {canCancelOrder(o) && (
+                          <button
+                            type='button'
+                            className='inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-red/15 bg-red/5 px-3 text-[10px] font-black text-red transition hover:bg-red/10 disabled:opacity-50'
+                            onClick={() => {
+                              setTempId(o.id);
+                              setShowCancelModal(true);
+                            }}
+                            disabled={tempId === o.id}
+                          >
+                            <MdOutlineCancel size={16} />
+                            لغو سفارش
+                          </button>
+                        )}
+
+                        {canConfirmDelivery(o) && (
+                          <SiteButton
+                            type='button'
+                            variant='primary'
+                            size='md'
+                            onClick={() => handleConfirmDelivery(o.id)}
+                            disabled={actionLoadingId === o.id}
+                          >
+                            {actionLoadingId === o.id ? (
+                              <span className='flex items-center gap-2'>
+                                <span className='h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white' />
+                                در حال ثبت...
+                              </span>
+                            ) : (
+                              <span className='flex items-center gap-2'>
+                                <HiOutlineCheckCircle size={17} />
+                                تحویل گرفتم
+                              </span>
+                            )}
+                          </SiteButton>
+                        )}
+
+                        {canRequestReturn(o) && (
+                          <button
+                            type='button'
+                            className='inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-blue/15 bg-blue/5 px-3 text-[10px] font-black text-blue transition hover:bg-blue/10'
+                            onClick={() => {
+                              setReturnOrder(o);
+                              setShowReturnModal(true);
+                            }}
+                          >
+                            <TbTruckReturn size={16} />
+                            درخواست مرجوعی
+                          </button>
+                        )}
                       </div>
-                    )}
-
-                    {/* actions */}
-                    <div className='mt-4 flex flex-wrap justify-end gap-2'>
-                      {canCancelOrder(o) && (
-                        <button
-                          className='flex items-center gap-0.5 text-2xs text-red md:text-xs'
-                          onClick={() => {
-                            setTempId(o.id);
-                            setShowCancelModal(true);
-                          }}
-                          disabled={tempId === o.id}
-                        >
-                          <MdOutlineCancel size={16} /> لغو سفارش
-                        </button>
-                      )}
-
-                      {canConfirmDelivery(o) && (
-                        <Button
-                          shadow
-                          className='text-xs'
-                          onClick={() => handleConfirmDelivery(o.id)}
-                          isLoading={actionLoadingId === o.id}
-                        >
-                          تحویل گرفتم
-                        </Button>
-                      )}
-
-                      {canRequestReturn(o) && (
-                        <button
-                          className='flex items-center gap-0.5 text-2xs text-blue md:text-xs'
-                          onClick={() => {
-                            setReturnOrder(o);
-                            setShowReturnModal(true);
-                          }}
-                        >
-                          <TbTruckReturn size={16} /> درخواست مرجوعی
-                        </button>
-                      )}
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </SiteCard>
             );
           })}
 
-          {/* ✅ pagination component شما */}
           {totalPages > 1 && (
-            <div className='pt-4'>
+            <div className='pt-3'>
               <Pagination
                 currentPage={page}
                 onPageChange={onPageChange}
@@ -658,6 +775,7 @@ export default function SectionShopOrders({ onCounts }) {
           )}
         </div>
       )}
+
       {showCancelModal && (
         <Modal
           title='لغو سفارش'
@@ -672,6 +790,7 @@ export default function SectionShopOrders({ onCounts }) {
           secondaryButtonClick={handleCancel}
         />
       )}
+
       <ReturnRequestModal
         open={showReturnModal}
         order={returnOrder}
@@ -681,10 +800,8 @@ export default function SectionShopOrders({ onCounts }) {
           setReturnOrder(null);
         }}
         onSuccess={async () => {
-          // refresh list
           await load(activeTab, page);
           await fetchCounts();
-          // اگر خواستی مستقیم تب returned باز بشه:
           setActiveTab('returned');
           setPage(1);
         }}

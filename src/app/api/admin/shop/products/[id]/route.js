@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
 import { normalizeUrlSlug } from '@/utils/slug';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export const dynamic = 'force-dynamic';
 
@@ -15,7 +16,7 @@ const isValidHttpUrl = (value) => {
   /*
    * رسانه‌های داخلی پروژه.
    */
-  if (/^\/(?:images|audio|videos|podcast)\//i.test(normalizedValue)) {
+  if (/^\/?(?:images|audio|videos|podcast)\//i.test(normalizedValue)) {
     return !normalizedValue.includes('..') && !normalizedValue.includes('\\');
   }
 
@@ -30,6 +31,20 @@ const isValidHttpUrl = (value) => {
   } catch {
     return false;
   }
+};
+
+const normalizeProductMedia = (product) => {
+  if (!product) {
+    return product;
+  }
+
+  return {
+    ...product,
+    coverImage: normalizeMediaUrl(product.coverImage),
+    images: Array.isArray(product.images)
+      ? product.images.map((image) => normalizeMediaUrl(image)).filter(Boolean)
+      : product.images,
+  };
 };
 
 export async function GET(_req, { params }) {
@@ -71,7 +86,7 @@ export async function GET(_req, { params }) {
     }
 
     const normalized = {
-      ...product,
+      ...normalizeProductMedia(product),
       colors: product.colors.map((x) => x.color),
       sizes: (product.sizes || []).map((x) => x.size),
     };
@@ -315,7 +330,7 @@ export async function PATCH(req, { params }) {
     });
 
     const normalized = {
-      ...updated,
+      ...normalizeProductMedia(updated),
       colors: (updated.colors || []).map((x) => x.color),
       sizes: (updated.sizes || []).map((x) => x.size),
     };

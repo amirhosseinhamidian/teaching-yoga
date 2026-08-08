@@ -51,12 +51,21 @@ async function fetchCourseDetails(short) {
       }
     );
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+
+      throw new Error(errorData?.code || 'SESSION_FETCH_FAILED');
+    }
 
     return await res.json();
   } catch (err) {
-    console.error(err);
-    redirect('/not-found');
+    console.error('[FETCH_SESSION_DETAILS_ERROR]', err);
+
+    if (err.message === 'SESSION_NOT_FOUND') {
+      redirect('/not-found');
+    }
+
+    throw err;
   }
 }
 
@@ -70,12 +79,21 @@ async function fetchSessionDetails(sessionId) {
       }
     );
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+
+      throw new Error(errorData?.code || 'SESSION_FETCH_FAILED');
+    }
 
     return await res.json();
   } catch (err) {
-    console.error(err);
-    redirect('/not-found');
+    console.error('[FETCH_SESSION_DETAILS_ERROR]', err);
+
+    if (err.message === 'SESSION_NOT_FOUND') {
+      redirect('/not-found');
+    }
+
+    throw err;
   }
 }
 
@@ -89,7 +107,11 @@ async function fetchCourseProgress(shortAddress) {
       }
     );
 
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => null);
+
+      throw new Error(errorData?.code || 'SESSION_FETCH_FAILED');
+    }
 
     return await res.json();
   } catch {

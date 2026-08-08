@@ -1,23 +1,32 @@
 import prismadb from '@/libs/prismadb';
+import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
+
 export const dynamic = 'force-dynamic';
 
 export async function buildCartResponse(userId) {
   const cart = await prismadb.cart.findFirst({
-    where: { userId, status: 'PENDING' },
+    where: {
+      userId,
+      status: 'PENDING',
+    },
     include: {
       cartTerms: {
         include: {
           term: {
             include: {
               courseTerms: {
-                include: { course: true },
+                include: {
+                  course: true,
+                },
               },
             },
           },
         },
       },
       cartCourses: {
-        include: { course: true },
+        include: {
+          course: true,
+        },
       },
     },
   });
@@ -35,14 +44,21 @@ export async function buildCartResponse(userId) {
     };
   }
 
-  // ===== محاسبات دوره، ترم و قیمت =====
   const coursesMap = new Map();
+
   const purchased = await prismadb.userCourse.findMany({
-    where: { userId, status: 'ACTIVE' },
-    select: { courseId: true },
+    where: {
+      userId,
+      status: 'ACTIVE',
+    },
+    select: {
+      courseId: true,
+    },
   });
-  const purchasedIds = new Set(purchased.map((c) => c.courseId));
-  const termSet = new Set(cart.cartTerms.map((ct) => ct.term.id));
+
+  const purchasedIds = new Set(purchased.map((course) => course.courseId));
+
+  const termSet = new Set(cart.cartTerms.map((cartTerm) => cartTerm.term.id));
 
   cart.cartCourses.forEach((cartCourse) => {
     const course = cartCourse.course;
@@ -51,33 +67,36 @@ export async function buildCartResponse(userId) {
       coursesMap.set(course.id, {
         courseId: course.id,
         courseTitle: course.title,
-        courseCoverImage: course.cover,
+        courseCoverImage: toAbsoluteMediaUrl(course.cover),
         finalPrice: 0,
         discount: 0,
         finalPriceWithoutDiscount: 0,
       });
     }
 
-    cart.cartTerms.forEach((ct) => {
-      const term = ct.term;
+    cart.cartTerms.forEach((cartTerm) => {
+      const term = cartTerm.term;
 
-      const isPurchased = term.courseTerms.some((ct2) =>
-        purchasedIds.has(ct2.course.id)
+      const isPurchased = term.courseTerms.some((courseTerm) =>
+        purchasedIds.has(courseTerm.course.id)
       );
 
       if (
         termSet.has(term.id) &&
         !isPurchased &&
-        term.courseTerms.some((ct2) => ct2.course.id === course.id)
+        term.courseTerms.some(
+          (courseTerm) => courseTerm.course.id === course.id
+        )
       ) {
         const price = term.price;
-        const dis = (price * (term.discount || 0)) / 100;
-        const final = price - dis;
+        const discount = (price * (term.discount || 0)) / 100;
+        const finalPrice = price - discount;
 
-        const info = coursesMap.get(course.id);
-        info.finalPrice += final;
-        info.discount += dis;
-        info.finalPriceWithoutDiscount += price;
+        const courseInfo = coursesMap.get(course.id);
+
+        courseInfo.finalPrice += finalPrice;
+        courseInfo.discount += discount;
+        courseInfo.finalPriceWithoutDiscount += price;
 
         termSet.delete(term.id);
       }
@@ -86,10 +105,18 @@ export async function buildCartResponse(userId) {
 
   const coursesInfo = Array.from(coursesMap.values());
 
-  const totalPrice = coursesInfo.reduce((s, c) => s + c.finalPrice, 0);
-  const totalDiscount = coursesInfo.reduce((s, c) => s + c.discount, 0);
+  const totalPrice = coursesInfo.reduce(
+    (sum, course) => sum + course.finalPrice,
+    0
+  );
+
+  const totalDiscount = coursesInfo.reduce(
+    (sum, course) => sum + course.discount,
+    0
+  );
+
   const totalPriceWithoutDiscount = coursesInfo.reduce(
-    (s, c) => s + c.finalPriceWithoutDiscount,
+    (sum, course) => sum + course.finalPriceWithoutDiscount,
     0
   );
 

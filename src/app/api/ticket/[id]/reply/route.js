@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
 import { PENDING } from '@/constants/ticketStatus';
+import { normalizeMediaUrl } from '@/server/media/normalize-media-url';
 
 export async function POST(request, { params }) {
   try {
@@ -68,7 +69,17 @@ export async function POST(request, { params }) {
       },
     });
 
-    return NextResponse.json(ticketReply, { status: 201 });
+    const formattedReply = {
+      ...ticketReply,
+      user: ticketReply.user
+        ? {
+            ...ticketReply.user,
+            avatar: normalizeMediaUrl(ticketReply.user.avatar),
+          }
+        : null,
+    };
+
+    return NextResponse.json(formattedReply, { status: 201 });
   } catch (error) {
     console.error('Error creating ticket reply:', error);
     return NextResponse.json(

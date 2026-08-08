@@ -2,6 +2,7 @@
 /* eslint-disable no-undef */
 
 import './globals.css';
+import '@/src/styles/site-animations.css';
 import React from 'react';
 import { AppProviders } from './providers';
 import prismadb from '@/libs/prismadb';

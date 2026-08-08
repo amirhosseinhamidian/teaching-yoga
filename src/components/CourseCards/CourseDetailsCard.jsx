@@ -1,29 +1,42 @@
-/* eslint-disable react/prop-types */
-
 import React from 'react';
+import PropTypes from 'prop-types';
 
-const CourseDetailsCard = ({
-  icon: Icon,
-  title,
-  value,
-  horizontal,
-  className,
-}) => {
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+
+const CourseDetailsCard = ({ icon: Icon, title, value, className = '' }) => {
+  const displayedValue =
+    value === null || value === undefined || value === '' ? '—' : value;
+
   return (
-    <div
-      className={`flex ${horizontal ? 'flex-col gap-1 text-center sm:flex-row sm:gap-3 sm:text-start' : 'flex-col text-center'} items-center rounded-xl bg-surface-light px-2 py-3 shadow sm:px-4 sm:py-2 dark:bg-surface-dark ${className}`}
+    <SiteCard
+      variant='soft'
+      padding='sm'
+      radius='sm'
+      className={`group min-w-0 text-center ${className}`}
     >
-      <Icon className='text-lg text-accent xs:text-2xl sm:mb-2 sm:text-2xl md:text-3xl lg:text-4xl' />
-      <div className={'flex flex-col'}>
-        <span className='text-xs font-normal text-subtext-light xs:text-xs md:text-sm dark:text-subtext-dark'>
-          {title}
-        </span>
-        <span className='font-faNa text-2xs font-medium xs:text-xs sm:text-sm md:text-base'>
-          {value}
-        </span>
-      </div>
-    </div>
+      <span className='mx-auto flex h-9 w-9 items-center justify-center rounded-xl bg-secondary/10 text-secondary transition-colors duration-300 group-hover:bg-secondary group-hover:text-white'>
+        <Icon className='text-[19px]' aria-hidden='true' />
+      </span>
+
+      <span className='mt-2 block text-[9px] leading-5 text-subtext-light sm:text-[10px] dark:text-subtext-dark'>
+        {title}
+      </span>
+
+      <span className='mt-0.5 block truncate font-faNa text-[11px] font-black leading-6 text-text-light sm:text-xs dark:text-text-dark'>
+        {displayedValue}
+      </span>
+    </SiteCard>
   );
+};
+
+CourseDetailsCard.propTypes = {
+  icon: PropTypes.elementType.isRequired,
+
+  title: PropTypes.string.isRequired,
+
+  value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+
+  className: PropTypes.string,
 };
 
 export default CourseDetailsCard;
