@@ -1,0 +1,81 @@
+name: Test VPS SSH
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test-ssh:
+    name: Test VPS SSH Connection
+    runs-on: ubuntu-latest
+
+    timeout-minutes: 5
+
+    steps:
+      - name: Configure SSH
+        shell: bash
+        env:
+          VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+        run: |
+          set -Eeuo pipefail
+
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Connect to VPS
+        shell: bash
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -Eeuo pipefail
+
+          ssh \
+            -i ~/.ssh/id_ed25519 \
+            -o BatchMode=yes \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -o ConnectTimeout=10 \
+            "$VPS_USER@$VPS_HOST" \
+            '
+              echo "================================="
+              echo "GitHub Actions SSH connection OK"
+              echo "================================="
+
+              echo "User:"
+              whoami
+
+              echo
+
+              echo "Hostname:"
+              hostname
+
+              echo
+
+              echo "Docker:"
+              docker --version
+
+              echo
+
+              echo "Docker Compose:"
+              docker compose version
+
+              echo
+
+              echo "Project:"
+              if [ -d /opt/teaching-yoga ]; then
+                echo "/opt/teaching-yoga exists"
+              else
+                echo "/opt/teaching-yoga NOT FOUND"
+                exit 1
+              fi
+            '
