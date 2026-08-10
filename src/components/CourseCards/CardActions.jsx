@@ -99,7 +99,7 @@ const CardActions = ({
           <SiteIconButton
             type='button'
             size='md'
-            variant='yellow'
+            variant='secondary'
             icon={PiCrownSimple}
             ariaLabel='مشاهده پلن‌های اشتراک'
             title='مشاهده پلن‌های اشتراک'

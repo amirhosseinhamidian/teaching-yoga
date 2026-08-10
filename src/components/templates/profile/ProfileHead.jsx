@@ -78,53 +78,102 @@ export default function ProfileHead() {
   };
 
   const handleFileChange = async (event) => {
-    setLoadingUpload(true);
     const file = event.target.files?.[0];
 
     if (!file) {
-      setLoadingUpload(false);
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folderPath', 'images/avatars');
-    formData.append('fileName', user.id);
+    /*
+     * validation اولیه سمت client
+     * فقط برای UX است.
+     *
+     * validation اصلی همچنان
+     * سمت API انجام می‌شود.
+     */
+    const allowedTypes = [
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      toast.showErrorToast('فقط تصاویر JPG، PNG، GIF و WebP مجاز هستند.');
+
+      event.target.value = '';
+
+      return;
+    }
+
+    const maxSize = 20 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      toast.showErrorToast('حجم تصویر نباید بیشتر از ۲۰ مگابایت باشد.');
+
+      event.target.value = '';
+
+      return;
+    }
+
+    setLoadingUpload(true);
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/upload/image`,
-        { method: 'POST', body: formData }
-      );
+      const formData = new FormData();
+
+      /*
+       * فقط خود فایل ارسال می‌شود.
+       *
+       * userId، folderPath و fileName
+       * را server مشخص می‌کند.
+       */
+      formData.append('file', file);
+
+      const response = await fetch('/api/users/me/avatar', {
+        method: 'POST',
+        body: formData,
+
+        /*
+         * برای اطمینان از ارسال
+         * cookie/session.
+         */
+        credentials: 'include',
+      });
+
+      const result = await response.json().catch(() => null);
 
       if (!response.ok) {
-        toast.showErrorToast('خطا در آپلود تصویر');
+        console.error('avatar upload failed:', {
+          status: response.status,
+
+          result,
+        });
+
+        toast.showErrorToast(result?.error || 'خطا در آپلود تصویر');
+
         return;
       }
 
-      const avatarUrl = await response.json();
-
-      const updateResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/${user.id}/update-avatar`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ avatar: avatarUrl.fileUrl }),
-        }
-      );
-
-      if (!updateResponse.ok) {
-        toast.showErrorToast('خطا در ثبت آواتار');
-        return;
-      }
-
+      /*
+       * اطلاعات user را دوباره
+       * از server دریافت کن.
+       */
       await loadUser();
-      toast.showSuccessToast('آواتار با موفقیت آپلود شد');
+
+      toast.showSuccessToast(result?.message || 'آواتار با موفقیت آپلود شد');
     } catch (error) {
-      console.error('avatar upload error: ', error);
-      toast.showErrorToast('خطا در آپلود');
+      console.error('avatar upload error:', error);
+
+      toast.showErrorToast('خطا در ارتباط با سرور');
     } finally {
       setLoadingUpload(false);
+
+      /*
+       * ضروری برای اینکه کاربر بتواند
+       * همان فایل را دوباره انتخاب کند.
+       */
+      event.target.value = '';
     }
   };
 
@@ -203,7 +252,7 @@ export default function ProfileHead() {
 
       <div
         aria-hidden='true'
-        className='pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full bg-yellow/10 blur-[100px]'
+        className='bg-yellow/10 pointer-events-none absolute -bottom-28 -left-20 h-64 w-64 rounded-full blur-[100px]'
       />
 
       <div className='relative z-10 grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(420px,1.1fr)] lg:items-stretch'>

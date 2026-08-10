@@ -3,13 +3,18 @@
 /* eslint-disable no-undef */
 
 import { headers } from 'next/headers';
-import Link from 'next/link';
 import React from 'react';
+
 import CoursesSwiperCarousel from './CoursesSwiperCarousel';
 
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
+import SectionHeader from '@/components/SiteUi/SectionHeader/SectionHeader';
+
 import {
-  HiOutlineArrowLeft,
   HiOutlineAcademicCap,
+  HiOutlineArrowLeft,
   HiOutlinePlayCircle,
   HiOutlineSparkles,
 } from 'react-icons/hi2';
@@ -36,7 +41,6 @@ const fetchCourseData = async () => {
 
 async function CoursesSection() {
   const response = await fetchCourseData();
-
   const courses = Array.isArray(response?.data) ? response.data : [];
 
   return (
@@ -49,137 +53,80 @@ async function CoursesSection() {
         className='pointer-events-none absolute inset-0 -z-10 overflow-hidden'
       >
         <div className='absolute -right-52 top-0 h-[520px] w-[520px] rounded-full bg-secondary/10 blur-[150px]' />
-
-        <div className='bg-yellow/10 dark:bg-yellow/5 absolute -left-52 bottom-0 h-[470px] w-[470px] rounded-full blur-[150px]' />
-
+        <div className='absolute -left-52 bottom-0 h-[470px] w-[470px] rounded-full bg-primary/10 blur-[150px] dark:bg-primary/5' />
         <div className='absolute left-1/2 top-0 h-px w-4/5 -translate-x-1/2 bg-gradient-to-r from-transparent via-secondary/30 to-transparent' />
-
         <div className='courses-background-grid absolute inset-0 opacity-[0.025] dark:opacity-[0.045]' />
-
         <div className='courses-floating-orbit absolute -right-28 top-24 h-72 w-72 rounded-full border border-dashed border-secondary/15' />
-
-        <div className='courses-floating-orbit-reverse border-yellow/15 absolute -left-24 bottom-8 h-64 w-64 rounded-full border border-dashed' />
-
-        <svg
-          viewBox='0 0 320 320'
-          fill='none'
-          className='absolute right-[8%] top-[16%] h-64 w-64 text-secondary opacity-[0.035] dark:opacity-[0.06]'
-        >
-          <circle
-            cx='160'
-            cy='160'
-            r='125'
-            stroke='currentColor'
-            strokeWidth='1.5'
-            strokeDasharray='7 10'
-          />
-
-          <circle
-            cx='160'
-            cy='160'
-            r='84'
-            stroke='currentColor'
-            strokeWidth='1.5'
-          />
-
-          <path
-            d='M160 42C174 99 203 128 260 142C203 156 174 185 160 242C146 185 117 156 60 142C117 128 146 99 160 42Z'
-            stroke='currentColor'
-            strokeWidth='1.5'
-          />
-        </svg>
+        <div className='courses-floating-orbit-reverse absolute -left-24 bottom-8 h-64 w-64 rounded-full border border-dashed border-primary/15' />
       </div>
 
       <div className='container mx-auto px-4 sm:px-6'>
-        <div className='relative overflow-hidden rounded-[32px] border border-black/5 bg-surface-light/75 px-4 py-8 shadow-[0_28px_90px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:rounded-[40px] sm:px-7 sm:py-11 lg:px-10 lg:py-14 dark:border-white/10 dark:bg-surface-dark/70 dark:shadow-[0_30px_100px_rgba(0,0,0,0.28)]'>
-          <div
-            aria-hidden='true'
-            className='absolute inset-x-16 top-0 h-px bg-gradient-to-r from-transparent via-secondary/55 to-transparent'
-          />
-
+        <SiteCard
+          variant='glass'
+          padding='none'
+          radius='lg'
+          topLine
+          className='px-4 py-8 sm:px-7 sm:py-11 lg:px-10 lg:py-14'
+        >
           <div
             aria-hidden='true'
             className='absolute -right-28 -top-28 h-72 w-72 rounded-full bg-secondary/10 blur-[100px]'
           />
-
           <div
             aria-hidden='true'
-            className='bg-yellow/10 absolute -bottom-32 left-[18%] h-72 w-72 rounded-full blur-[110px]'
+            className='absolute -bottom-32 left-[18%] h-72 w-72 rounded-full bg-primary/10 blur-[110px]'
           />
 
-          <div className='relative z-10 mb-9 flex flex-col gap-7 lg:mb-12 lg:flex-row lg:items-end lg:justify-between'>
-            <div className='max-w-3xl'>
-              <div className='mb-4 inline-flex items-center gap-2 rounded-full border border-secondary/20 bg-secondary/10 px-4 py-2 text-xs font-bold text-secondary sm:text-sm'>
-                <HiOutlineSparkles size={18} />
+          <SectionHeader
+            icon={HiOutlineSparkles}
+            eyebrow='مسیرهای آموزشی سامانه یوگا'
+            title={
+              <span className='block text-3xl font-black leading-[1.65] sm:text-4xl lg:text-5xl'>
+                دوره‌ای متناسب با{' '}
+                <span className='text-secondary'>مسیر شما</span>
+              </span>
+            }
+            description='از تمرین‌های پایه تا مسیرهای تخصصی، دوره‌ها به‌صورت مرحله‌به‌مرحله طراحی شده‌اند تا با آرامش و استمرار پیشرفت کنید.'
+            action={
+              <SiteButton
+                href='/courses'
+                variant='secondary'
+                size='lg'
+                startIcon={GrYoga}
+                endIcon={HiOutlineArrowLeft}
+                className='hidden lg:inline-flex'
+              >
+                مشاهده همه دوره‌ها
+              </SiteButton>
+            }
+            className='relative z-10 mb-6 lg:mb-7'
+          />
 
-                <span>مسیرهای آموزشی سمانه یوگا</span>
-              </div>
-
-              <h2 className='text-3xl font-black leading-[1.65] text-text-light sm:text-4xl lg:text-5xl dark:text-text-dark'>
-                دوره‌ای متناسب با
-                <span className='relative mx-2 inline-block text-secondary'>
-                  مسیر شما
-                  <svg
-                    aria-hidden='true'
-                    viewBox='0 0 170 18'
-                    preserveAspectRatio='none'
-                    className='text-yellow pointer-events-none absolute -bottom-1 right-0 h-3 w-full'
-                  >
-                    <path
-                      d='M4 12C36 4 68 16 101 9C126 4 147 5 166 9'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='4'
-                      strokeLinecap='round'
-                      opacity='0.75'
-                    />
-                  </svg>
-                </span>
-              </h2>
-
-              <p className='mt-5 max-w-2xl text-sm leading-8 text-subtext-light sm:text-base sm:leading-9 dark:text-subtext-dark'>
-                از تمرین‌های پایه تا مسیرهای تخصصی، دوره‌ها به‌صورت
-                مرحله‌به‌مرحله طراحی شده‌اند تا با آرامش و استمرار پیشرفت کنید.
-              </p>
-
-              <div className='mt-6 flex flex-wrap items-center gap-3'>
-                <div className='flex items-center gap-2 rounded-2xl border border-black/5 bg-background-light/70 px-4 py-3 text-xs font-bold text-text-light shadow-sm dark:border-white/10 dark:bg-background-dark/55 dark:text-text-dark'>
-                  <HiOutlinePlayCircle size={20} className='text-secondary' />
-
-                  <span>آموزش ویدیویی</span>
-                </div>
-
-                <div className='flex items-center gap-2 rounded-2xl border border-black/5 bg-background-light/70 px-4 py-3 text-xs font-bold text-text-light shadow-sm dark:border-white/10 dark:bg-background-dark/55 dark:text-text-dark'>
-                  <HiOutlineAcademicCap size={20} className='text-yellow' />
-
-                  <span>مناسب همه سطوح</span>
-                </div>
-
-                {courses.length > 0 && (
-                  <div className='flex items-center gap-2 rounded-2xl border border-secondary/15 bg-secondary/10 px-4 py-3 text-xs font-bold text-secondary'>
-                    <span className='font-faNa text-sm'>
-                      {courses.length.toLocaleString('fa-IR')}
-                    </span>
-
-                    <span>دوره آموزشی</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Link
-              href='/courses'
-              className='group hidden h-14 shrink-0 items-center justify-center gap-2 rounded-2xl border border-secondary/20 bg-secondary/10 px-6 text-sm font-bold text-secondary transition-all duration-300 hover:-translate-y-1 hover:border-secondary hover:bg-secondary hover:text-white lg:flex'
+          <div className='relative z-10 mb-9 flex flex-wrap items-center gap-2 lg:mb-12'>
+            <SiteBadge
+              icon={HiOutlinePlayCircle}
+              variant='neutral'
+              size='lg'
             >
-              <GrYoga size={21} />
+              آموزش ویدیویی
+            </SiteBadge>
 
-              <span>مشاهده همه دوره‌ها</span>
+            <SiteBadge
+              icon={HiOutlineAcademicCap}
+              variant='yellow'
+              size='lg'
+            >
+              مناسب همه سطوح
+            </SiteBadge>
 
-              <HiOutlineArrowLeft
-                size={19}
-                className='transition-transform duration-300 group-hover:-translate-x-1'
-              />
-            </Link>
+            {courses.length > 0 && (
+              <SiteBadge variant='secondary' size='lg'>
+                <span className='font-faNa'>
+                  {courses.length.toLocaleString('fa-IR')}
+                </span>{' '}
+                دوره آموزشی
+              </SiteBadge>
+            )}
           </div>
 
           <div className='relative z-10'>
@@ -187,28 +134,25 @@ async function CoursesSection() {
           </div>
 
           <div className='relative z-10 mt-8 flex justify-center lg:hidden'>
-            <Link
+            <SiteButton
               href='/courses'
-              className='group flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-secondary px-6 text-sm font-bold text-white shadow-[0_16px_40px_rgba(38,145,125,0.24)] transition-all duration-300 hover:-translate-y-1 sm:w-auto'
+              variant='primary'
+              size='lg'
+              startIcon={GrYoga}
+              endIcon={HiOutlineArrowLeft}
+              fullWidth
+              className='sm:w-auto'
             >
-              <span>مشاهده همه دوره‌ها</span>
-
-              <HiOutlineArrowLeft
-                size={19}
-                className='transition-transform duration-300 group-hover:-translate-x-1'
-              />
-            </Link>
+              مشاهده همه دوره‌ها
+            </SiteButton>
           </div>
-        </div>
+        </SiteCard>
       </div>
 
       <style>{`
         .courses-background-grid {
           background-image:
-            linear-gradient(
-              rgba(100, 244, 171, 0.25) 1px,
-              transparent 1px
-            ),
+            linear-gradient(rgba(100, 244, 171, 0.25) 1px, transparent 1px),
             linear-gradient(
               90deg,
               rgba(100, 244, 171, 0.25) 1px,
@@ -228,7 +172,6 @@ async function CoursesSection() {
           from {
             transform: rotate(0deg);
           }
-
           to {
             transform: rotate(360deg);
           }
@@ -238,7 +181,6 @@ async function CoursesSection() {
           from {
             transform: rotate(360deg);
           }
-
           to {
             transform: rotate(0deg);
           }

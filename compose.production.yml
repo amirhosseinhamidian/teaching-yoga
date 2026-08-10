@@ -34,6 +34,9 @@ services:
       VIDEO_UPLOAD_ROOT: /app/storage/uploads/jobs
       VIDEO_PROCESSING_ROOT: /app/storage/processing/jobs
 
+    extra_hosts:
+      - 'samaneyoga.ir:host-gateway'
+
     ports:
       - '127.0.0.1:3000:3000'
 
