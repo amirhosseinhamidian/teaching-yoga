@@ -1,0 +1,494 @@
+name: Deploy Production
+
+on:
+  push:
+    branches:
+      - master
+
+  # امکان اجرای دستی از GitHub Actions
+  workflow_dispatch:
+
+# حداقل permission موردنیاز
+permissions:
+  contents: read
+
+# اجازه نده دو deploy همزمان production اجرا شوند
+concurrency:
+  group: teaching-yoga-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Teaching Yoga
+
+    runs-on:
+      - self-hosted
+      - linux
+      - x64
+
+    timeout-minutes: 60
+
+    steps:
+      - name: Deploy production
+        shell: bash
+
+        env:
+          DEPLOY_SHA: ${{ github.sha }}
+
+        run: |
+          set -Eeuo pipefail
+
+          # ============================================
+          # Configuration
+          # ============================================
+
+          APP_DIR="/opt/teaching-yoga"
+          HEALTH_URL="https://samaneyoga.ir/api/health"
+
+          echo
+          echo "============================================"
+          echo " Teaching Yoga Production Deployment"
+          echo "============================================"
+          echo
+
+          echo "Target commit:"
+          echo "$DEPLOY_SHA"
+
+          echo
+          echo "Application directory:"
+          echo "$APP_DIR"
+
+          # ============================================
+          # Go to production repository
+          # ============================================
+
+          if [ ! -d "$APP_DIR" ]; then
+            echo "ERROR: application directory does not exist:"
+            echo "$APP_DIR"
+            exit 1
+          fi
+
+          cd "$APP_DIR"
+
+          if [ ! -d ".git" ]; then
+            echo "ERROR: $APP_DIR is not a Git repository."
+            exit 1
+          fi
+
+          # ============================================
+          # Docker Compose helper
+          # ============================================
+
+          compose() {
+            docker compose \
+              --env-file .env.production \
+              -f compose.production.yml \
+              -f compose.vps.yml \
+              "$@"
+          }
+
+          # ============================================
+          # Pre-deploy information
+          # ============================================
+
+          PREVIOUS_COMMIT="$(git rev-parse HEAD)"
+
+          echo
+          echo "Previous production commit:"
+          echo "$PREVIOUS_COMMIT"
+
+          echo
+          echo "Current Git status:"
+          git status --short || true
+
+          echo
+          echo "Current Docker disk usage:"
+          docker system df || true
+
+          # ============================================
+          # Rollback function
+          # ============================================
+
+          rollback() {
+            echo
+            echo "============================================"
+            echo " ROLLBACK STARTED"
+            echo "============================================"
+            echo
+
+            echo "Rolling back to:"
+            echo "$PREVIOUS_COMMIT"
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            echo
+            echo "Validating previous Docker Compose config..."
+
+            if ! compose config > /dev/null; then
+              echo "CRITICAL: previous Compose config is invalid."
+              return 1
+            fi
+
+            echo
+            echo "Rebuilding previous production version..."
+
+            if ! compose build web video-worker; then
+              echo "CRITICAL: rollback build failed."
+              return 1
+            fi
+
+            echo
+            echo "Starting previous production version..."
+
+            if ! compose up \
+              -d \
+              --no-build \
+              web \
+              video-worker
+            then
+              echo "CRITICAL: rollback containers could not start."
+              return 1
+            fi
+
+            echo
+            echo "Rollback container status:"
+            compose ps
+
+            echo
+            echo "Checking rollback health..."
+
+            ROLLBACK_HEALTH_OK=0
+
+            for attempt in $(seq 1 20); do
+              echo "Rollback health check: $attempt/20"
+
+              if curl \
+                -fsS \
+                --connect-timeout 5 \
+                --max-time 10 \
+                "$HEALTH_URL" \
+                > /dev/null
+              then
+                ROLLBACK_HEALTH_OK=1
+                break
+              fi
+
+              sleep 3
+            done
+
+            if [ "$ROLLBACK_HEALTH_OK" -ne 1 ]; then
+              echo
+              echo "CRITICAL: rollback completed but health check failed."
+              return 1
+            fi
+
+            echo
+            echo "============================================"
+            echo " ROLLBACK SUCCESSFUL"
+            echo "============================================"
+            echo
+
+            return 0
+          }
+
+          # ============================================
+          # Fetch master
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Fetching latest master"
+          echo "============================================"
+
+          git fetch \
+            --prune \
+            origin \
+            +refs/heads/master:refs/remotes/origin/master
+
+          # ============================================
+          # Verify requested commit
+          # ============================================
+
+          echo
+          echo "Checking deployment commit..."
+
+          if ! git cat-file \
+            -e "${DEPLOY_SHA}^{commit}" \
+            2>/dev/null
+          then
+            echo "ERROR: deployment commit does not exist:"
+            echo "$DEPLOY_SHA"
+            exit 1
+          fi
+
+          # اطمینان از اینکه SHA مربوط به master است
+          if ! git merge-base \
+            --is-ancestor \
+            "$DEPLOY_SHA" \
+            origin/master
+          then
+            echo "ERROR: requested commit is not part of origin/master."
+            exit 1
+          fi
+
+          # ============================================
+          # Checkout exact GitHub commit
+          # ============================================
+
+          echo
+          echo "Switching production repository to:"
+          echo "$DEPLOY_SHA"
+
+          git reset --hard "$DEPLOY_SHA"
+
+          echo
+          echo "Deploying:"
+          git log -1 --oneline
+
+          # ============================================
+          # Validate environment
+          # ============================================
+
+          echo
+          echo "Checking production environment file..."
+
+          if [ ! -f ".env.production" ]; then
+            echo "ERROR: .env.production does not exist."
+            git reset --hard "$PREVIOUS_COMMIT"
+            exit 1
+          fi
+
+          echo
+          echo "Validating Docker Compose configuration..."
+
+          if ! compose config > /dev/null; then
+            echo
+            echo "ERROR: Docker Compose configuration is invalid."
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            exit 1
+          fi
+
+          # ============================================
+          # Build
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Building Production Images"
+          echo "============================================"
+          echo
+
+          if ! compose build \
+            web \
+            video-worker
+          then
+            echo
+            echo "============================================"
+            echo " BUILD FAILED"
+            echo "============================================"
+            echo
+
+            echo "Running production containers were NOT restarted."
+
+            echo "Returning Git repository to:"
+            echo "$PREVIOUS_COMMIT"
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            exit 1
+          fi
+
+          echo
+          echo "Docker build completed successfully."
+
+          # ============================================
+          # Start new version
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Starting New Production Version"
+          echo "============================================"
+          echo
+
+          if ! compose up \
+            -d \
+            --no-build \
+            web \
+            video-worker
+          then
+            echo
+            echo "ERROR: failed to start new containers."
+
+            rollback || true
+
+            exit 1
+          fi
+
+          echo
+          echo "Container status:"
+          compose ps
+
+          # ============================================
+          # Health check
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Production Health Check"
+          echo "============================================"
+          echo
+
+          HEALTH_OK=0
+
+          # حداکثر حدود یک دقیقه برای آماده‌شدن برنامه
+          for attempt in $(seq 1 20); do
+            echo "Health check: $attempt/20"
+
+            if curl \
+              -fsS \
+              --connect-timeout 5 \
+              --max-time 10 \
+              "$HEALTH_URL" \
+              > /dev/null
+            then
+              HEALTH_OK=1
+
+              echo
+              echo "Production health check passed."
+
+              break
+            fi
+
+            sleep 3
+          done
+
+          # ============================================
+          # Rollback if health check fails
+          # ============================================
+
+          if [ "$HEALTH_OK" -ne 1 ]; then
+            echo
+            echo "============================================"
+            echo " HEALTH CHECK FAILED"
+            echo "============================================"
+            echo
+
+            echo "New version is unhealthy."
+            echo "Starting automatic rollback..."
+
+            rollback || true
+
+            exit 1
+          fi
+
+          # ============================================
+          # Deployment success
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " DEPLOYMENT SUCCESSFUL"
+          echo "============================================"
+          echo
+
+          echo "Production commit:"
+          git log -1 --oneline
+
+          echo
+          echo "Running containers:"
+          compose ps
+
+          # ============================================
+          # Docker Cleanup
+          # فقط بعد از deploy موفق
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Docker Cleanup"
+          echo "============================================"
+          echo
+
+          echo "Disk usage before cleanup:"
+          docker system df || true
+
+          # --------------------------------------------
+          # حذف build cache قدیمی‌تر از 7 روز
+          # --------------------------------------------
+
+          echo
+          echo "Cleaning Docker build cache older than 7 days..."
+
+          docker builder prune \
+            -af \
+            --filter "until=168h" \
+            || true
+
+          # --------------------------------------------
+          # حذف dangling images قدیمی‌تر از 7 روز
+          #
+          # عمداً -a استفاده نمی‌کنیم تا imageهای
+          # tag شده / backup ناخواسته حذف نشوند.
+          # --------------------------------------------
+
+          echo
+          echo "Cleaning dangling images older than 7 days..."
+
+          docker image prune \
+            -f \
+            --filter "until=168h" \
+            || true
+
+          # --------------------------------------------
+          # حذف stopped containerهای قدیمی
+          # --------------------------------------------
+
+          echo
+          echo "Cleaning stopped containers older than 7 days..."
+
+          docker container prune \
+            -f \
+            --filter "until=168h" \
+            || true
+
+          # ============================================
+          # IMPORTANT
+          #
+          # عمداً این‌ها را اجرا نمی‌کنیم:
+          #
+          # docker volume prune
+          # docker system prune --volumes
+          #
+          # چون ممکن است داده‌های persistent پروژه
+          # را حذف کنند.
+          # ============================================
+
+          echo
+          echo "Disk usage after cleanup:"
+          docker system df || true
+
+          # ============================================
+          # Final health check
+          # ============================================
+
+          echo
+          echo "Running final health check..."
+
+          curl \
+            -fsS \
+            --connect-timeout 5 \
+            --max-time 10 \
+            "$HEALTH_URL" \
+            > /dev/null
+
+          echo
+          echo "Final health check passed."
+
+          echo
+          echo "============================================"
+          echo " DEPLOY FINISHED SUCCESSFULLY"
+          echo "============================================"
+          echo
