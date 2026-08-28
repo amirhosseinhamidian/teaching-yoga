@@ -7,7 +7,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 WORKDIR /app
 
-RUN apt-get update \
+RUN sed -i \
+      -e 's|URIs: http://deb.debian.org/debian-security|URIs: http://security.debian.org/debian-security|' \
+      -e 's|URIs: http://deb.debian.org/debian|URIs: http://ftp.at.debian.org/debian|' \
+      /etc/apt/sources.list.d/debian.sources \
+    && apt-get update \
     && apt-get install -y --no-install-recommends \
       ca-certificates \
       curl \
