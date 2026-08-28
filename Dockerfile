@@ -31,10 +31,27 @@ RUN npm ci
 
 
 # ==================================================
+# Video regression tests
+# ==================================================
+#
+# Production images may only be built after the
+# resumable-upload and worker-health suites pass.
+# This makes the deploy workflow fail before any
+# running production container is restarted.
+# ==================================================
+
+FROM dependencies AS video-tests
+
+COPY . .
+
+RUN npm run test:video
+
+
+# ==================================================
 # Builder
 # ==================================================
 
-FROM dependencies AS builder
+FROM video-tests AS builder
 
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -47,7 +64,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
 ENV NEXT_PUBLIC_POSTEX_API_KEY=${NEXT_PUBLIC_POSTEX_API_KEY}
 
-COPY . .
+# Source code was copied by the mandatory video-tests stage.
 
 # package.json build خودش prisma generate اجرا می‌کند.
 RUN npm run build

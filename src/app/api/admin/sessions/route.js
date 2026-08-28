@@ -101,6 +101,7 @@ export async function GET(request) {
         sessionDuration: session.duration,
         sessionIsFree: session.isFree,
         sessionIsActive: session.isActive,
+        sessionCreatedAt: session.createAt,
 
         videoKey: session?.video?.videoKey || null,
         videoId: session?.video?.id || null,

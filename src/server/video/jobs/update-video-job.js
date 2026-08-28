@@ -88,6 +88,7 @@ export async function markVideoJobQueued({ jobId, sourcePath }) {
       sourcePath: sourcePath.trim(),
 
       status: 'QUEUED',
+      uploadProgress: 100,
       progress: 0,
       attempts: 0,
       outputKey: null,
@@ -101,6 +102,49 @@ export async function markVideoJobQueued({ jobId, sourcePath }) {
     const job = await getRequiredJob(normalizedJobId);
 
     throw new Error(`Cannot queue a video job with status ${job.status}.`);
+  }
+
+  return getRequiredJob(normalizedJobId);
+}
+
+export async function updateVideoJobUploadProgress({ jobId, progress }) {
+  const normalizedJobId = normalizeJobId(jobId);
+
+  const normalizedProgress = normalizeProgress(progress);
+
+  const result = await prismadb.videoProcessingJob.updateMany({
+    where: {
+      id: normalizedJobId,
+      status: 'UPLOADING',
+
+      uploadProgress: {
+        lt: normalizedProgress,
+      },
+    },
+
+    data: {
+      uploadProgress: normalizedProgress,
+      updatedAt: new Date(),
+    },
+  });
+
+  if (result.count !== 1) {
+    const job = await getRequiredJob(normalizedJobId);
+
+    /*
+     * با آپلود موازی ممکن است پاسخ chunk کندتر بعد از
+     * chunk جدیدتر برسد. Progress نباید به عقب برگردد.
+     */
+    if (
+      job.status === 'UPLOADING' &&
+      Number(job.uploadProgress) >= normalizedProgress
+    ) {
+      return job;
+    }
+
+    throw new Error(
+      `Cannot update upload progress for a video job with status ${job.status}.`
+    );
   }
 
   return getRequiredJob(normalizedJobId);

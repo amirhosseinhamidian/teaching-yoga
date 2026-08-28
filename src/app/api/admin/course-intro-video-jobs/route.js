@@ -10,7 +10,11 @@ import { withApiLogging } from '@/server/logger/with-api-logging';
 
 import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
 
-import { createCourseIntroVideoJob } from '@/server/video/jobs';
+import {
+  ActiveVideoJobConflictError,
+  createCourseIntroVideoJob,
+  ensureVideoJobOwnership,
+} from '@/server/video/jobs';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -63,12 +67,16 @@ const handlePost = async (request) => {
     component: 'admin-course-intro-video-jobs',
   });
 
+  let actor = null;
+
   try {
     const auth = await requireAdminApi();
 
     if (!auth.ok) {
       return auth.response;
     }
+
+    actor = auth.user;
 
     const body = await request.json();
 
@@ -85,7 +93,7 @@ const handlePost = async (request) => {
         : Number(body.courseId);
 
     log = getAdminVideoJobLogger({
-      actor: auth.user,
+      actor,
 
       component: 'admin-course-intro-video-jobs',
     }).child({
@@ -141,12 +149,25 @@ const handlePost = async (request) => {
     });
 
     if (activeJob) {
+      const ownership =
+        await ensureVideoJobOwnership({
+          jobId: activeJob.id,
+          userId: auth.user.id,
+        });
+
+      const canAdopt =
+        ownership.owned;
+
       log.warn(
         {
           event: 'course_intro_video_job_active_conflict',
 
           activeJobId: activeJob.id,
           activeJobStatus: activeJob.status,
+
+          sameAdmin: canAdopt,
+          legacyClaimed:
+            ownership.claimed,
         },
         'An active course intro video job already exists'
       );
@@ -154,8 +175,21 @@ const handlePost = async (request) => {
       return NextResponse.json(
         {
           success: false,
-          error: 'برای ویدئوی معرفی این دوره یک عملیات فعال وجود دارد.',
-          job: activeJob,
+
+          error: canAdopt
+            ? 'برای ویدئوی معرفی این دوره یک عملیات فعال وجود دارد.'
+            : 'ویدئوی معرفی این دوره توسط مدیر دیگری در حال آپلود یا پردازش است.',
+
+          ...(canAdopt
+            ? {
+                job: {
+                  ...activeJob,
+
+                  createdByUserId:
+                    auth.user.id,
+                },
+              }
+            : {}),
         },
         {
           status: 409,
@@ -166,6 +200,7 @@ const handlePost = async (request) => {
     const job = await createCourseIntroVideoJob({
       courseId,
       courseTitle,
+      createdByUserId: auth.user.id,
     });
 
     getAdminVideoJobLogger({
@@ -190,6 +225,57 @@ const handlePost = async (request) => {
       }
     );
   } catch (error) {
+    if (
+      error instanceof
+        ActiveVideoJobConflictError
+    ) {
+      const activeJob =
+        error.job;
+
+      const canAdopt =
+        Boolean(
+          actor?.id &&
+          activeJob?.createdByUserId ===
+            actor.id
+        );
+
+      log.warn(
+        {
+          event:
+            'course_intro_video_job_atomic_conflict',
+
+          activeJobId:
+            activeJob?.id || null,
+
+          activeJobStatus:
+            activeJob?.status || null,
+
+          sameAdmin: canAdopt,
+        },
+        'Atomic course intro video job create conflict detected'
+      );
+
+      return NextResponse.json(
+        {
+          success: false,
+
+          error: canAdopt
+            ? 'برای ویدئوی معرفی این دوره یک عملیات فعال وجود دارد.'
+            : 'ویدئوی معرفی این دوره توسط مدیر دیگری در حال آپلود یا پردازش است.',
+
+          ...(canAdopt &&
+          activeJob
+            ? {
+                job: activeJob,
+              }
+            : {}),
+        },
+        {
+          status: 409,
+        }
+      );
+    }
+
     const classified = classifyCreateError(error);
 
     if (classified.expected) {

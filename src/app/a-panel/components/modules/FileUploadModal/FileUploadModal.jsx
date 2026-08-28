@@ -1,10 +1,14 @@
 /* eslint-disable no-undef */
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import PropTypes from 'prop-types';
-import { IoClose } from 'react-icons/io5';
 
+import AdaptiveDialog from '@/components/Ui/AdaptiveDialog/AdaptiveDialog';
 import Button from '@/components/Ui/Button/Button';
 
 const VIDEO_STAGE_LABELS = {
@@ -40,7 +44,9 @@ const FileUploadModal = ({
 }) => {
   const fileInputRef = useRef(null);
   const uploadControllerRef = useRef(null);
+  const closeTimerRef = useRef(null);
 
+  const [isDialogOpen, setIsDialogOpen] = useState(true);
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -84,10 +90,38 @@ const FileUploadModal = ({
 
   const getStageLabel = () => {
     if (!isVideo) {
-      return currentStage === 'ready' ? 'آپلود تکمیل شد' : 'در حال آپلود فایل';
+      return currentStage === 'ready'
+        ? 'آپلود تکمیل شد'
+        : 'در حال آپلود فایل';
     }
 
-    return VIDEO_STAGE_LABELS[currentStage] || 'در حال پردازش ویدئو';
+    return (
+      VIDEO_STAGE_LABELS[currentStage] ||
+      'در حال پردازش ویدئو'
+    );
+  };
+
+  const closeDialog = ({
+    force = false,
+  } = {}) => {
+    if (
+      isLoading &&
+      !force
+    ) {
+      return;
+    }
+
+    if (closeTimerRef.current) {
+      return;
+    }
+
+    setIsDialogOpen(false);
+
+    closeTimerRef.current =
+      setTimeout(() => {
+        closeTimerRef.current = null;
+        onClose();
+      }, 240);
   };
 
   const handleUpload = async () => {
@@ -108,22 +142,44 @@ const FileUploadModal = ({
 
     try {
       if (isVideo) {
-        await onUpload(file, undefined, {
-          signal: abortController.signal,
+        const uploadResult =
+          await onUpload(
+            file,
+            undefined,
+            {
+              signal:
+                abortController.signal,
 
-          onProgress: (value) => {
-            setProgress(clampProgress(value));
-          },
+              onProgress: (value) => {
+                setProgress(
+                  clampProgress(value)
+                );
+              },
 
-          onStageChange: (stage) => {
-            if (typeof stage === 'string' && stage.trim()) {
-              setCurrentStage(stage);
+              onStageChange: (stage) => {
+                if (
+                  typeof stage ===
+                    'string' &&
+                  stage.trim()
+                ) {
+                  setCurrentStage(
+                    stage
+                  );
+                }
+              },
             }
-          },
-        });
+          );
 
-        setCurrentStage('ready');
-        setProgress(100);
+        /*
+         * GlobalVideoUploadManager مسئول status واقعی
+         * ویدئو است. وقتی upload به پس‌زمینه تحویل داده
+         * شد، این modal نباید READY/100% جعلی نشان دهد.
+         */
+        if (!uploadResult?.background) {
+          setCurrentStage('ready');
+          setProgress(100);
+        }
+
         completedSuccessfully = true;
       } else {
         await onUpload(file, (value) => {
@@ -151,53 +207,68 @@ const FileUploadModal = ({
     }
 
     if (completedSuccessfully) {
-      onClose();
+      closeDialog({
+        force: true,
+      });
     }
   };
 
   useEffect(() => {
     return () => {
       uploadControllerRef.current?.abort();
+
+      if (closeTimerRef.current) {
+        clearTimeout(
+          closeTimerRef.current
+        );
+
+        closeTimerRef.current = null;
+      }
     };
   }, []);
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
-        <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
-          <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
-            {title}
-          </h3>
-
-          <button
-            type='button'
-            onClick={onClose}
-            disabled={isLoading}
-            aria-label='بستن'
-            className={isLoading ? 'cursor-not-allowed opacity-50' : ''}
-          >
-            <IoClose
-              size={24}
-              className='text-subtext-light md:cursor-pointer dark:text-subtext-dark'
-            />
-          </button>
-        </div>
-
-        <p className='py-4 text-sm text-subtext-light dark:text-subtext-dark'>
-          {desc}
-        </p>
-
+    <AdaptiveDialog
+      title={title}
+      description={desc}
+      isOpen={isDialogOpen}
+      onClose={closeDialog}
+      closeOnBackdrop={!isLoading}
+      closeOnEscape={!isLoading}
+      showCloseButton={!isLoading}
+      panelClassName='md:max-w-[640px]'
+      bodyClassName='pt-3 sm:pt-4'
+      footer={
+        <Button
+          onClick={handleUpload}
+          className='w-full text-xs sm:text-base'
+          isLoading={isLoading}
+          disabled={
+            isLoading ||
+            !file
+          }
+        >
+          {uploadButtonText}
+        </Button>
+      }
+    >
+      <div className='min-w-0'>
         <div
           role='button'
           tabIndex={0}
-          className={`mt-4 flex h-40 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark ${
-            isLoading ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+          className={`flex min-h-36 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-accent bg-background-light px-3 py-5 text-center sm:min-h-40 dark:bg-background-dark ${
+            isLoading
+              ? 'cursor-not-allowed opacity-60'
+              : 'cursor-pointer'
           }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={openFilePicker}
           onKeyDown={(event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
+            if (
+              event.key === 'Enter' ||
+              event.key === ' '
+            ) {
               event.preventDefault();
               openFilePicker();
             }
@@ -205,26 +276,35 @@ const FileUploadModal = ({
         >
           <input
             type='file'
-            accept={isVideo ? 'video/*' : 'image/*'}
+            accept={
+              isVideo
+                ? 'video/*'
+                : 'image/*'
+            }
             className='hidden'
             ref={fileInputRef}
             onChange={handleFileChange}
             disabled={isLoading}
           />
 
-          <div className='cursor-pointer'>
+          <div className='min-w-0 cursor-pointer'>
             {file ? (
               <>
-                <p className='break-all px-4 text-sm text-text-light dark:text-text-dark'>
+                <p className='break-all px-2 text-sm text-text-light sm:px-4 dark:text-text-dark'>
                   {file.name}
                 </p>
 
-                <p className='mt-2 text-xs text-subtext-light dark:text-subtext-dark'>
-                  {(file.size / 1024 / 1024).toFixed(2)} مگابایت
+                <p className='mt-2 font-faNa text-xs text-subtext-light dark:text-subtext-dark'>
+                  {(
+                    file.size /
+                    1024 /
+                    1024
+                  ).toFixed(2)}{' '}
+                  مگابایت
                 </p>
               </>
             ) : (
-              <p className='text-sm text-subtext-light dark:text-subtext-dark'>
+              <p className='px-2 text-sm leading-7 text-subtext-light dark:text-subtext-dark'>
                 {isVideo
                   ? 'برای انتخاب ویدئو کلیک کنید یا فایل را اینجا رها کنید'
                   : 'برای انتخاب تصویر کلیک کنید یا فایل را اینجا رها کنید'}
@@ -233,47 +313,47 @@ const FileUploadModal = ({
           </div>
         </div>
 
-        {progressbar && isLoading && (
-          <div>
-            <div className='mt-4 h-3 w-full overflow-hidden rounded-full bg-foreground-light dark:bg-foreground-dark'>
-              <div
-                className='h-3 rounded-full bg-primary transition-[width] duration-300'
-                style={{
-                  width: `${progress}%`,
-                }}
-              />
-            </div>
-
-            <div className='mt-2 text-center font-faNa text-sm text-text-light dark:text-text-dark'>
-              {`${getStageLabel()}: ${progress}%`}
-            </div>
+        {isVideo && (
+          <div className='mt-4 rounded-2xl border border-blue-500/15 bg-blue-500/5 px-3 py-3 text-xs leading-6 text-blue sm:px-4 sm:text-sm'>
+            بعد از شروع، آپلود و پردازش ویدئو در پس‌زمینه ادامه پیدا می‌کند و وضعیت آن از نوار آپلود سراسری قابل مشاهده است.
           </div>
         )}
 
+        {progressbar &&
+          isLoading && (
+            <div className='mt-4'>
+              <div className='h-3 w-full overflow-hidden rounded-full bg-foreground-light dark:bg-foreground-dark'>
+                <div
+                  className='h-3 rounded-full bg-primary transition-[width] duration-300'
+                  style={{
+                    width: `${progress}%`,
+                  }}
+                />
+              </div>
+
+              <div className='mt-2 text-center font-faNa text-sm text-text-light dark:text-text-dark'>
+                {`${getStageLabel()}: ${progress}%`}
+              </div>
+            </div>
+          )}
+
         {errorMessage && (
-          <p className='text-red-500 mt-3 text-sm'>{errorMessage}</p>
+          <p
+            role='alert'
+            className='mt-4 rounded-2xl bg-red-500/10 px-3 py-3 text-sm leading-6 text-red-500'
+          >
+            {errorMessage}
+          </p>
         )}
 
-        <p
-          className={`mt-2 font-medium text-blue ${
-            isLoading ? 'block' : 'hidden'
-          }`}
-        >
-          {isVideo
-            ? 'تا پایان آپلود اولیه این پنجره را نبندید. پردازش ویدئو روی سرور انجام می‌شود.'
-            : 'لطفاً تا پایان فرایند آپلود از این پنجره خارج نشوید.'}
-        </p>
-
-        <Button
-          onClick={handleUpload}
-          className='mt-8 text-xs sm:text-base'
-          isLoading={isLoading}
-          disabled={isLoading || !file}
-        >
-          {uploadButtonText}
-        </Button>
+        {!isVideo &&
+          isLoading && (
+            <p className='mt-3 text-xs font-medium leading-6 text-blue sm:text-sm'>
+              لطفاً تا پایان آپلود تصویر این پنجره را نبندید.
+            </p>
+          )}
       </div>
-    </div>
+    </AdaptiveDialog>
   );
 };
 

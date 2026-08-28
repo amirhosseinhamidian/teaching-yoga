@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import Table from '@/components/Ui/Table/Table';
 import Pagination from '@/components/Ui/Pagination/Pagination';
@@ -20,12 +20,7 @@ import AudioModal from '../../modules/AudioModal/AudioModal';
 import UploadSessionMediaModal from '../../modules/UploadSessionVideoModal/UploadSessionVideoModal';
 import OutlineButton from '@/components/Ui/OutlineButton/OutlineButton';
 import Button from '@/components/Ui/Button/Button';
-import {
-  cancelAdminVideoJob,
-  createAdminVideoJob,
-  uploadAdminVideoSource,
-  waitForAdminVideoJob,
-} from '@/server/videoJobClient';
+import { useGlobalVideoUpload } from '@/contexts/GlobalVideoUploadContext';
 
 const SessionTable = ({
   className,
@@ -35,9 +30,16 @@ const SessionTable = ({
   totalPages,
   isLoading,
   onPageChange,
+  onRefresh,
 }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
+  const {
+    startVideoUpload,
+    tasks: videoUploadTasks,
+  } = useGlobalVideoUpload();
+
+  const handledReadyVideoTasksRef = useRef(new Set());
 
   const [sessionTempId, setSessionTempId] = useState(null);
   const [termTempId, setTermTempId] = useState(null);
@@ -57,6 +59,28 @@ const SessionTable = ({
     useState(false);
   const [showUploadAudioSessionModal, setShowUploadAudioSessionModal] =
     useState(false);
+
+  useEffect(() => {
+    const readyTasksForVisibleSessions = videoUploadTasks.filter(
+      (task) =>
+        task.stage === 'ready' &&
+        task.targetType === 'SESSION' &&
+        sessions.some(
+          (session) => session.sessionId === task.sessionId
+        ) &&
+        !handledReadyVideoTasksRef.current.has(task.id)
+    );
+
+    if (readyTasksForVisibleSessions.length === 0) {
+      return;
+    }
+
+    readyTasksForVisibleSessions.forEach((task) => {
+      handledReadyVideoTasksRef.current.add(task.id);
+    });
+
+    void onRefresh?.();
+  }, [videoUploadTasks, sessions, onRefresh]);
 
   // -----------------------------
   // حذف جلسه از یک ترم (انتخاب ترم)
@@ -207,14 +231,7 @@ const SessionTable = ({
   // -----------------------------
   // آپلود/بروزرسانی ویدیو
   // -----------------------------
-  const handleSessionVideoUpload = async (file, accessLevel, controls = {}) => {
-    const {
-      signal,
-      onProgress,
-      onStageChange,
-      onJobCreated,
-    } = controls;
-
+  const handleSessionVideoUpload = async (file, accessLevel) => {
     if (!(file instanceof File)) {
       throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
     }
@@ -226,74 +243,26 @@ const SessionTable = ({
       throw new Error('اطلاعات ترم یا جلسه معتبر نیست.');
     }
 
-    let jobId = null;
-
-    try {
-      onStageChange?.('creating');
-      onProgress?.(0);
-
-      const createdJob = await createAdminVideoJob({
-        sessionId,
-        termId,
-        accessLevel,
-        signal,
-      });
-
-      jobId = createdJob.id;
-      onJobCreated?.(jobId);
-
-      onStageChange?.('uploading');
-      onProgress?.(0);
-
-      await uploadAdminVideoSource({
-        jobId,
-        file,
-        signal,
-        onProgress,
-      });
-
-      onStageChange?.('queued');
-      onProgress?.(0);
-
-      const readyJob = await waitForAdminVideoJob({
-        jobId,
-        signal,
-
-        onUpdate: (job) => {
-          onStageChange?.(job.stage || job.status.toLowerCase());
-
-          onProgress?.(
-            Number.isFinite(job.displayProgress)
-              ? job.displayProgress
-              : job.progress || 0
-          );
-        },
-      });
-
-      /*
-       * این قسمت را با تابع فعلی دریافت مجدد
-       * لیست جلسات در SessionTable هماهنگ کن.
-       */
-      if (typeof fetchSessions === 'function') {
-        await fetchSessions(termId, true);
-      }
-
-      setTermTempId(null);
-      setSessionTempId('');
-
-      return {
-        job: readyJob,
-        message: 'ویدئوی جلسه با موفقیت آپلود و پردازش شد.',
-      };
-    } catch (error) {
-      if (error?.name === 'AbortError' && jobId) {
-        await cancelAdminVideoJob({
-          jobId,
-        }).catch(() => {});
-      }
-
-      throw error;
+    if (!accessLevel) {
+      throw new Error('لطفاً سطح دسترسی ویدئو را مشخص کنید.');
     }
+
+    const taskId = startVideoUpload({
+      file,
+      sessionId,
+      termId,
+      accessLevel,
+
+      label: sessionTemp?.sessionName
+        ? `ویدئوی ${sessionTemp.sessionName}`
+        : 'ویدئوی جلسه',
+    });
+
+    return {
+      taskId,
+      background: true,
+      message: 'آپلود و پردازش ویدئو در پس‌زمینه آغاز شد.',
+    };
   };
 
   // -----------------------------
@@ -515,13 +484,13 @@ const SessionTable = ({
       ),
     },
     {
-      key: 'createAt',
+      key: 'sessionCreatedAt',
       label: 'تاریخ ایجاد',
       render: (_, row) => (
         <p className='whitespace-nowrap'>
-          {getShamsiDate(
-            row.type === 'VIDEO' ? row.videoCreatedAt : row.audioCreatedAt
-          )}
+          {row.sessionCreatedAt
+            ? getShamsiDate(row.sessionCreatedAt)
+            : '___'}
         </p>
       ),
     },
@@ -746,7 +715,7 @@ const SessionTable = ({
             setShowUpdateVideoSessionModal(false);
           }}
           isUpdate
-          videoAccessLevel={sessionTemp?.videoAccessLevel}
+          mediaAccessLevel={sessionTemp?.videoAccessLevel}
           onUpload={handleSessionVideoUpload}
         />
       )}
@@ -777,6 +746,7 @@ SessionTable.propTypes = {
   totalPages: PropTypes.number.isRequired,
   isLoading: PropTypes.bool.isRequired,
   onPageChange: PropTypes.func.isRequired,
+  onRefresh: PropTypes.func.isRequired,
   setSessions: PropTypes.func.isRequired,
 };
 

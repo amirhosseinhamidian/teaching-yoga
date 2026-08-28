@@ -9,6 +9,8 @@ import ClientWrapper from '@/components/ClientWrapper';
 import { PushLinkOnLogin } from '@/components/PushLinkOnLogin';
 import CartBootstrapper from '@/components/Bootstrap/CartBootstrapper';
 import { UiOverlayProvider } from '@/contexts/UiOverlayContext';
+import { GlobalVideoUploadProvider } from '@/contexts/GlobalVideoUploadContext';
+import GlobalVideoUploadDock from '@/components/Ui/GlobalVideoUploadDock/GlobalVideoUploadDock';
 
 export function AppProviders({ children }) {
   return (
@@ -16,9 +18,13 @@ export function AppProviders({ children }) {
       <CartBootstrapper />
       <VisitLogger />
       <ClientSideAOS />
-      <UiOverlayProvider>
-        <ClientWrapper>{children}</ClientWrapper>
-      </UiOverlayProvider>
+      <GlobalVideoUploadProvider>
+        <UiOverlayProvider>
+          <ClientWrapper>{children}</ClientWrapper>
+        </UiOverlayProvider>
+
+        <GlobalVideoUploadDock />
+      </GlobalVideoUploadProvider>
       <PushLinkOnLogin />
       <Toaster />
     </ThemeProvider>

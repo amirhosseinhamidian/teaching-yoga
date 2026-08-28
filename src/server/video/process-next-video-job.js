@@ -13,19 +13,34 @@ import {
   claimNextVideoJob,
   handleVideoJobFailure,
   heartbeatVideoJob,
+  markVideoJobFailed,
   markVideoJobPublishing,
   updateVideoJobProgress,
 } from '@/server/video/jobs';
 
 import { publishVideoJob } from '@/server/video/publish-video-job';
 
+import {
+  cleanupPreviousPublishedVideo,
+} from '@/server/video/cleanup-previous-published-video';
+
 import { probeVideo } from '@/server/video/ffmpeg/probe-video';
 
-import { generateHls } from '@/server/video/ffmpeg/generate-hls';
+import {
+  estimateHlsOutputBytes,
+  generateHls,
+} from '@/server/video/ffmpeg/generate-hls';
+
+import {
+  ensureVideoDiskSpace,
+  VideoDiskSpaceError,
+} from '@/server/video/disk-space';
 
 const DEFAULT_PROCESSING_ROOT = './storage/processing/jobs';
 
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 15000;
+
+const DEFAULT_PROCESSING_OUTPUT_COPIES = 2;
 
 const getPositiveInteger = (value, fallback) => {
   const number = Number(value);
@@ -35,6 +50,22 @@ const getPositiveInteger = (value, fallback) => {
   }
 
   return fallback;
+};
+
+const getProcessingOutputCopies = () => {
+  const value = Number(
+    process.env.VIDEO_PROCESSING_DISK_OUTPUT_COPIES
+  );
+
+  if (
+    Number.isFinite(value) &&
+    value >= 1 &&
+    value <= 4
+  ) {
+    return value;
+  }
+
+  return DEFAULT_PROCESSING_OUTPUT_COPIES;
 };
 
 const getProcessingRoot = () =>
@@ -238,7 +269,11 @@ export async function processNextVideoJob() {
       force: true,
     });
 
-    await mkdir(hlsOutputDirectory, {
+    /*
+     * Root باید برای statfs وجود داشته باشد، ولی خود
+     * workdir هنوز ساخته نمی‌شود تا preflight انجام شود.
+     */
+    await mkdir(getProcessingRoot(), {
       recursive: true,
     });
 
@@ -259,6 +294,57 @@ export async function processNextVideoJob() {
 
       'Video source probe completed'
     );
+
+    const estimatedHlsOutputBytes =
+      estimateHlsOutputBytes(metadata);
+
+    const outputCopies =
+      getProcessingOutputCopies();
+
+    const diskSpace =
+      await ensureVideoDiskSpace({
+        targetPath:
+          getProcessingRoot(),
+
+        /*
+         * یک نسخه workdir همیشه داریم. در Local Storage
+         * هنگام publish یک کپی دیگر هم موقتاً ساخته می‌شود.
+         * مقدار پیش‌فرض ۲ محافظه‌کارانه است و برای FTPS
+         * می‌تواند با env روی ۱ قرار بگیرد.
+         */
+        requiredBytes:
+          estimatedHlsOutputBytes *
+          outputCopies,
+
+        operation:
+          'پردازش و انتشار ویدئو',
+      });
+
+    jobLog.info(
+      {
+        event:
+          'video_job_disk_space_preflight_passed',
+
+        estimatedHlsOutputBytes,
+
+        outputCopies,
+
+        requiredBytes:
+          diskSpace.requiredBytes,
+
+        reserveBytes:
+          diskSpace.reserveBytes,
+
+        availableBytes:
+          diskSpace.availableBytes,
+      },
+
+      'Video processing disk space preflight passed'
+    );
+
+    await mkdir(hlsOutputDirectory, {
+      recursive: true,
+    });
 
     let lastDatabaseProgress = 1;
 
@@ -387,6 +473,54 @@ export async function processNextVideoJob() {
     });
 
     /*
+     * دیتابیس حالا به نسخه جدید اشاره می‌کند. فقط بعد از
+     * READY شدن می‌توان نسخه منتشرشده قبلی را حذف کرد.
+     * خطای این Cleanup نباید Job موفق را FAILED کند.
+     */
+    try {
+      const previousCleanup =
+        await cleanupPreviousPublishedVideo({
+          storage,
+
+          previousOutputKey:
+            publishResult.previousOutputKey,
+
+          currentOutputKey:
+            outputKey,
+        });
+
+      if (previousCleanup.deleted) {
+        jobLog.info(
+          {
+            event:
+              'video_previous_published_output_deleted',
+
+            previousOutputPrefix:
+              previousCleanup.previousPrefix,
+          },
+
+          'Previous published video output was deleted'
+        );
+      }
+    } catch (cleanupError) {
+      logError({
+        log: jobLog,
+        error: cleanupError,
+
+        message:
+          'Failed to remove previous published video output',
+
+        data: {
+          event:
+            'video_previous_published_output_cleanup_failed',
+
+          previousOutputKey:
+            publishResult.previousOutputKey,
+        },
+      });
+    }
+
+    /*
      * Job در دیتابیس READY شده است.
      * خطای Cleanup دیگر نباید Job موفق را FAILED کند.
      */
@@ -447,6 +581,54 @@ export async function processNextVideoJob() {
         durationMs: Date.now() - jobStartedAt,
       },
     });
+    if (
+      error instanceof VideoDiskSpaceError ||
+      error?.code === 'VIDEO_DISK_SPACE_LOW'
+    ) {
+      await markVideoJobFailed({
+        jobId: job.id,
+        error,
+      }).catch((statusError) => {
+        logError({
+          log: jobLog,
+          error: statusError,
+
+          message:
+            'Failed to mark low-disk video job as failed',
+
+          data: {
+            event:
+              'video_job_low_disk_status_update_failed',
+          },
+        });
+      });
+
+      jobLog.error(
+        {
+          event:
+            'video_job_stopped_for_low_disk_space',
+
+          availableBytes:
+            error?.availableBytes,
+
+          requiredBytes:
+            error?.requiredBytes,
+
+          reserveBytes:
+            error?.reserveBytes,
+        },
+
+        'Video job stopped because disk space is too low'
+      );
+
+      await rm(processingDirectory, {
+        recursive: true,
+        force: true,
+      }).catch(() => {});
+
+      throw error;
+    }
+
     const failureResult = await handleVideoJobFailure({
       jobId: job.id,
 

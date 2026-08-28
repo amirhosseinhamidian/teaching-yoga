@@ -2,6 +2,17 @@ import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
 
+import {
+  cleanupPreviousCourseCover,
+} from '@/server/media/cleanup-course-cover';
+
+import { getMediaStorage } from '@/server/storage';
+
+import {
+  cleanupPreviousPublishedVideo,
+  deleteManagedPublishedVideo,
+} from '@/server/video/cleanup-previous-published-video';
+
 export async function GET(request, { params }) {
   const { id } = params;
 
@@ -133,7 +144,18 @@ export async function PUT(request, { params }) {
       }
     }
 
-    const updated = await prismadb.$transaction(async (tx) => {
+    const updateResult = await prismadb.$transaction(async (tx) => {
+      const previousCourse = await tx.course.findUnique({
+        where: {
+          id: courseId,
+        },
+
+        select: {
+          cover: true,
+          introVideoUrl: true,
+        },
+      });
+
       const updatedCourse = await tx.course.update({
         where: {
           id: courseId,
@@ -165,7 +187,17 @@ export async function PUT(request, { params }) {
           },
         });
 
-        return updatedCourse;
+        return {
+          course: updatedCourse,
+
+          previousCover:
+            previousCourse?.cover ||
+            null,
+
+          previousIntroVideoUrl:
+            previousCourse?.introVideoUrl ||
+            null,
+        };
       }
 
       await tx.subscriptionPlanCourse.deleteMany({
@@ -182,13 +214,98 @@ export async function PUT(request, { params }) {
         skipDuplicates: true,
       });
 
-      return updatedCourse;
+      return {
+        course: updatedCourse,
+
+        previousCover:
+          previousCourse?.cover ||
+          null,
+
+        previousIntroVideoUrl:
+          previousCourse?.introVideoUrl ||
+          null,
+      };
     });
+
+    const updated =
+      updateResult.course;
+
+    let coverCleanup = null;
+    let introVideoCleanup = null;
+    const warnings = [];
+
+    if (
+      updateResult.previousCover &&
+      updateResult.previousCover !==
+        updated.cover
+    ) {
+      try {
+        coverCleanup =
+          await cleanupPreviousCourseCover({
+            storage:
+              getMediaStorage(),
+
+            previousCover:
+              updateResult.previousCover,
+
+            currentCover:
+              updated.cover,
+          });
+      } catch (cleanupError) {
+        console.error(
+          '[course-update] Previous cover cleanup failed:',
+          cleanupError
+        );
+
+        warnings.push(
+          'دوره به‌روزرسانی شد، اما پاک‌سازی تصویر کاور قبلی کامل نشد.'
+        );
+      }
+    }
+
+    if (
+      updateResult.previousIntroVideoUrl &&
+      updateResult.previousIntroVideoUrl !==
+        updated.introVideoUrl
+    ) {
+      try {
+        introVideoCleanup =
+          await cleanupPreviousPublishedVideo({
+            storage:
+              getMediaStorage(),
+
+            previousOutputKey:
+              updateResult.previousIntroVideoUrl,
+
+            currentOutputKey:
+              updated.introVideoUrl,
+          });
+      } catch (cleanupError) {
+        console.error(
+          '[course-update] Previous intro video cleanup failed:',
+          cleanupError
+        );
+
+        warnings.push(
+          'دوره به‌روزرسانی شد، اما پاک‌سازی نسخه قبلی ویدئوی معرفی کامل نشد.'
+        );
+      }
+    }
 
     return NextResponse.json(
       {
         ...updated,
         cover: toAbsoluteMediaUrl(updated.cover),
+
+        cleanup: {
+          cover:
+            coverCleanup,
+
+          introVideo:
+            introVideoCleanup,
+        },
+
+        warnings,
       },
       {
         status: 200,
@@ -222,9 +339,70 @@ export async function DELETE(request, { params }) {
       },
     });
 
+    let coverCleanup = null;
+    let introVideoCleanup = null;
+    const warnings = [];
+
+    if (deletedCourse.cover) {
+      try {
+        coverCleanup =
+          await cleanupPreviousCourseCover({
+            storage:
+              getMediaStorage(),
+
+            previousCover:
+              deletedCourse.cover,
+          });
+      } catch (cleanupError) {
+        console.error(
+          '[course-delete] Cover cleanup failed:',
+          cleanupError
+        );
+
+        warnings.push(
+          'دوره حذف شد، اما پاک‌سازی تصویر کاور کامل نشد.'
+        );
+      }
+    }
+
+    if (deletedCourse.introVideoUrl) {
+      try {
+        introVideoCleanup =
+          await deleteManagedPublishedVideo({
+            storage:
+              getMediaStorage(),
+
+            outputKey:
+              deletedCourse.introVideoUrl,
+          });
+      } catch (cleanupError) {
+        console.error(
+          '[course-delete] Intro video cleanup failed:',
+          cleanupError
+        );
+
+        warnings.push(
+          'دوره حذف شد، اما پاک‌سازی فایل ویدئوی معرفی کامل نشد.'
+        );
+      }
+    }
+
     return NextResponse.json(
       {
-        message: `${deletedCourse.title} با موفقیت پاک شد.`,
+        message:
+          warnings.length > 0
+            ? `${deletedCourse.title} حذف شد، اما بخشی از پاک‌سازی فایل‌های رسانه‌ای کامل نشد.`
+            : `${deletedCourse.title} با موفقیت پاک شد.`,
+
+        cleanup: {
+          cover:
+            coverCleanup,
+
+          introVideo:
+            introVideoCleanup,
+        },
+
+        warnings,
       },
       {
         status: 200,

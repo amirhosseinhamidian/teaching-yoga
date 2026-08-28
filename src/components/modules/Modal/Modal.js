@@ -59,7 +59,7 @@ const Modal = ({
       dir='rtl'
       role='dialog'
       aria-modal='true'
-      className={`fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/50 px-4 py-6 backdrop-blur-sm ${className}`}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 px-2 py-4 backdrop-blur-sm sm:px-4 sm:py-6 ${className}`}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           secondaryButtonClick?.();
@@ -70,7 +70,7 @@ const Modal = ({
         padding='none'
         radius='lg'
         topLine
-        className='relative my-auto w-full max-w-[560px] overflow-hidden'
+        className='relative my-auto flex max-h-[calc(100dvh-2rem)] min-h-0 w-full max-w-[560px] flex-col overflow-hidden sm:max-h-[calc(100dvh-3rem)]'
       >
         {/* Decorative glow */}
         <div
@@ -83,9 +83,9 @@ const Modal = ({
           className='bg-yellow/10 pointer-events-none absolute -bottom-28 -left-20 h-56 w-56 rounded-full blur-[90px]'
         />
 
-        <div className='relative z-10'>
+        <div className='relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden'>
           {/* Header */}
-          <div className='flex items-start gap-3 border-b border-black/5 px-5 py-5 sm:px-6 dark:border-white/10'>
+          <div className='flex shrink-0 items-start gap-3 border-b border-black/5 px-4 py-4 sm:px-6 sm:py-5 dark:border-white/10'>
             <span
               className='flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-secondary/10 text-secondary'
               style={
@@ -112,7 +112,7 @@ const Modal = ({
 
           {/* Content */}
           {(desc || children) && (
-            <div className='max-h-[70vh] overflow-y-auto px-5 py-5 sm:px-6'>
+            <div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5'>
               {desc && (
                 <div className='rounded-2xl border border-black/5 bg-background-light/45 px-4 py-3.5 text-xs leading-7 text-subtext-light sm:text-sm sm:leading-8 dark:border-white/10 dark:bg-background-dark/30 dark:text-subtext-dark'>
                   {desc}
@@ -124,7 +124,7 @@ const Modal = ({
           )}
 
           {/* Actions */}
-          <div className='flex flex-col-reverse gap-2 border-t border-black/5 bg-background-light/20 px-5 py-4 sm:flex-row sm:justify-end sm:px-6 dark:border-white/10 dark:bg-background-dark/15'>
+          <div className='flex shrink-0 flex-col-reverse gap-2 border-t border-black/5 bg-background-light/20 px-4 py-3 sm:flex-row sm:justify-end sm:px-6 sm:py-4 dark:border-white/10 dark:bg-background-dark/15'>
             <SiteButton
               type='button'
               variant='outline'

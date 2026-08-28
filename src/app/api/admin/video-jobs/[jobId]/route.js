@@ -12,6 +12,10 @@ import { getRequestLogger } from '@/server/logger/request-context';
 import { withApiLogging } from '@/server/logger/with-api-logging';
 import { getAdminVideoJobLogger } from '@/server/video/admin-video-job-logger';
 
+import {
+  ensureVideoJobOwnership,
+} from '@/server/video/jobs';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -140,6 +144,24 @@ const handleGet = async (request, context) => {
 
       component: 'admin-video-job-status',
     });
+
+    const ownership =
+      await ensureVideoJobOwnership({
+        jobId,
+        userId: auth.user.id,
+      });
+
+    if (!ownership.owned) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'عملیات پردازش ویدئو پیدا نشد.',
+        },
+        {
+          status: 404,
+        }
+      );
+    }
 
     const job = await prismadb.videoProcessingJob.findUnique({
       where: {
@@ -308,6 +330,24 @@ const handleDelete = async (request, context) => {
       component: 'admin-video-job-cancel',
     });
 
+    const ownership =
+      await ensureVideoJobOwnership({
+        jobId,
+        userId: auth.user.id,
+      });
+
+    if (!ownership.owned) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'عملیات پردازش ویدئو پیدا نشد.',
+        },
+        {
+          status: 404,
+        }
+      );
+    }
+
     const job = await prismadb.videoProcessingJob.findUnique({
       where: {
         id: jobId,
@@ -377,6 +417,9 @@ const handleDelete = async (request, context) => {
     const cancelResult = await prismadb.videoProcessingJob.updateMany({
       where: {
         id: jobId,
+
+        createdByUserId:
+          auth.user.id,
 
         status: {
           in: CANCELLABLE_STATUSES,

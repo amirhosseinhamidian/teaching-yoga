@@ -7,15 +7,24 @@ import { videoWorkerLogger } from '@/server/video/video-logger';
 import { processNextVideoJob } from '@/server/video/process-next-video-job';
 
 import {
+  cleanupVideoJobFiles,
   getVideoJobMaxAttempts,
   recoverStaleVideoJobs,
 } from '@/server/video/jobs';
+
+import {
+  createVideoWorkerHeartbeat,
+  getVideoWorkerHeartbeatIntervalMs,
+} from '@/server/video/worker/video-worker-heartbeat';
 
 const DEFAULT_POLL_INTERVAL_MS = 5000;
 
 const DEFAULT_ERROR_DELAY_MS = 10000;
 
 const DEFAULT_STALE_SCAN_INTERVAL_MS = 60000;
+
+const DEFAULT_FILE_CLEANUP_SCAN_INTERVAL_MS =
+  10 * 60 * 1000;
 
 const getPositiveInteger = (value, fallback) => {
   const number = Number(value);
@@ -81,6 +90,60 @@ const logRecoveryResult = (result, trigger) => {
   );
 };
 
+const runFileCleanup = async (trigger) => {
+  try {
+    const result =
+      await cleanupVideoJobFiles();
+
+    if (!result.scanned) {
+      return;
+    }
+
+    videoWorkerLogger.debug(
+      {
+        event:
+          'video_worker_file_cleanup_scan_completed',
+
+        trigger,
+
+        scanned: result.scanned,
+
+        expiredUploads:
+          result.expiredUploads,
+
+        terminalCleanups:
+          result.terminalCleanups,
+
+        orphanCleanups:
+          result.orphanCleanups,
+
+        skipped: result.skipped,
+
+        cleanupFailures:
+          result.cleanupFailures,
+      },
+
+      'Video worker file cleanup scan completed'
+    );
+  } catch (error) {
+    logError({
+      log: videoWorkerLogger,
+
+      error,
+
+      message:
+        'Video worker file cleanup scan failed',
+
+      data: {
+        event:
+          'video_worker_file_cleanup_scan_failed',
+
+        trigger,
+      },
+    });
+  }
+};
+
 export async function runVideoWorker({ signal } = {}) {
   const pollInterval = getPositiveInteger(
     process.env.VIDEO_WORKER_POLL_INTERVAL_MS,
@@ -100,6 +163,17 @@ export async function runVideoWorker({ signal } = {}) {
     DEFAULT_STALE_SCAN_INTERVAL_MS
   );
 
+  const fileCleanupScanInterval =
+    getPositiveInteger(
+      process.env
+        .VIDEO_WORKER_FILE_CLEANUP_SCAN_INTERVAL_MS,
+
+      DEFAULT_FILE_CLEANUP_SCAN_INTERVAL_MS
+    );
+
+  const heartbeatInterval =
+    getVideoWorkerHeartbeatIntervalMs();
+
   videoWorkerLogger.info(
     {
       event: 'video_worker_loop_started',
@@ -110,11 +184,40 @@ export async function runVideoWorker({ signal } = {}) {
 
       staleScanIntervalMs: staleScanInterval,
 
+      fileCleanupScanIntervalMs:
+        fileCleanupScanInterval,
+
+      heartbeatIntervalMs:
+        heartbeatInterval,
+
       maxAttempts: getVideoJobMaxAttempts(),
     },
 
     'Video worker loop started'
   );
+
+  const heartbeat =
+    createVideoWorkerHeartbeat({
+      intervalMs:
+        heartbeatInterval,
+
+      onError: (error) => {
+        logError({
+          log: videoWorkerLogger,
+          error,
+
+          message:
+            'Video worker heartbeat write failed',
+
+          data: {
+            event:
+              'video_worker_heartbeat_write_failed',
+          },
+        });
+      },
+    });
+
+  await heartbeat.start();
 
   try {
     const recoveryResult = await recoverStaleVideoJobs();
@@ -134,7 +237,12 @@ export async function runVideoWorker({ signal } = {}) {
     });
   }
 
+  await runFileCleanup('startup');
+
   let nextStaleScanAt = Date.now() + staleScanInterval;
+
+  let nextFileCleanupAt =
+    Date.now() + fileCleanupScanInterval;
 
   while (!signal?.aborted) {
     if (Date.now() >= nextStaleScanAt) {
@@ -159,10 +267,21 @@ export async function runVideoWorker({ signal } = {}) {
       nextStaleScanAt = Date.now() + staleScanInterval;
     }
 
+    if (Date.now() >= nextFileCleanupAt) {
+      await runFileCleanup('periodic');
+
+      nextFileCleanupAt =
+        Date.now() + fileCleanupScanInterval;
+    }
+
     try {
       const result = await processNextVideoJob();
 
       if (result.processed) {
+        void heartbeat.markJobCompleted(
+          result.job
+        );
+
         videoWorkerLogger.info(
           {
             event: 'video_worker_job_cycle_completed',
@@ -204,6 +323,8 @@ export async function runVideoWorker({ signal } = {}) {
       await sleep(errorDelay, signal);
     }
   }
+
+  await heartbeat.stop();
 
   videoWorkerLogger.info(
     {

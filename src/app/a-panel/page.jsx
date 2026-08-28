@@ -7,6 +7,7 @@ import DashboardUserSummarySection from './components/templates/dashboard/Dashbo
 import LineChartComponent from '@/components/Ui/LineChart/LineChartComponent';
 import { getShamsiDate } from '@/utils/dateTimeHelper';
 import CourseSaleTable from './components/templates/dashboard/CourseSaleTable';
+import VideoProcessingHealthSection from './components/templates/dashboard/VideoProcessingHealthSection';
 
 export default function AdminPage() {
   const [infos, setInfos] = useState({});
@@ -132,6 +133,9 @@ export default function AdminPage() {
   return (
     <div>
       <NotificationSection />
+
+      <VideoProcessingHealthSection className='mt-6 sm:mt-10' />
+
       <DashboardCourseSummarySection
         courseInfo={infos.courseInfos}
         isLoading={infosLoading}

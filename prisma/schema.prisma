@@ -903,6 +903,8 @@ model VideoProcessingJob {
   id           String             @id @default(cuid())
   targetType   VideoJobTargetType @default(SESSION_VIDEO)
 
+  createdByUserId String?
+
   sessionId    String?
   termId       Int?
 
@@ -930,6 +932,7 @@ model VideoProcessingJob {
 
   course Course? @relation(fields: [courseId], references: [id], onDelete: SetNull)
 
+  @@index([createdByUserId, status, createdAt])
   @@index([sessionId, createdAt])
   @@index([termId, sessionId])
   @@index([courseId, createdAt])

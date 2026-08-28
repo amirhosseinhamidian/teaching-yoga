@@ -29,8 +29,24 @@ const publishSessionVideo = async ({ tx, job, outputKey }) => {
   }
 
   let sessionVideo;
+  let previousOutputKey = null;
 
   if (session.videoId) {
+    const previousVideo =
+      await tx.sessionVideo.findUnique({
+        where: {
+          id: session.videoId,
+        },
+
+        select: {
+          videoKey: true,
+        },
+      });
+
+    previousOutputKey =
+      previousVideo?.videoKey ||
+      null;
+
     sessionVideo = await tx.sessionVideo.update({
       where: {
         id: session.videoId,
@@ -67,6 +83,7 @@ const publishSessionVideo = async ({ tx, job, outputKey }) => {
   return {
     video: sessionVideo,
     course: null,
+    previousOutputKey,
   };
 };
 
@@ -80,6 +97,7 @@ const publishCourseIntro = async ({ tx, job, outputKey }) => {
     return {
       video: null,
       course: null,
+      previousOutputKey: null,
     };
   }
 
@@ -90,6 +108,7 @@ const publishCourseIntro = async ({ tx, job, outputKey }) => {
 
     select: {
       id: true,
+      introVideoUrl: true,
     },
   });
 
@@ -110,6 +129,10 @@ const publishCourseIntro = async ({ tx, job, outputKey }) => {
   return {
     video: null,
     course: updatedCourse,
+
+    previousOutputKey:
+      course.introVideoUrl ||
+      null,
   };
 };
 
@@ -190,6 +213,10 @@ export async function publishVideoJob({ jobId, outputKey }) {
       job: readyJob,
       video: publishResult.video,
       course: publishResult.course,
+
+      previousOutputKey:
+        publishResult.previousOutputKey ||
+        null,
     };
   });
 }

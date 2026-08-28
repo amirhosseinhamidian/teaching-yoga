@@ -3,9 +3,9 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
-import { IoClose } from 'react-icons/io5';
 
 import Button from '@/components/Ui/Button/Button';
+import AdaptiveDialog from '@/components/Ui/AdaptiveDialog/AdaptiveDialog';
 import DropDown from '@/components/Ui/DropDown/DropDwon';
 import { useTheme } from '@/contexts/ThemeContext';
 import { createToastHandler } from '@/utils/toastHandler';
@@ -35,6 +35,57 @@ const clampProgress = (value) => {
   return Math.max(0, Math.min(100, Math.round(numericValue)));
 };
 
+const formatBytes = (value) => {
+  const bytes = Number(value);
+
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 MB';
+  }
+
+  const megabytes = bytes / 1024 / 1024;
+
+  if (megabytes < 1024) {
+    return `${megabytes.toFixed(megabytes >= 100 ? 0 : 1)} MB`;
+  }
+
+  const gigabytes = megabytes / 1024;
+
+  return `${gigabytes.toFixed(gigabytes >= 10 ? 1 : 2)} GB`;
+};
+
+const formatUploadSpeed = (value) => {
+  const bytesPerSecond = Number(value);
+
+  if (!Number.isFinite(bytesPerSecond) || bytesPerSecond <= 0) {
+    return 'در حال محاسبه';
+  }
+
+  return `${(bytesPerSecond / 1024 / 1024).toFixed(2)} MB/s`;
+};
+
+const formatEta = (value) => {
+  const seconds = Number(value);
+
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return 'در حال محاسبه';
+  }
+
+  if (seconds < 60) {
+    return `${Math.max(1, Math.ceil(seconds))} ثانیه`;
+  }
+
+  const totalMinutes = Math.ceil(seconds / 60);
+
+  if (totalMinutes < 60) {
+    return `${totalMinutes} دقیقه`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  return minutes > 0 ? `${hours} ساعت و ${minutes} دقیقه` : `${hours} ساعت`;
+};
+
 const UploadSessionMediaModal = ({
   onClose,
   onUpload,
@@ -52,6 +103,7 @@ const UploadSessionMediaModal = ({
 
   const [file, setFile] = useState(null);
   const [accessLevel, setAccessLevel] = useState(mediaAccessLevel || '');
+  const [isDialogOpen, setIsDialogOpen] = useState(true);
 
   const [isLoading, setIsLoading] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -59,6 +111,7 @@ const UploadSessionMediaModal = ({
   const [uploadError, setUploadError] = useState('');
 
   const [progress, setProgress] = useState(0);
+  const [uploadMetrics, setUploadMetrics] = useState(null);
 
   const [currentStage, setCurrentStage] = useState('idle');
 
@@ -108,6 +161,7 @@ const UploadSessionMediaModal = ({
 
     setFile(selectedFile);
     setProgress(0);
+    setUploadMetrics(null);
     setCurrentStage('idle');
     setUploadError('');
   };
@@ -152,6 +206,14 @@ const UploadSessionMediaModal = ({
     return 'در حال آپلود صدا';
   };
 
+  const closeDialog = () => {
+    setIsDialogOpen(false);
+
+    setTimeout(() => {
+      onClose();
+    }, 240);
+  };
+
   const handleUpload = async () => {
     if (!validateInputs()) {
       toast.showErrorToast('مقادیر را به درستی وارد کنید.');
@@ -174,38 +236,29 @@ const UploadSessionMediaModal = ({
     setUploadError('');
     setIsLoading(true);
     setProgress(0);
+    setUploadMetrics(null);
     setCurrentStage(mediaType === 'VIDEO' ? 'creating' : 'uploading');
 
     try {
       if (mediaType === 'VIDEO') {
-        const result = await onUpload(file, accessLevel, {
-          signal: abortController.signal,
+        /*
+         * Upload واقعی توسط GlobalVideoUploadProvider مدیریت می‌شود.
+         * این Modal فقط task را ایجاد می‌کند و بلافاصله می‌تواند بسته شود.
+         */
+        const result = await onUpload(file, accessLevel);
 
-          onProgress: (value) => {
-            setProgress(clampProgress(value));
-          },
+        setCurrentStage('queued');
+        setProgress(0);
+        setUploadMetrics(null);
 
-          onStageChange: (stage) => {
-            if (typeof stage === 'string' && stage.length > 0) {
-              setCurrentStage(stage);
-            }
-          },
-
-          onJobCreated: (jobId) => {
-            if (typeof jobId === 'string' && jobId.length > 0) {
-              setActiveJobId(jobId);
-            }
-          },
-        });
-
-        setCurrentStage('ready');
-        setProgress(100);
-
-        toast.showSuccessToast(result?.message || 'ویدئو با موفقیت ثبت شد.');
+        toast.showSuccessToast(
+          result?.message ||
+            'آپلود و پردازش ویدئو در پس‌زمینه آغاز شد.'
+        );
 
         uploadControllerRef.current = null;
         setActiveJobId(null);
-        onClose();
+        closeDialog();
 
         return;
       }
@@ -216,7 +269,7 @@ const UploadSessionMediaModal = ({
       setProgress(100);
 
       uploadControllerRef.current = null;
-      onClose();
+      closeDialog();
     } catch (error) {
       if (error?.name === 'AbortError') {
         setCurrentStage('cancelled');
@@ -266,6 +319,7 @@ const UploadSessionMediaModal = ({
       setActiveJobId(null);
       setCurrentStage('cancelled');
       setProgress(0);
+      setUploadMetrics(null);
       setUploadError('');
 
       toast.showSuccessToast(
@@ -307,33 +361,28 @@ const UploadSessionMediaModal = ({
   }, []);
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm'>
-      <div className='relative max-h-screen w-2/3 overflow-y-auto rounded-xl bg-surface-light p-6 dark:bg-background-dark'>
-        <div className='flex items-center justify-between border-b border-subtext-light pb-3 dark:border-subtext-dark'>
-          <h3 className='text-lg font-semibold text-text-light dark:text-text-dark'>
-            {mediaType === 'VIDEO' ? 'آپلود ویدیو جلسه' : 'آپلود صدا جلسه'}
-          </h3>
-
-          <button
-            type='button'
-            onClick={onClose}
-            disabled={isOperationLocked}
-            aria-label='بستن'
-            className={
-              isOperationLocked
-                ? 'cursor-not-allowed opacity-50'
-                : ''
-            }
-          >
-            <IoClose
-              size={24}
-              className='text-subtext-light md:cursor-pointer dark:text-subtext-dark'
-            />
-          </button>
-        </div>
-
+    <AdaptiveDialog
+      title={mediaType === 'VIDEO' ? 'آپلود ویدیو جلسه' : 'آپلود صدا جلسه'}
+      isOpen={isDialogOpen}
+      onClose={closeDialog}
+      closeOnBackdrop={!isOperationLocked}
+      closeOnEscape={!isOperationLocked}
+      showCloseButton={!isOperationLocked}
+      bodyClassName='pt-2 sm:pt-3 md:pt-4'
+      footer={
+        <Button
+          onClick={handleUpload}
+          className='w-full text-xs sm:text-base'
+          isLoading={isLoading || isCancelling}
+          disable={isOperationLocked}
+        >
+          {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
+        </Button>
+      }
+    >
+      <div className='min-w-0'>
         {showAccessLevel && (
-          <div className='mt-6 grid grid-cols-1 gap-6'>
+          <div className='mt-2 grid grid-cols-1 gap-6 sm:mt-3'>
             <DropDown
               options={accessMediaOptions}
               placeholder='سطح دسترسی را مشخص کنید'
@@ -354,7 +403,7 @@ const UploadSessionMediaModal = ({
           </div>
         )}
 
-        <p className='px-2 pb-1 pt-6 text-xs text-subtext-light xs:text-sm dark:text-subtext-dark'>
+        <p className='px-1 pb-1 pt-5 text-xs leading-6 text-subtext-light xs:text-sm sm:pt-6 dark:text-subtext-dark'>
           {isUpdate
             ? `برای آپدیت ${
                 mediaType === 'VIDEO' ? 'ویدیو' : 'صدا'
@@ -367,7 +416,7 @@ const UploadSessionMediaModal = ({
         <div
           role='button'
           tabIndex={0}
-          className={`mt-4 flex h-40 w-full flex-col items-center justify-center rounded-lg border-2 border-dashed border-accent bg-background-light text-center dark:bg-background-dark ${
+          className={`mt-3 flex min-h-36 w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-accent bg-background-light px-3 py-5 text-center sm:mt-4 sm:min-h-40 dark:bg-background-dark ${
             isOperationLocked
               ? 'cursor-not-allowed opacity-60'
               : 'cursor-pointer'
@@ -395,10 +444,10 @@ const UploadSessionMediaModal = ({
             disabled={isOperationLocked}
           />
 
-          <div className='cursor-pointer'>
+          <div className='min-w-0 cursor-pointer'>
             {file ? (
               <>
-                <p className='break-all px-4 text-sm text-text-light dark:text-text-dark'>
+                <p className='break-all px-2 text-sm text-text-light dark:text-text-dark sm:px-4'>
                   {file.name}
                 </p>
 
@@ -430,6 +479,39 @@ const UploadSessionMediaModal = ({
             <div className='mt-2 text-center font-faNa text-sm text-text-light dark:text-text-dark'>
               {`${getCurrentStageLabel()}: ${progress}%`}
             </div>
+
+            {currentStage === 'uploading' && uploadMetrics && (
+              <div className='mt-3 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3'>
+                <div className='rounded-xl border border-black/5 bg-background-light/50 px-3 py-2.5 dark:border-white/10 dark:bg-background-dark/35'>
+                  <p className='text-subtext-light dark:text-subtext-dark'>
+                    حجم ارسال‌شده
+                  </p>
+                  <p className='mt-1 font-faNa font-semibold text-text-light dark:text-text-dark'>
+                    {`${formatBytes(uploadMetrics.loadedBytes)} از ${formatBytes(
+                      uploadMetrics.totalBytes
+                    )}`}
+                  </p>
+                </div>
+
+                <div className='rounded-xl border border-black/5 bg-background-light/50 px-3 py-2.5 dark:border-white/10 dark:bg-background-dark/35'>
+                  <p className='text-subtext-light dark:text-subtext-dark'>
+                    سرعت آپلود
+                  </p>
+                  <p className='mt-1 font-faNa font-semibold text-text-light dark:text-text-dark'>
+                    {formatUploadSpeed(uploadMetrics.bytesPerSecond)}
+                  </p>
+                </div>
+
+                <div className='rounded-xl border border-black/5 bg-background-light/50 px-3 py-2.5 dark:border-white/10 dark:bg-background-dark/35'>
+                  <p className='text-subtext-light dark:text-subtext-dark'>
+                    زمان تقریبی باقی‌مانده
+                  </p>
+                  <p className='mt-1 font-faNa font-semibold text-text-light dark:text-text-dark'>
+                    {formatEta(uploadMetrics.etaSeconds)}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -461,17 +543,8 @@ const UploadSessionMediaModal = ({
               : 'توقف و لغو عملیات'}
           </button>
         )}
-
-        <Button
-          onClick={handleUpload}
-          className='mt-8 text-xs sm:text-base'
-          isLoading={isLoading || isCancelling}
-          disabled={isOperationLocked}
-        >
-          {isUpdate ? 'بروزرسانی' : 'ثبت جلسه'}
-        </Button>
       </div>
-    </div>
+    </AdaptiveDialog>
   );
 };
 

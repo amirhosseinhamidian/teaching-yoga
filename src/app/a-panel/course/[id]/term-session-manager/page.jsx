@@ -23,12 +23,7 @@ import { createFFmpeg } from '@ffmpeg/ffmpeg';
 import SimpleDropdown from '@/components/Ui/SimpleDropDown/SimpleDropDown';
 import UploadSessionMediaModal from '@/app/a-panel/components/modules/UploadSessionVideoModal/UploadSessionVideoModal';
 import AudioModal from '@/app/a-panel/components/modules/AudioModal/AudioModal';
-import {
-  cancelAdminVideoJob,
-  createAdminVideoJob,
-  uploadAdminVideoSource,
-  waitForAdminVideoJob,
-} from '@/server/videoJobClient';
+import { useGlobalVideoUpload } from '@/contexts/GlobalVideoUploadContext';
 
 const AddTermSessionPage = () => {
   const params = useParams();
@@ -38,6 +33,13 @@ const AddTermSessionPage = () => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const ffmpeg = useRef();
+
+  const {
+    startVideoUpload,
+    tasks: videoUploadTasks,
+  } = useGlobalVideoUpload();
+
+  const handledReadyVideoTasksRef = useRef(new Set());
 
   const [terms, setTerms] = useState([]);
   const [termTempId, setTermTempId] = useState(null);
@@ -131,6 +133,29 @@ const AddTermSessionPage = () => {
     }
   };
 
+  useEffect(() => {
+    const readyTasks = videoUploadTasks.filter(
+      (task) =>
+        task.targetType === 'SESSION' &&
+        task.stage === 'ready' &&
+        Number.isInteger(Number(task.termId)) &&
+        Array.isArray(sessions[task.termId]) &&
+        sessions[task.termId].some(
+          (session) => session.id === task.sessionId
+        ) &&
+        !handledReadyVideoTasksRef.current.has(task.id)
+    );
+
+    if (readyTasks.length === 0) {
+      return;
+    }
+
+    readyTasks.forEach((task) => {
+      handledReadyVideoTasksRef.current.add(task.id);
+      void fetchSessions(Number(task.termId), true);
+    });
+  }, [videoUploadTasks, sessions]);
+
   const handleShowDeleteModal = (row) => {
     setTermTempId(row.termId);
     setSessionTempId(row.id);
@@ -221,14 +246,7 @@ const AddTermSessionPage = () => {
     setShowUploadAudioSessionModal(true);
   };
 
-  const handleSessionVideoUpload = async (file, accessLevel, controls = {}) => {
-    const {
-      signal,
-      onProgress,
-      onStageChange,
-      onJobCreatedd,
-    } = controls;
-
+  const handleSessionVideoUpload = async (file, accessLevel) => {
     if (!(file instanceof File)) {
       throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
     }
@@ -240,75 +258,30 @@ const AddTermSessionPage = () => {
       throw new Error('اطلاعات ترم یا جلسه معتبر نیست.');
     }
 
-    let jobId = null;
-
-    try {
-      onStageChange?.('creating');
-      onProgress?.(0);
-
-      const createdJob = await createAdminVideoJob({
-        sessionId,
-        termId,
-        accessLevel,
-        signal,
-      });
-
-      jobId = createdJob.id;
-      onJobCreatedd?.(jobId);
-
-      onStageChange?.('uploading');
-      onProgress?.(0);
-
-      await uploadAdminVideoSource({
-        jobId,
-        file,
-        signal,
-        onProgress,
-      });
-
-      onStageChange?.('queued');
-      onProgress?.(0);
-
-      const readyJob = await waitForAdminVideoJob({
-        jobId,
-        signal,
-
-        onUpdate: (job) => {
-          onStageChange?.(job.stage || job.status.toLowerCase());
-
-          onProgress?.(
-            Number.isFinite(job.displayProgress)
-              ? job.displayProgress
-              : job.progress || 0
-          );
-        },
-      });
-
-      await fetchSessions(termId, true);
-
-      setTermTempId(null);
-      setSessionTempId('');
-
-      return {
-        job: readyJob,
-        message: 'ویدئوی جلسه با موفقیت آپلود و پردازش شد.',
-      };
-    } catch (error) {
-      /*
-       * اگر کاربر حین Upload یا QUEUED عملیات را متوقف کند،
-       * تلاش می‌کنیم Job و فایل موقت پاک شوند.
-       *
-       * اگر FFmpeg پردازش را شروع کرده باشد، API ممکن است
-       * پاسخ 409 بدهد؛ Worker در آن حالت ادامه می‌دهد.
-       */
-      if (error?.name === 'AbortError' && jobId) {
-        await cancelAdminVideoJob({
-          jobId,
-        }).catch(() => {});
-      }
-
-      throw error;
+    if (!accessLevel) {
+      throw new Error('لطفاً سطح دسترسی ویدئو را مشخص کنید.');
     }
+
+    const currentSession = sessions[termId]?.find(
+      (session) => session.id === sessionId
+    );
+
+    const taskId = startVideoUpload({
+      file,
+      sessionId,
+      termId,
+      accessLevel,
+
+      label: currentSession?.name
+        ? `ویدئوی ${currentSession.name}`
+        : 'ویدئوی جلسه',
+    });
+
+    return {
+      taskId,
+      background: true,
+      message: 'آپلود و پردازش ویدئو در پس‌زمینه آغاز شد.',
+    };
   };
 
   const handleSessionAudioUpload = async (

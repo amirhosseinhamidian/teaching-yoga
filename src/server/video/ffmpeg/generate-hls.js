@@ -99,6 +99,62 @@ const getProfiles = (metadata) => {
   ];
 };
 
+const parseKbps = (value) => {
+  if (typeof value !== 'string') {
+    return 0;
+  }
+
+  const match = /^([0-9]+(?:\.[0-9]+)?)k$/i.exec(
+    value.trim()
+  );
+
+  if (!match) {
+    return 0;
+  }
+
+  return Number(match[1]) * 1000;
+};
+
+export const estimateHlsOutputBytes = (metadata) => {
+  const duration = Number(metadata?.duration);
+
+  if (!Number.isFinite(duration) || duration <= 0) {
+    return 0;
+  }
+
+  const profiles = getProfiles(metadata);
+
+  const totalBitsPerSecond = profiles.reduce(
+    (sum, profile) => {
+      const videoBitsPerSecond =
+        parseKbps(profile.maxRate) ||
+        parseKbps(profile.videoBitrate);
+
+      const audioBitsPerSecond =
+        metadata.hasAudio
+          ? parseKbps(profile.audioBitrate)
+          : 0;
+
+      return (
+        sum +
+        videoBitsPerSecond +
+        audioBitsPerSecond
+      );
+    },
+    0
+  );
+
+  /*
+   * حدود ۱۰٪ برای container/HLS overhead و نوسان bitrate.
+   * برای preflight فضای دیسک عمداً محافظه‌کارانه است.
+   */
+  return Math.ceil(
+    (totalBitsPerSecond * duration) /
+      8 *
+      1.1
+  );
+};
+
 const parseProgressLine = (line, duration) => {
   const [key, rawValue] = line.trim().split('=');
 

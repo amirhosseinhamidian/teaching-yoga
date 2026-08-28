@@ -93,8 +93,9 @@ const SessionTableSection = () => {
         sessionDuration: newSession.duration,
         sessionIsFree: newSession.isFree,
         sessionIsActive: newSession.isActive,
-        videoCreatedAt: newSession.createdAt,
-        audioCreatedAt: newSession.createdAt,
+        sessionCreatedAt: newSession.createAt,
+        videoCreatedAt: newSession.video?.createAt || null,
+        audioCreatedAt: newSession.audio?.createAt || null,
         type: newSession.type,
         terms: mappedTerms,
       }
@@ -127,6 +128,7 @@ const SessionTableSection = () => {
           setSessions={setSessions}
           isLoading={isLoading}
           onPageChange={handlePageChange}
+          onRefresh={() => fetchSessions(page, searchDebounce)}
           page={page}
           totalPages={totalPages}
         />

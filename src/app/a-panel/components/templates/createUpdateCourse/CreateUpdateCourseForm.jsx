@@ -27,17 +27,19 @@ import { FaCircleCheck } from 'react-icons/fa6';
 import { ImSpinner2 } from 'react-icons/im';
 import { IoIosCloseCircle } from 'react-icons/io';
 import { IoClose } from 'react-icons/io5';
-import {
-  cancelAdminVideoJob,
-  createAdminCourseIntroVideoJob,
-  uploadAdminVideoSource,
-  waitForAdminVideoJob,
-} from '@/server/videoJobClient';
+import { useGlobalVideoUpload } from '@/contexts/GlobalVideoUploadContext';
 
 function CreateCourseUpdateForm({ courseToUpdate }) {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const router = useRouter();
+
+  const {
+    startCourseIntroVideoUpload,
+    tasks: videoUploadTasks,
+  } = useGlobalVideoUpload();
+
+  const [introUploadTaskId, setIntroUploadTaskId] = useState(null);
 
   const [coverLink, setCoverLink] = useState(courseToUpdate?.cover || '');
   const [introLink, setIntroLink] = useState(
@@ -123,6 +125,57 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
   const [openUploadImageModal, setOpenUploadImageModal] = useState(false);
   const [openUploadIntroModal, setOpenUploadIntroModal] = useState(false);
 
+  const restoredIntroVideoTask = videoUploadTasks.find(
+    (task) =>
+      task.targetType === 'COURSE_INTRO' &&
+      !['ready', 'failed', 'cancelled'].includes(task.stage) &&
+      courseToUpdate?.id &&
+      Number(task.courseId) === Number(courseToUpdate.id)
+  );
+
+  const introVideoTask =
+    videoUploadTasks.find(
+      (task) => task.id === introUploadTaskId
+    ) || restoredIntroVideoTask;
+
+  const isIntroVideoProcessing =
+    introVideoTask &&
+    !['ready', 'failed', 'cancelled'].includes(
+      introVideoTask.stage
+    );
+
+  useEffect(() => {
+    if (!introVideoTask) {
+      return;
+    }
+
+    if (!introUploadTaskId) {
+      setIntroUploadTaskId(introVideoTask.id);
+    }
+
+    if (
+      introVideoTask.stage === 'ready' &&
+      introVideoTask.result?.outputKey
+    ) {
+      setIntroLink(introVideoTask.result.outputKey);
+
+      setErrorMessages((previous) => ({
+        ...previous,
+        introLink: '',
+      }));
+
+      setIntroUploadTaskId(null);
+      return;
+    }
+
+    if (
+      introVideoTask.stage === 'failed' ||
+      introVideoTask.stage === 'cancelled'
+    ) {
+      setIntroUploadTaskId(null);
+    }
+  }, [introUploadTaskId, introVideoTask]);
+
   const handleOpenUploadCoverImageModal = () => {
     if (!title) {
       toast.showErrorToast('ابتدا عنوان دوره را وارد کنید.');
@@ -183,94 +236,38 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
     setOpenUploadIntroModal(true);
   };
 
-  const handleIntroVideoUpload = async (file, accessLevel, controls = {}) => {
-    const { signal, onProgress, onStageChange } = controls;
-
+  const handleIntroVideoUpload = async (file) => {
     if (!(file instanceof File)) {
       throw new Error('لطفاً یک فایل ویدئویی معتبر انتخاب کنید.');
     }
 
     const normalizedTitle =
-      typeof title === 'string' ? title.normalize('NFC').trim() : '';
+      typeof title === 'string'
+        ? title.normalize('NFC').trim()
+        : '';
 
     if (!normalizedTitle) {
       throw new Error('ابتدا عنوان دوره را وارد کنید.');
     }
 
-    const rawCourseId = courseToUpdate?.id;
+    const taskId = startCourseIntroVideoUpload({
+      file,
+      courseId: courseToUpdate?.id || null,
+      courseTitle: normalizedTitle,
+      label: `ویدئوی معرفی ${normalizedTitle}`,
+    });
 
-    const courseId =
-      rawCourseId === undefined || rawCourseId === null || rawCourseId === ''
-        ? null
-        : Number(rawCourseId);
+    setIntroUploadTaskId(taskId);
 
-    if (courseId !== null && (!Number.isInteger(courseId) || courseId <= 0)) {
-      throw new Error('شناسه دوره معتبر نیست.');
-    }
+    toast.showSuccessToast(
+      'آپلود و پردازش ویدئوی معرفی در پس‌زمینه آغاز شد.'
+    );
 
-    let jobId = null;
-
-    try {
-      onStageChange?.('creating');
-      onProgress?.(0);
-
-      const createdJob = await createAdminCourseIntroVideoJob({
-        courseId,
-        courseTitle: normalizedTitle,
-        signal,
-      });
-
-      jobId = createdJob.id;
-
-      onStageChange?.('uploading');
-      onProgress?.(0);
-
-      await uploadAdminVideoSource({
-        jobId,
-        file,
-        signal,
-        onProgress,
-      });
-
-      onStageChange?.('queued');
-      onProgress?.(0);
-
-      const readyJob = await waitForAdminVideoJob({
-        jobId,
-        signal,
-
-        onUpdate: (job) => {
-          onStageChange?.(
-            job.stage || job.status?.toLowerCase() || 'processing'
-          );
-
-          onProgress?.(
-            Number.isFinite(job.displayProgress)
-              ? job.displayProgress
-              : job.progress || 0
-          );
-        },
-      });
-
-      if (!readyJob.outputKey) {
-        throw new Error('مسیر نهایی ویدئوی معرفی دریافت نشد.');
-      }
-
-      setIntroLink(readyJob.outputKey);
-
-      return {
-        job: readyJob,
-        message: 'ویدئوی معرفی دوره با موفقیت آپلود و پردازش شد.',
-      };
-    } catch (error) {
-      if (error?.name === 'AbortError' && jobId) {
-        await cancelAdminVideoJob({
-          jobId,
-        }).catch(() => {});
-      }
-
-      throw error;
-    }
+    return {
+      taskId,
+      background: true,
+      message: 'آپلود و پردازش ویدئوی معرفی در پس‌زمینه آغاز شد.',
+    };
   };
 
   const validateShortAddress = async (value = shortAddress) => {
@@ -433,7 +430,11 @@ function CreateCourseUpdateForm({ courseToUpdate }) {
       errors.coverLink = 'لینک کاور باید با فرمت .jpg، .jpeg یا .png باشد.';
     }
     const videoRegex = /\.m3u8$/i;
-    if (!videoRegex.test(introLink)) {
+
+    if (isIntroVideoProcessing) {
+      errors.introLink =
+        'ویدئوی معرفی هنوز در حال آپلود یا پردازش است.';
+    } else if (!videoRegex.test(introLink)) {
       errors.introLink = 'لینک ویدیو باید با فرمت .m3u8 باشد.';
     }
 

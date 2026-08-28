@@ -1,5 +1,20 @@
 import prismadb from '@/libs/prismadb';
 
+import {
+  ActiveVideoJobConflictError,
+} from './active-video-job-conflict-error';
+
+import {
+  lockVideoJobTarget,
+} from './lock-video-job-target';
+
+const ACTIVE_JOB_STATUSES = [
+  'UPLOADING',
+  'QUEUED',
+  'PROCESSING',
+  'PUBLISHING',
+];
+
 const normalizeCourseTitle = (value) => {
   const courseTitle =
     typeof value === 'string' ? value.normalize('NFC').trim() : '';
@@ -39,39 +54,114 @@ const normalizeOptionalCourseId = (value) => {
   return courseId;
 };
 
-export async function createCourseIntroVideoJob({ courseId, courseTitle }) {
+export async function createCourseIntroVideoJob({
+  courseId,
+  courseTitle,
+  createdByUserId,
+}) {
   const normalizedCourseId = normalizeOptionalCourseId(courseId);
 
   const normalizedCourseTitle = normalizeCourseTitle(courseTitle);
 
-  if (normalizedCourseId) {
-    const course = await prismadb.course.findUnique({
-      where: {
-        id: normalizedCourseId,
-      },
-      select: {
-        id: true,
-      },
-    });
+  const normalizedCreatedByUserId =
+    typeof createdByUserId === 'string'
+      ? createdByUserId.trim()
+      : '';
 
-    if (!course) {
-      throw new Error('Course was not found.');
-    }
+  if (!normalizedCreatedByUserId) {
+    throw new Error(
+      'createdByUserId is required.'
+    );
   }
 
-  return prismadb.videoProcessingJob.create({
-    data: {
-      targetType: 'COURSE_INTRO',
+  const targetKey =
+    normalizedCourseId
+      ? `course-intro:id:${normalizedCourseId}`
+      : `course-intro:title:${normalizedCourseTitle}`;
 
-      courseId: normalizedCourseId,
-      courseTitle: normalizedCourseTitle,
+  return prismadb.$transaction(
+    async (tx) => {
+      await lockVideoJobTarget({
+        tx,
+        key: targetKey,
+      });
 
-      sessionId: null,
-      termId: null,
+      const activeJob =
+        await tx.videoProcessingJob.findFirst({
+          where: {
+            targetType:
+              'COURSE_INTRO',
 
-      status: 'UPLOADING',
-      uploadProgress: 0,
-      progress: 0,
-    },
-  });
+            status: {
+              in: ACTIVE_JOB_STATUSES,
+            },
+
+            ...(normalizedCourseId
+              ? {
+                  courseId:
+                    normalizedCourseId,
+                }
+              : {
+                  courseId: null,
+
+                  courseTitle:
+                    normalizedCourseTitle,
+                }),
+          },
+
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+      if (activeJob) {
+        throw new ActiveVideoJobConflictError(
+          activeJob
+        );
+      }
+
+      if (normalizedCourseId) {
+        const course =
+          await tx.course.findUnique({
+            where: {
+              id:
+                normalizedCourseId,
+            },
+
+            select: {
+              id: true,
+            },
+          });
+
+        if (!course) {
+          throw new Error(
+            'Course was not found.'
+          );
+        }
+      }
+
+      return tx.videoProcessingJob.create({
+        data: {
+          targetType:
+            'COURSE_INTRO',
+
+          createdByUserId:
+            normalizedCreatedByUserId,
+
+          courseId:
+            normalizedCourseId,
+
+          courseTitle:
+            normalizedCourseTitle,
+
+          sessionId: null,
+          termId: null,
+
+          status: 'UPLOADING',
+          uploadProgress: 0,
+          progress: 0,
+        },
+      });
+    }
+  );
 }
