@@ -304,6 +304,88 @@ jobs:
           echo "Docker build completed successfully."
 
           # ============================================
+          # Database migrations
+          #
+          # Migrations are applied with the NEW image,
+          # before the new web/worker containers start.
+          #
+          # Production migrations must remain backward
+          # compatible because application rollback does
+          # not roll back the database schema.
+          # ============================================
+
+          echo
+          echo "============================================"
+          echo " Applying Database Migrations"
+          echo "============================================"
+          echo
+
+          echo "Ensuring PostgreSQL service is running..."
+
+          if ! compose up -d db; then
+            echo
+            echo "ERROR: PostgreSQL service could not be started."
+            echo "Running application containers were NOT restarted."
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            exit 1
+          fi
+
+          DB_READY=0
+
+          for attempt in $(seq 1 30); do
+            echo "Database readiness check: $attempt/30"
+
+            if compose exec -T db sh -lc \
+              'exec pg_isready --username="$POSTGRES_USER" --dbname="$POSTGRES_DB"' \
+              > /dev/null
+            then
+              DB_READY=1
+              break
+            fi
+
+            sleep 2
+          done
+
+          if [ "$DB_READY" -ne 1 ]; then
+            echo
+            echo "ERROR: PostgreSQL did not become ready."
+            echo "Running application containers were NOT restarted."
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            exit 1
+          fi
+
+          echo
+          echo "Running Prisma production migrations..."
+
+          if ! compose run \
+            --rm \
+            --no-deps \
+            web \
+            ./node_modules/.bin/prisma \
+            migrate \
+            deploy
+          then
+            echo
+            echo "============================================"
+            echo " DATABASE MIGRATION FAILED"
+            echo "============================================"
+            echo
+            echo "Running application containers were NOT restarted."
+            echo "Database migrations are not automatically rolled back."
+
+            git reset --hard "$PREVIOUS_COMMIT"
+
+            exit 1
+          fi
+
+          echo
+          echo "Database migrations completed successfully."
+
+          # ============================================
           # Start new version
           # ============================================
 
