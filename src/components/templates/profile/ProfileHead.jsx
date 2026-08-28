@@ -263,7 +263,7 @@ export default function ProfileHead() {
               type='file'
               ref={fileInputRef}
               className='hidden'
-              accept='image/*'
+              accept='image/jpeg,image/png,image/gif,image/webp'
               onChange={handleFileChange}
             />
 
