@@ -1,6 +1,7 @@
 // src/app/api/admin/shop/products/route.js
 
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
 import { normalizeUrlSlug } from '@/utils/slug';
@@ -349,7 +350,7 @@ export async function POST(req) {
 
         coverImage,
 
-        details: details.length ? details : null,
+        details: details.length ? details : Prisma.DbNull,
 
         isActive,
 
@@ -417,6 +418,18 @@ export async function POST(req) {
         },
         {
           status: 409,
+        }
+      );
+    }
+
+    if (error?.code === 'P2003') {
+      return NextResponse.json(
+        {
+          error:
+            'یکی از دسته‌بندی‌ها، رنگ‌ها، سایزها یا نوع بسته‌بندی انتخاب‌شده معتبر نیست.',
+        },
+        {
+          status: 400,
         }
       );
     }

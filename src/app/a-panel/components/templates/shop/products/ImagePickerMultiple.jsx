@@ -36,6 +36,7 @@ const ImagePickerMultiple = ({
 
   const [openUploadModal, setOpenUploadModal] = useState(false);
   const [urlInput, setUrlInput] = useState('');
+  const [uploadedPreviewUrls, setUploadedPreviewUrls] = useState({});
 
   const normalizedValues = Array.isArray(values) ? values.filter(Boolean) : [];
 
@@ -61,11 +62,17 @@ const ImagePickerMultiple = ({
 
   const handleRemove = (url) => {
     if (disabled) return;
+    setUploadedPreviewUrls((previous) => {
+      const next = { ...previous };
+      delete next[url];
+      return next;
+    });
     onChange(normalizedValues.filter((x) => x !== url));
   };
 
   const handleClearAll = () => {
     if (disabled) return;
+    setUploadedPreviewUrls({});
     onChange([]);
   };
 
@@ -110,6 +117,7 @@ const ImagePickerMultiple = ({
 
       const data = await res.json();
       const fileUrl = String(data?.fileUrl || '');
+      const absoluteUrl = String(data?.absoluteUrl || '');
 
       if (!fileUrl) {
         toast.showErrorToast('آدرس تصویر از سرور دریافت نشد.');
@@ -117,6 +125,10 @@ const ImagePickerMultiple = ({
       }
 
       if (!normalizedValues.includes(fileUrl)) {
+        setUploadedPreviewUrls((previous) => ({
+          ...previous,
+          [fileUrl]: absoluteUrl || fileUrl,
+        }));
         onChange([...normalizedValues, fileUrl]);
       }
 
@@ -192,7 +204,7 @@ const ImagePickerMultiple = ({
               className='group relative overflow-hidden rounded-xl bg-foreground-light p-2 dark:bg-foreground-dark'
             >
               <Image
-                src={url}
+                src={uploadedPreviewUrls[url] || url}
                 alt='product'
                 width={previewSize}
                 height={previewSize}

@@ -37,6 +37,7 @@ const ImagePickerSingle = ({
   const toast = createToastHandler(isDark);
 
   const [openUploadModal, setOpenUploadModal] = useState(false);
+  const [uploadedPreviewUrl, setUploadedPreviewUrl] = useState('');
 
   const handleOpenUpload = () => {
     if (disabled) return;
@@ -79,12 +80,16 @@ const ImagePickerSingle = ({
 
       const data = await res.json();
       const fileUrl = String(data?.fileUrl || '');
+      const absoluteUrl = String(data?.absoluteUrl || '');
 
       if (!fileUrl) {
         toast.showErrorToast('آدرس تصویر از سرور دریافت نشد.');
         return;
       }
 
+      // Keep the managed relative path in the form/database, but render the
+      // remotely stored FTPS file from its public media URL immediately.
+      setUploadedPreviewUrl(absoluteUrl || fileUrl);
       onChange(fileUrl);
       toast.showSuccessToast('کاور با موفقیت آپلود شد.');
     } catch (e) {
@@ -96,6 +101,7 @@ const ImagePickerSingle = ({
 
   const handleRemove = () => {
     if (disabled) return;
+    setUploadedPreviewUrl('');
     onChange('');
   };
 
@@ -107,6 +113,7 @@ const ImagePickerSingle = ({
   };
 
   const hasImage = !!String(value || '').trim();
+  const previewUrl = uploadedPreviewUrl || value;
 
   return (
     <div className='w-full rounded-2xl border border-accent bg-surface-light p-4 dark:bg-surface-dark'>
@@ -138,7 +145,11 @@ const ImagePickerSingle = ({
         label={`${label}${required ? ' (الزامی)' : ' (اختیاری)'}`}
         placeholder={placeholder}
         value={value || ''}
-        onChange={(v) => (!disabled ? onChange(v) : null)}
+        onChange={(v) => {
+          if (disabled) return;
+          setUploadedPreviewUrl('');
+          onChange(v);
+        }}
         onBlur={handleBlurValidate}
         className='bg-surface-light text-text-light placeholder:text-xs placeholder:sm:text-sm dark:bg-surface-dark dark:text-text-dark'
       />
@@ -148,7 +159,7 @@ const ImagePickerSingle = ({
           <div className='flex items-center gap-3 rounded-xl bg-foreground-light p-2 dark:bg-foreground-dark'>
             {/* Thumbnail */}
             <Image
-              src={value}
+              src={previewUrl}
               alt='cover'
               width={previewSize}
               height={previewSize}

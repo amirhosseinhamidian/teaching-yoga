@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import prismadb from '@/libs/prismadb';
 import { getAuthUser } from '@/utils/getAuthUser';
 import { normalizeUrlSlug } from '@/utils/slug';
@@ -177,7 +178,7 @@ export async function PATCH(req, { params }) {
 
     if (body.details !== undefined) {
       if (body.details == null) {
-        data.details = null;
+        data.details = Prisma.DbNull;
       } else if (!Array.isArray(body.details)) {
         return NextResponse.json(
           { error: 'فرمت جزئیات محصول معتبر نیست.' },
@@ -191,7 +192,9 @@ export async function PATCH(req, { params }) {
           }))
           .filter((x) => x.key && x.value);
 
-        data.details = normalizedDetails.length ? normalizedDetails : null;
+        data.details = normalizedDetails.length
+          ? normalizedDetails
+          : Prisma.DbNull;
       }
     }
 
@@ -347,6 +350,16 @@ export async function PATCH(req, { params }) {
       return NextResponse.json(
         { error: 'محصول مورد نظر پیدا نشد.' },
         { status: 404 }
+      );
+    }
+
+    if (error?.code === 'P2003') {
+      return NextResponse.json(
+        {
+          error:
+            'یکی از دسته‌بندی‌ها، رنگ‌ها، سایزها یا نوع بسته‌بندی انتخاب‌شده معتبر نیست.',
+        },
+        { status: 400 }
       );
     }
 
