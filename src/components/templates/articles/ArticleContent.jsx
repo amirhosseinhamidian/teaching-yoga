@@ -8,8 +8,12 @@ import {
   HiOutlineAcademicCap,
   HiOutlineArrowLeft,
   HiOutlineBookOpen,
+  HiOutlinePlayCircle,
 } from 'react-icons/hi2';
 
+import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
+import SiteButton from '@/components/SiteUi/Button/SiteButton';
+import SiteCard from '@/components/SiteUi/Card/SiteCard';
 import { splitArticleCourseEmbeds } from '@/utils/articleCourseEmbeds';
 
 const getEmbedTitle = (html) =>
@@ -23,60 +27,89 @@ const InlineCourseCard = ({ course, fallbackTitle, slug }) => {
   const href = `/courses/${encodeURIComponent(slug)}`;
 
   return (
-    <Link
-      href={href}
-      className='group my-7 grid overflow-hidden rounded-[22px] border border-secondary/20 bg-background-light/75 !text-text-light !no-underline shadow-[0_16px_45px_rgba(38,145,125,0.1)] transition-all duration-300 hover:-translate-y-0.5 hover:border-secondary/35 hover:shadow-[0_20px_55px_rgba(38,145,125,0.16)] sm:grid-cols-[180px_minmax(0,1fr)] dark:bg-background-dark/55 dark:!text-text-dark'
+    <SiteCard
+      as='aside'
+      variant='secondary'
+      padding='none'
+      radius='md'
+      topLine
+      className='group my-8 transition-all duration-300 hover:-translate-y-0.5 hover:border-secondary/35 hover:shadow-[0_22px_60px_rgba(38,145,125,0.14)]'
     >
-      <div className='relative min-h-[170px] overflow-hidden bg-secondary/10 sm:min-h-[150px]'>
-        {course?.cover ? (
-          <Image
-            src={course.cover}
-            alt={title}
-            fill
-            sizes='(max-width: 640px) 100vw, 180px'
-            className='!m-0 !h-full !w-full !max-w-none !rounded-none object-cover transition-transform duration-500 group-hover:scale-105'
-          />
-        ) : (
-          <div className='flex h-full min-h-[170px] items-center justify-center text-secondary sm:min-h-[150px]'>
-            <HiOutlineBookOpen size={44} />
-          </div>
-        )}
-
-        <div className='absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent' />
-      </div>
-
-      <div className='relative flex min-w-0 flex-col justify-center p-5 sm:p-6'>
-        <div
-          aria-hidden='true'
-          className='absolute -left-14 -top-14 h-32 w-32 rounded-full bg-secondary/10 blur-[45px]'
-        />
-
-        <div className='relative z-10'>
-          <span className='inline-flex items-center gap-1.5 rounded-full bg-secondary/10 px-3 py-1.5 text-[10px] font-black !text-secondary sm:text-xs'>
-            <HiOutlineAcademicCap size={14} />
-            دوره مرتبط با این مقاله
-          </span>
-
-          <h3 className='!mb-0 !mt-3 line-clamp-2 !text-base !font-black !leading-8 !text-text-light sm:!text-lg dark:!text-text-dark'>
-            {title}
-          </h3>
-
-          {course?.subtitle && (
-            <p className='!mb-0 !mt-1.5 line-clamp-2 !text-xs !leading-6 !text-subtext-light sm:!text-sm dark:!text-subtext-dark'>
-              {course.subtitle}
-            </p>
+      <div className='grid sm:grid-cols-[210px_minmax(0,1fr)]'>
+        <Link
+          href={href}
+          aria-label={`مشاهده دوره ${title}`}
+          className='relative block min-h-[190px] overflow-hidden !no-underline sm:min-h-full'
+        >
+          {course?.cover ? (
+            <Image
+              src={course.cover}
+              alt={title}
+              fill
+              sizes='(max-width: 640px) 100vw, 210px'
+              className='!m-0 !h-full !w-full !max-w-none !rounded-none object-cover transition-transform duration-700 group-hover:scale-105'
+            />
+          ) : (
+            <div className='flex h-full min-h-[190px] items-center justify-center bg-secondary/10 text-secondary'>
+              <HiOutlineBookOpen size={48} />
+            </div>
           )}
 
-          <span className='mt-4 inline-flex items-center gap-2 text-xs font-black !text-secondary'>
-            ورود به جزئیات دوره
-            <HiOutlineArrowLeft
-              size={16}
-              className='transition-transform duration-300 group-hover:-translate-x-1'
-            />
+          <div className='absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent' />
+
+          <span className='absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-xl border border-white/20 bg-black/30 px-2.5 py-1.5 text-[10px] font-bold !text-white backdrop-blur-md'>
+            <HiOutlinePlayCircle size={15} />
+            دوره آموزشی
           </span>
+        </Link>
+
+        <div className='relative flex min-w-0 flex-col p-5 sm:p-6'>
+          <div
+            aria-hidden='true'
+            className='absolute -left-16 -top-16 h-36 w-36 rounded-full bg-secondary/10 blur-[50px]'
+          />
+
+          <div className='relative z-10 flex h-full flex-col'>
+            <SiteBadge
+              icon={HiOutlineAcademicCap}
+              variant='secondary'
+              size='sm'
+              className='w-fit'
+            >
+              پیشنهاد مرتبط با مقاله
+            </SiteBadge>
+
+            <Link href={href} className='!no-underline'>
+              <h3 className='!mb-0 !mt-3 line-clamp-2 !text-lg !font-black !leading-8 !text-text-light transition-colors group-hover:!text-secondary sm:!text-xl dark:!text-text-dark'>
+                {title}
+              </h3>
+            </Link>
+
+            {course?.subtitle && (
+              <p className='!mb-0 !mt-2 line-clamp-2 !text-xs !leading-6 !text-subtext-light sm:!text-sm sm:!leading-7 dark:!text-subtext-dark'>
+                {course.subtitle}
+              </p>
+            )}
+
+            <div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-secondary/15 pt-4 sm:mt-auto'>
+              <span className='text-[11px] font-bold !text-subtext-light dark:!text-subtext-dark'>
+                برای مشاهده سرفصل‌ها و ثبت‌نام
+              </span>
+
+              <SiteButton
+                href={href}
+                variant='primary'
+                size='md'
+                endIcon={HiOutlineArrowLeft}
+                className='!text-white !no-underline'
+              >
+                مشاهده دوره
+              </SiteButton>
+            </div>
+          </div>
         </div>
       </div>
-    </Link>
+    </SiteCard>
   );
 };
 

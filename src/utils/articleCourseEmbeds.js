@@ -1,13 +1,9 @@
-const COURSE_CARD_CLASS = 'ql-course-card';
-
-const COURSE_CARD_TAG_PATTERN = new RegExp(
-  `<a\\b(?=[^>]*\\bclass=(['"])[^'"]*\\b${COURSE_CARD_CLASS}\\b[^'"]*\\1)[^>]*>[\\s\\S]*?<\\/a>`,
-  'gi'
-);
+const ANCHOR_TAG_PATTERN = /<a\b[^>]*>[\s\S]*?<\/a>/gi;
 
 const COURSE_SLUG_ATTRIBUTE_PATTERN = /\bdata-course-slug=(['"])([^'"]+)\1/i;
 
-const COURSE_HREF_PATTERN = /\bhref=(['"])\/courses\/([^?'"#]+)[^'"]*\1/i;
+const COURSE_HREF_PATTERN =
+  /\bhref=(['"])(?:https?:\/\/[^/'"]+)?\/courses\/([^/?'"#]+)(?:[/?#][^'"]*)?\1/i;
 
 const normalizeSlug = (value) => {
   if (!value) {
@@ -36,7 +32,7 @@ export const getCourseSlugFromEmbed = (html = '') => {
 export const extractEmbeddedCourseSlugs = (html = '') => {
   const slugs = new Set();
 
-  for (const match of String(html).matchAll(COURSE_CARD_TAG_PATTERN)) {
+  for (const match of String(html).matchAll(ANCHOR_TAG_PATTERN)) {
     const slug = getCourseSlugFromEmbed(match[0]);
 
     if (slug) {
@@ -52,23 +48,41 @@ export const splitArticleCourseEmbeds = (html = '') => {
   const parts = [];
   let lastIndex = 0;
 
-  COURSE_CARD_TAG_PATTERN.lastIndex = 0;
+  ANCHOR_TAG_PATTERN.lastIndex = 0;
 
-  for (const match of source.matchAll(COURSE_CARD_TAG_PATTERN)) {
-    if (match.index > lastIndex) {
+  for (const match of source.matchAll(ANCHOR_TAG_PATTERN)) {
+    const slug = getCourseSlugFromEmbed(match[0]);
+
+    if (!slug) {
+      continue;
+    }
+
+    let embedStart = match.index;
+    let embedEnd = match.index + match[0].length;
+    const beforeEmbed = source.slice(lastIndex, embedStart);
+    const afterEmbed = source.slice(embedEnd);
+    const paragraphStart = beforeEmbed.match(/<p\b[^>]*>\s*$/i);
+    const paragraphEnd = afterEmbed.match(/^\s*<\/p>/i);
+
+    if (paragraphStart && paragraphEnd) {
+      embedStart = lastIndex + paragraphStart.index;
+      embedEnd += paragraphEnd[0].length;
+    }
+
+    if (embedStart > lastIndex) {
       parts.push({
         type: 'html',
-        value: source.slice(lastIndex, match.index),
+        value: source.slice(lastIndex, embedStart),
       });
     }
 
     parts.push({
       type: 'course',
-      slug: getCourseSlugFromEmbed(match[0]),
+      slug,
       value: match[0],
     });
 
-    lastIndex = match.index + match[0].length;
+    lastIndex = embedEnd;
   }
 
   if (lastIndex < source.length) {
