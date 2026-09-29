@@ -19,11 +19,14 @@ const secondEmbed =
   '<a data-course-slug="meditation" class="featured ql-course-card" href="/courses/meditation">مدیتیشن</a>';
 
 test('extracts unique course slugs from the article HTML', () => {
-  const content = `<p>شروع مقاله</p>${firstEmbed}<p>میانه</p>${secondEmbed}${firstEmbed}`;
+  const plainCourseLink =
+    '<a href="https://samaneyoga.ir/courses/flexibility?source=article">انعطاف‌پذیری</a>';
+  const content = `<p>شروع مقاله</p>${firstEmbed}<p>میانه</p>${secondEmbed}${firstEmbed}${plainCourseLink}`;
 
   assert.deepEqual(extractEmbeddedCourseSlugs(content), [
     'yoga-beginner',
     'meditation',
+    'flexibility',
   ]);
 });
 
@@ -38,5 +41,21 @@ test('splits HTML and course embeds while keeping their position', () => {
       value: firstEmbed,
     },
     { type: 'html', value: '<p>بعد</p>' },
+  ]);
+});
+
+test('converts a classless course link and removes its empty paragraph wrapper', () => {
+  const classlessEmbed =
+    '<a href="/courses/yoga-first-term">ترم اول دوره جامع یوگا</a>';
+  const content = `<p>قبل</p><p class="ql-align-right">${classlessEmbed}</p><h2>بعد</h2>`;
+
+  assert.deepEqual(splitArticleCourseEmbeds(content), [
+    { type: 'html', value: '<p>قبل</p>' },
+    {
+      type: 'course',
+      slug: 'yoga-first-term',
+      value: classlessEmbed,
+    },
+    { type: 'html', value: '<h2>بعد</h2>' },
   ]);
 });
