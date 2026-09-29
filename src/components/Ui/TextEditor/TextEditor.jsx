@@ -10,7 +10,22 @@ import PropTypes from 'prop-types';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
 
-const ReactQuill = dynamic(() => import('react-quill'), { ssr: false });
+const ReactQuill = dynamic(
+  () =>
+    import('react-quill').then(({ default: QuillComponent }) => {
+      const QuillWithForwardedRef = ({ forwardedRef, ...props }) => (
+        <QuillComponent ref={forwardedRef} {...props} />
+      );
+
+      QuillWithForwardedRef.displayName = 'QuillWithForwardedRef';
+      QuillWithForwardedRef.propTypes = {
+        forwardedRef: PropTypes.shape({ current: PropTypes.any }),
+      };
+
+      return QuillWithForwardedRef;
+    }),
+  { ssr: false }
+);
 
 const customStyles = `
   .ql-editor {
@@ -181,7 +196,7 @@ const TextEditor = forwardRef(function TextEditor(
       </div>
       <style>{customStyles}</style>
       <ReactQuill
-        ref={quillRef}
+        forwardedRef={quillRef}
         value={value}
         onChange={handleChange}
         onChangeSelection={(range) => {
