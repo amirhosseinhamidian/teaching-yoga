@@ -15,6 +15,7 @@ import HeaderWrapper from '@/components/Header/HeaderWrapper';
 import CommentsMainCard from '@/components/Comment/CommentsMainCard';
 
 import SuggestionCourses from '@/components/templates/articles/SuggestionCourses';
+import ArticleContent from '@/components/templates/articles/ArticleContent';
 
 import PageBackground from '@/components/SiteUi/PageBackground/PageBackground';
 import SiteBadge from '@/components/SiteUi/Badge/SiteBadge';
@@ -462,7 +463,7 @@ const ArticleDetailPage = async ({ params }) => {
                 </div>
 
                 {/* Article HTML */}
-                <div
+                <ArticleContent
                   className={[
                     'article-content',
                     'relative z-10',
@@ -628,9 +629,8 @@ const ArticleDetailPage = async ({ params }) => {
                     '[&_.ql-size-large]:text-xl',
                     '[&_.ql-size-huge]:text-2xl',
                   ].join(' ')}
-                  dangerouslySetInnerHTML={{
-                    __html: article.content || '',
-                  }}
+                  content={article.content || ''}
+                  courses={article.embeddedCourses || []}
                 />
               </SiteCard>
 

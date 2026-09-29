@@ -1,6 +1,7 @@
 import prismadb from '@/libs/prismadb';
 import { NextResponse } from 'next/server';
 import { toAbsoluteMediaUrl } from '@/server/media/absolute-url';
+import { extractEmbeddedCourseSlugs } from '@/utils/articleCourseEmbeds';
 
 export async function GET(req, { params }) {
   try {
@@ -20,9 +21,32 @@ export async function GET(req, { params }) {
       );
     }
 
+    const embeddedCourseSlugs = extractEmbeddedCourseSlugs(article.content);
+    const embeddedCourses = embeddedCourseSlugs.length
+      ? await prismadb.course.findMany({
+          where: {
+            shortAddress: {
+              in: embeddedCourseSlugs,
+            },
+            activeStatus: true,
+          },
+          select: {
+            id: true,
+            title: true,
+            subtitle: true,
+            cover: true,
+            shortAddress: true,
+          },
+        })
+      : [];
+
     const normalizedArticle = {
       ...article,
       cover: toAbsoluteMediaUrl(article.cover),
+      embeddedCourses: embeddedCourses.map((course) => ({
+        ...course,
+        cover: toAbsoluteMediaUrl(course.cover),
+      })),
     };
 
     return NextResponse.json(normalizedArticle, { status: 200 });
