@@ -1,5 +1,11 @@
+/* eslint-disable no-undef */
 'use client';
-import React, { useEffect } from 'react';
+import React, {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+} from 'react';
 import PropTypes from 'prop-types';
 import dynamic from 'next/dynamic';
 import 'react-quill/dist/quill.snow.css';
@@ -20,11 +26,35 @@ const customStyles = `
     max-width: 100%;
     height: auto;
   }
-     .ql-editor img {
+  .ql-editor img {
     display: block;
     margin: 10px auto; /* تنظیم خودکار برای وسط‌چین شدن */
     max-width: 100%; /* جلوگیری از بزرگ‌تر شدن از عرض صفحه */
     height: auto;
+  }
+  .ql-editor .ql-course-card {
+    direction: rtl;
+    display: flex;
+    align-items: center;
+    min-height: 72px;
+    margin: 18px 0;
+    padding: 16px 18px;
+    border: 1px solid rgba(38, 145, 125, 0.35);
+    border-radius: 16px;
+    background: rgba(38, 145, 125, 0.08);
+    color: #26917d;
+    font-weight: 700;
+    text-decoration: none;
+  }
+  .ql-editor .ql-course-card::before {
+    content: 'دوره پیشنهادی';
+    margin-left: 12px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: #26917d;
+    color: #fff;
+    font-size: 11px;
+    white-space: nowrap;
   }
     @media (prefers-color-scheme: dark) {
     .ql-container.ql-snow .ql-editor::before {
@@ -37,25 +67,89 @@ const getPlainText = (html) => {
   return html.replace(/<[^>]*>/g, '').trim();
 };
 
-const TextEditor = ({
-  placeholder = '',
-  value,
-  onChange,
-  className = '',
-  fullWidth = false,
-  errorMessage = '',
-  errorClassName = 'mr-3',
-  label = '',
-  maxLength,
-  toolbarItems = [],
-}) => {
+const TextEditor = forwardRef(function TextEditor(
+  {
+    placeholder = '',
+    value,
+    onChange,
+    className = '',
+    fullWidth = false,
+    errorMessage = '',
+    errorClassName = 'mr-3',
+    label = '',
+    maxLength,
+    toolbarItems = [],
+  },
+  ref
+) {
+  const quillRef = useRef(null);
+  const lastSelectionRef = useRef(null);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const Quill = require('quill');
       const ImageResize = require('quill-image-resize-module-react').default;
+
+      if (!Quill.imports['formats/courseCard']) {
+        const BlockEmbed = Quill.import('blots/block/embed');
+
+        class CourseCardBlot extends BlockEmbed {
+          static create(course) {
+            const node = super.create();
+            const slug = String(course?.shortAddress || '').trim();
+            const title = String(course?.title || '').trim();
+
+            node.setAttribute('href', `/courses/${encodeURIComponent(slug)}`);
+            node.setAttribute('data-course-slug', slug);
+            node.setAttribute('contenteditable', 'false');
+            node.setAttribute('title', `مشاهده جزئیات دوره ${title}`);
+            node.textContent = title;
+
+            return node;
+          }
+
+          static value(node) {
+            return {
+              shortAddress: node.getAttribute('data-course-slug') || '',
+              title: node.textContent || '',
+            };
+          }
+        }
+
+        CourseCardBlot.blotName = 'courseCard';
+        CourseCardBlot.tagName = 'a';
+        CourseCardBlot.className = 'ql-course-card';
+
+        Quill.register(CourseCardBlot);
+      }
+
       Quill.register('modules/imageResize', ImageResize);
     }
   }, []);
+
+  useImperativeHandle(ref, () => ({
+    insertCourseCard(course) {
+      const editor = quillRef.current?.getEditor?.();
+
+      if (!editor || !course?.shortAddress || !course?.title) {
+        return false;
+      }
+
+      const range = lastSelectionRef.current || editor.getSelection();
+      const index = range?.index ?? Math.max(0, editor.getLength() - 1);
+
+      if (range?.length) {
+        editor.deleteText(index, range.length, 'user');
+      }
+
+      editor.insertEmbed(index, 'courseCard', course, 'user');
+      editor.insertText(index + 1, '\n', 'user');
+      editor.setSelection(index + 2, 0, 'silent');
+      lastSelectionRef.current = { index: index + 2, length: 0 };
+
+      return true;
+    },
+  }));
   const handleChange = (value) => {
     if (!maxLength || getPlainText(value).length <= maxLength) {
       onChange(value);
@@ -87,8 +181,14 @@ const TextEditor = ({
       </div>
       <style>{customStyles}</style>
       <ReactQuill
+        ref={quillRef}
         value={value}
         onChange={handleChange}
+        onChangeSelection={(range) => {
+          if (range) {
+            lastSelectionRef.current = range;
+          }
+        }}
         placeholder={placeholder}
         className={`w-full rounded-xl border border-solid ${
           errorMessage
@@ -105,7 +205,7 @@ const TextEditor = ({
       )}
     </div>
   );
-};
+});
 
 TextEditor.propTypes = {
   placeholder: PropTypes.string,

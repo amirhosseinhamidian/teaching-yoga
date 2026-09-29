@@ -7,6 +7,13 @@ export async function GET() {
       select: {
         id: true,
         title: true,
+        subtitle: true,
+        cover: true,
+        shortAddress: true,
+        activeStatus: true,
+      },
+      orderBy: {
+        title: 'asc',
       },
     });
 

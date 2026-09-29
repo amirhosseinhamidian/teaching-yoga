@@ -1,6 +1,6 @@
 /* eslint-disable no-undef */
 'use client';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import Button from '@/components/Ui/Button/Button';
 import Input from '@/components/Ui/Input/Input';
@@ -20,7 +20,11 @@ const CreateEditBlog = ({ article, editLoading }) => {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
   const router = useRouter();
+  const textEditorRef = useRef(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [courses, setCourses] = useState([]);
+  const [selectedCourseId, setSelectedCourseId] = useState('');
+  const [isCoursesLoading, setIsCoursesLoading] = useState(true);
   const [shortAddressStatus, setShortAddressStatus] = useState('');
   const [shortAddressError, setShortAddressError] = useState('');
   const [debounceTimer, setDebounceTimer] = useState(null);
@@ -44,6 +48,39 @@ const CreateEditBlog = ({ article, editLoading }) => {
     }
   }, [article]);
 
+  useEffect(() => {
+    const controller = new AbortController();
+
+    const fetchCourses = async () => {
+      try {
+        setIsCoursesLoading(true);
+        const response = await fetch('/api/admin/courses-option', {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch courses: ${response.status}`);
+        }
+
+        const result = await response.json();
+        setCourses(Array.isArray(result) ? result : []);
+      } catch (error) {
+        if (error.name !== 'AbortError') {
+          console.error('[ARTICLE_COURSES_FETCH_ERROR]', error);
+          toast.showErrorToast('دریافت فهرست دوره‌ها با خطا مواجه شد.');
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsCoursesLoading(false);
+        }
+      }
+    };
+
+    fetchCourses();
+
+    return () => controller.abort();
+  }, []);
+
   const [openUploadImageModal, setOpenUploadImageModal] = useState(false);
   const [errorMessages, setErrorMessages] = useState({
     title: '',
@@ -59,6 +96,27 @@ const CreateEditBlog = ({ article, editLoading }) => {
       return;
     }
     setOpenUploadImageModal(true);
+  };
+
+  const handleInsertCourseCard = () => {
+    const selectedCourse = courses.find(
+      (course) => String(course.id) === selectedCourseId
+    );
+
+    if (!selectedCourse) {
+      toast.showErrorToast('ابتدا یک دوره را انتخاب کنید.');
+      return;
+    }
+
+    const inserted = textEditorRef.current?.insertCourseCard(selectedCourse);
+
+    if (!inserted) {
+      toast.showErrorToast('امکان درج دوره در ویرایشگر وجود ندارد.');
+      return;
+    }
+
+    setSelectedCourseId('');
+    toast.showSuccessToast('کارت دوره در محل نشانگر درج شد.');
   };
 
   const handleCoverImageUpload = async (file) => {
@@ -324,7 +382,7 @@ const CreateEditBlog = ({ article, editLoading }) => {
                     {shortAddressStatus === 'valid' && (
                       <FaCircleCheck
                         size={20}
-                        className='text-green-light dark:text-green-dark absolute left-2 top-11'
+                        className='absolute left-2 top-11 text-green-light dark:text-green-dark'
                       />
                     )}
                     {shortAddressStatus === 'invalid' && (
@@ -356,7 +414,51 @@ const CreateEditBlog = ({ article, editLoading }) => {
               />
             </div>
             <div className='mt-10'>
+              <div className='mb-4 rounded-2xl border border-secondary/20 bg-secondary/5 p-4 dark:bg-secondary/10'>
+                <div className='mb-3'>
+                  <p className='text-sm font-semibold text-text-light dark:text-text-dark'>
+                    درج دوره در مقاله
+                  </p>
+                  <p className='mt-1 text-xs leading-6 text-subtext-light dark:text-subtext-dark'>
+                    نشانگر را در محل موردنظر متن قرار دهید، سپس دوره را انتخاب و
+                    درج کنید.
+                  </p>
+                </div>
+
+                <div className='flex flex-col gap-3 sm:flex-row'>
+                  <select
+                    value={selectedCourseId}
+                    onChange={(event) =>
+                      setSelectedCourseId(event.target.value)
+                    }
+                    disabled={isCoursesLoading}
+                    className='min-h-11 flex-1 rounded-xl border border-accent bg-background-light px-3 text-sm text-text-light outline-none transition focus:ring-1 focus:ring-accent disabled:opacity-60 dark:bg-background-dark dark:text-text-dark'
+                  >
+                    <option value=''>
+                      {isCoursesLoading
+                        ? 'در حال دریافت دوره‌ها...'
+                        : 'انتخاب دوره'}
+                    </option>
+                    {courses.map((course) => (
+                      <option key={course.id} value={String(course.id)}>
+                        {course.title}
+                      </option>
+                    ))}
+                  </select>
+
+                  <Button
+                    onClick={handleInsertCourseCard}
+                    color='secondary'
+                    disable={isCoursesLoading || courses.length === 0}
+                    className='min-h-11 whitespace-nowrap px-5 text-sm'
+                  >
+                    درج کارت دوره
+                  </Button>
+                </div>
+              </div>
+
               <TextEditor
+                ref={textEditorRef}
                 label='محتوای مقاله'
                 value={content}
                 onChange={setContent}
