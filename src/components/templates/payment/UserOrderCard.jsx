@@ -14,7 +14,6 @@ import SiteCard from '@/components/SiteUi/Card/SiteCard';
 
 import { createToastHandler } from '@/utils/toastHandler';
 import { useTheme } from '@/contexts/ThemeContext';
-import { useAuthUser } from '@/hooks/auth/useAuthUser';
 import { reportClientError } from '@/utils/reportClientError';
 
 import CoursePaymentItem from './CoursePaymentItem';
@@ -83,10 +82,14 @@ ProductPaymentImage.propTypes = {
   alt: PropTypes.string,
 };
 
-export default function UserOrderCard({ data, className, addressId }) {
+export default function UserOrderCard({
+  data,
+  className,
+  addressId,
+  onBeforePayment,
+}) {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
-  const { user } = useAuthUser();
 
   const cart = data?.cart || null;
   const shopCart = data?.shopCart || null;
@@ -408,11 +411,6 @@ export default function UserOrderCard({ data, className, addressId }) {
    * ----------------------------------------------------------------------- */
 
   const handlePayment = async () => {
-    if (!user?.firstname || !user?.lastname) {
-      toast.showErrorToast('لطفا نام و نام خانوادگی خود را ثبت کنید.');
-      return;
-    }
-
     if (hasShop) {
       if (!addressId) {
         toast.showErrorToast('لطفاً ابتدا یک آدرس برای ارسال انتخاب کنید.');
@@ -439,6 +437,14 @@ export default function UserOrderCard({ data, className, addressId }) {
 
     try {
       setPaymentLoading(true);
+
+      if (typeof onBeforePayment !== 'function') {
+        toast.showErrorToast('امکان بررسی اطلاعات کاربر وجود ندارد.');
+        return;
+      }
+
+      const userInformationSaved = await onBeforePayment();
+      if (!userInformationSaved) return;
 
       let discountResponse;
 
@@ -1062,7 +1068,7 @@ export default function UserOrderCard({ data, className, addressId }) {
               onClick={handlePayment}
               className='hidden w-full lg:flex'
             >
-              {paymentLoading ? 'در حال انتقال...' : paymentButtonText}
+              {paymentLoading ? 'در حال پردازش...' : paymentButtonText}
             </SiteButton>
           </div>
         </div>
@@ -1102,7 +1108,7 @@ export default function UserOrderCard({ data, className, addressId }) {
               onClick={handlePayment}
               className='min-w-[165px] shrink-0 sm:min-w-[210px]'
             >
-              {paymentLoading ? 'در حال انتقال...' : paymentButtonText}
+              {paymentLoading ? 'در حال پردازش...' : paymentButtonText}
             </SiteButton>
           </div>
         </div>
@@ -1118,4 +1124,5 @@ UserOrderCard.propTypes = {
   }),
   className: PropTypes.string,
   addressId: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+  onBeforePayment: PropTypes.func.isRequired,
 };

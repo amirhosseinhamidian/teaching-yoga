@@ -1,7 +1,7 @@
 /* eslint-disable no-undef */
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 
 import PageBackground from '@/components/SiteUi/PageBackground/PageBackground';
@@ -14,6 +14,7 @@ import { HiOutlineCreditCard } from 'react-icons/hi2';
 
 export default function PaymentMain({ cart, shopCart }) {
   const [selectedAddressId, setSelectedAddressId] = useState(null);
+  const userInformationCardRef = useRef(null);
 
   const hasShopCart =
     Array.isArray(shopCart?.items) && shopCart.items.length > 0;
@@ -37,6 +38,7 @@ export default function PaymentMain({ cart, shopCart }) {
 
         <div className='mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_420px] xl:grid-cols-[minmax(0,1fr)_440px] xl:gap-6'>
           <UserInformationCard
+            ref={userInformationCardRef}
             className='min-w-0'
             hasShopCart={hasShopCart}
             onAddressSelect={(address) =>
@@ -46,6 +48,7 @@ export default function PaymentMain({ cart, shopCart }) {
 
           <UserOrderCard
             data={{ cart, shopCart }}
+            onBeforePayment={() => userInformationCardRef.current?.save?.()}
             addressId={selectedAddressId}
             className='min-w-0 lg:sticky lg:top-24'
           />
