@@ -1,7 +1,12 @@
 /* eslint-disable no-undef */
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, {
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useState,
+} from 'react';
 import PropTypes from 'prop-types';
 
 import Input from '@/components/Ui/Input/Input';
@@ -320,7 +325,10 @@ AddressModal.propTypes = {
   defaultPhone: PropTypes.string,
 };
 
-const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
+const UserInformationCard = React.forwardRef(function UserInformationCard(
+  { className, onAddressSelect, hasShopCart },
+  ref
+) {
   const { isDark } = useTheme();
   const toast = createToastHandler(isDark);
 
@@ -331,8 +339,6 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   const [lastname, setLastname] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-
   const [errorMessages, setErrorMessages] = useState({
     firstname: '',
     lastname: '',
@@ -421,7 +427,6 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   useEffect(() => {
     if (!user || !hasShopCart) return;
     fetchAddresses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, hasShopCart]);
 
   const validateInputs = () => {
@@ -453,12 +458,15 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
   const handleSubmitUserInfo = async () => {
     if (!validateInputs()) {
       toast.showErrorToast('لطفاً ورودی‌ها را به درستی تکمیل کنید');
-      return;
+      return false;
+    }
+
+    if (!user?.id || !user?.username) {
+      toast.showErrorToast('اطلاعات حساب کاربری در دسترس نیست');
+      return false;
     }
 
     try {
-      setIsLoading(true);
-
       const payload = {
         firstname,
         lastname,
@@ -467,30 +475,32 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
         username: user.username,
       };
 
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/users/${user.id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-          credentials: 'include',
-        }
-      );
+      const base = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+      const response = await fetch(`${base}/api/users/${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        credentials: 'include',
+      });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
-      if (response.ok) {
-        toast.showSuccessToast('اطلاعات با موفقیت به‌روزرسانی شد');
-        loadUser();
-      } else {
+      if (!response.ok) {
         toast.showErrorToast(data.error || 'خطایی رخ داده است');
+        return false;
       }
+
+      loadUser();
+      return true;
     } catch (error) {
       toast.showErrorToast('خطای غیرمنتظره رخ داد');
-    } finally {
-      setIsLoading(false);
+      return false;
     }
   };
+
+  useImperativeHandle(ref, () => ({
+    save: handleSubmitUserInfo,
+  }));
 
   const selectedAddress = useMemo(
     () => addresses.find((item) => item.id === selectedAddressId) || null,
@@ -620,16 +630,10 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
               />
             </div>
 
-            <SiteButton
-              type='button'
-              variant='outline'
-              size='md'
-              onClick={handleSubmitUserInfo}
-              disabled={isLoading}
-              className='mt-4 w-full sm:w-auto'
-            >
-              {isLoading ? 'در حال ثبت...' : 'ثبت اطلاعات کاربر'}
-            </SiteButton>
+            <p className='mt-4 text-[10px] leading-5 text-subtext-light dark:text-subtext-dark'>
+              اطلاعات واردشده با انتخاب «ادامه پرداخت» به‌صورت خودکار ذخیره
+              می‌شود.
+            </p>
           </section>
 
           {hasShopCart && (
@@ -775,7 +779,7 @@ const UserInformationCard = ({ className, onAddressSelect, hasShopCart }) => {
       />
     </SiteCard>
   );
-};
+});
 
 UserInformationCard.propTypes = {
   className: PropTypes.string,
